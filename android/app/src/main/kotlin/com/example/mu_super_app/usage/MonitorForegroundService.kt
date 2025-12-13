@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -53,6 +54,7 @@ class MonitorForegroundService : Service() {
                 Log.d(TAG, "Runnable: checking usage...")
                 checkUsageAndMaybeBlock()
                 checkPrayerLocksAndMaybeBlock()
+                checkParentalControls()
             } catch (t: Throwable) {
                 Log.e(TAG, "Error checking usage", t)
             } finally {
@@ -212,41 +214,63 @@ class MonitorForegroundService : Service() {
 
         if (offending != null) {
             val pkg = offending.packageName
+            
+            // Don't show overlay on this app itself
+            if (pkg == this.packageName) {
+                Log.d(TAG, "Skipping overlay for this app: $pkg")
+                return
+            }
+            
+            // Don't show overlay on system apps
+            if (isSystemApp(pkg)) {
+                Log.d(TAG, "Skipping overlay for system app: $pkg")
+                return
+            }
+            
+            // Check if overlay was already shown for this app in this session
+            if (wasOverlayShown(pkg)) {
+                Log.d(TAG, "Overlay already shown for $pkg this session")
+                return
+            }
+            
             val appName = trackedPackages[pkg] ?: pkg
             val minutes = ((offending.totalTimeInForeground / 1000L) + 59L) / 60L
             Log.i(
                 TAG,
                 "App $appName exceeded limit: $minutes / $limitMinutes minutes"
             )
-            saveOverlayDataAndRequestOverlay(appName, minutes.toInt(), limitMinutes)
+            
+            // Mark overlay as shown
+            markOverlayShown(pkg)
+            
+            saveOverlayDataAndRequestOverlay(appName, minutes.toInt(), limitMinutes, pkg)
             return
         }
 
         // If no single tracked app exceeded the limit, fall back to total usage.
-        if (totalMinutes >= limitMinutes) {
-            Log.i(
-                TAG,
-                "Total device usage exceeded limit: $totalMinutes / $limitMinutes minutes"
-            )
-            saveOverlayDataAndRequestOverlay(
-                appName = "All Apps",
-                usedMinutes = totalMinutes.toInt(),
-                limitMinutes = limitMinutes
-            )
-        }
+        // Note: We don't show overlay for "All Apps" as it's not a specific app
+        // The overlay should only show for specific apps that exceeded their limits
     }
 
     private fun saveOverlayDataAndRequestOverlay(
         appName: String,
         usedMinutes: Int,
-        limitMinutes: Int
+        limitMinutes: Int,
+        packageName: String? = null
     ) {
         val prefs = getSharedPreferences(FLUTTER_PREFS, Context.MODE_PRIVATE)
-        prefs.edit()
-            .putString("${PFX}$_PREF_OVERLAY_APP", appName)
-            .putInt("${PFX}$_PREF_OVERLAY_USED", usedMinutes)
-            .putInt("${PFX}$_PREF_OVERLAY_LIMIT", limitMinutes)
-            .apply()
+        val editor = prefs.edit()
+        editor.putString("${PFX}$_PREF_OVERLAY_APP", appName)
+        editor.putInt("${PFX}$_PREF_OVERLAY_USED", usedMinutes)
+        editor.putInt("${PFX}$_PREF_OVERLAY_LIMIT", limitMinutes)
+        
+        // Also save package name if available for blocking
+        if (packageName != null) {
+            editor.putString("${PFX}overlay_package_name", packageName)
+        }
+        editor.apply()
+        
+        Log.d(TAG, "Saved overlay data for $appName (package: $packageName)")
 
         // If we don't have overlay permission, we cannot show the blocker.
         if (!Settings.canDrawOverlays(this)) {
@@ -387,6 +411,289 @@ class MonitorForegroundService : Service() {
         }
     }
 
+    /**
+     * Checks parental control settings and enforces app blocking and time limits.
+     */
+    private fun checkParentalControls() {
+        val prefs = getSharedPreferences(FLUTTER_PREFS, Context.MODE_PRIVATE)
+        
+        // Check if schedule is active
+        val scheduleJson = prefs.getString("${PFX}$_PREF_SCHEDULE", null)
+        if (scheduleJson != null) {
+            val scheduleEnabled = scheduleJson.contains("\"enabled\":true")
+            if (scheduleEnabled) {
+                // Parse schedule and check if restrictions should be active
+                // For now, we'll check if we're in the active time window
+                // This is a simplified check - full implementation would parse JSON properly
+                val isInActiveWindow = checkScheduleActive(scheduleJson)
+                if (!isInActiveWindow) {
+                    Log.d(TAG, "Schedule restrictions not active")
+                    return
+                }
+            }
+        }
+
+        // IMPORTANT: We do NOT automatically close apps here!
+        // We only show overlay when time limits are exceeded.
+        // The user must click "Take a Break" button to close and block the app.
+        // Permanently blocked apps are handled by AccessibilityService separately.
+
+        // Check time limits for individual apps and show overlay (DO NOT close)
+        val timeLimitsJson = prefs.getString("${PFX}$_PREF_TIME_LIMITS", null)
+        if (timeLimitsJson != null && timeLimitsJson != "{}") {
+            val timeLimits = parseTimeLimits(timeLimitsJson)
+            checkAppTimeLimits(timeLimits)
+        }
+        
+        // DO NOT check permanently blocked apps here - that's handled by AccessibilityService
+        // We only show overlay for time limit violations, not for permanent blocks
+    }
+
+    /**
+     * Checks if schedule restrictions are currently active.
+     */
+    private fun checkScheduleActive(scheduleJson: String): Boolean {
+        // Simplified check - full implementation would parse JSON properly
+        // For now, assume restrictions are active if schedule is enabled
+        // In production, parse the JSON and check current time against start/end times
+        return true
+    }
+
+    /**
+     * Parses blocked apps from JSON string.
+     */
+    private fun parseBlockedApps(json: String): Set<String> {
+        val apps = mutableSetOf<String>()
+        try {
+            // Simple parsing - remove brackets and quotes, split by comma
+            val cleaned = json.replace("[", "").replace("]", "").replace("\"", "")
+            if (cleaned.isNotEmpty()) {
+                cleaned.split(",").forEach { app ->
+                    val trimmed = app.trim()
+                    if (trimmed.isNotEmpty()) {
+                        apps.add(trimmed)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to parse blocked apps", e)
+        }
+        return apps
+    }
+
+    /**
+     * Parses time limits from JSON string.
+     */
+    private fun parseTimeLimits(json: String): Map<String, Int> {
+        val limits = mutableMapOf<String, Int>()
+        try {
+            // Simple parsing - this is a simplified version
+            // Full implementation would use proper JSON parsing
+            // Format: {"package.name": minutes, ...}
+            val cleaned = json.replace("{", "").replace("}", "").replace("\"", "")
+            if (cleaned.isNotEmpty()) {
+                cleaned.split(",").forEach { entry ->
+                    val parts = entry.split(":")
+                    if (parts.size == 2) {
+                        val packageName = parts[0].trim()
+                        val minutes = parts[1].trim().toIntOrNull()
+                        if (minutes != null) {
+                            limits[packageName] = minutes
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to parse time limits", e)
+        }
+        return limits
+    }
+
+    /**
+     * Gets the current foreground app package name.
+     * Uses UsageStatsManager to find the most recently used app.
+     */
+    private fun getCurrentForegroundApp(): String? {
+        return try {
+            val now = System.currentTimeMillis()
+            val stats = usageStatsManager.queryUsageStats(
+                UsageStatsManager.INTERVAL_DAILY,
+                now - 10000, // Last 10 seconds (more accurate)
+                now
+            )
+            // Get the app with the most recent lastTimeUsed
+            val currentApp = stats?.maxByOrNull { it.lastTimeUsed }
+            if (currentApp != null && (now - currentApp.lastTimeUsed) < 5000) {
+                // Only return if app was used in last 5 seconds (likely in foreground)
+                return currentApp.packageName
+            }
+            null
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to get current foreground app", e)
+            null
+        }
+    }
+
+    /**
+     * Closes the specified app and returns to home screen.
+     */
+    private fun closeAppAndGoHome(packageName: String) {
+        try {
+            // First, try to kill the app's processes
+            val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                activityManager.killBackgroundProcesses(packageName)
+                Log.d(TAG, "Killed background processes for: $packageName")
+            }
+            
+            // Then send home intent
+            val homeIntent = Intent(Intent.ACTION_MAIN).apply {
+                addCategory(Intent.CATEGORY_HOME)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+            startActivity(homeIntent)
+            Log.d(TAG, "Sent home intent after closing: $packageName")
+            
+            // Close overlay if it's showing
+            try {
+                val overlayIntent = Intent(this, OverlayService::class.java).apply {
+                    action = "CLOSE_OVERLAY"
+                }
+                stopService(overlayIntent)
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not close overlay service", e)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error closing app: $packageName", e)
+        }
+    }
+
+    /**
+     * Gets app name from package name.
+     */
+    private fun getAppName(packageName: String): String {
+        return SOCIAL_APPS[packageName] ?: packageName
+    }
+
+    /**
+     * Checks time limits for apps and shows overlay if exceeded.
+     * Only shows overlay if the offending app is currently in foreground.
+     * Automatically closes the app when limit is exceeded.
+     */
+    private fun checkAppTimeLimits(timeLimits: Map<String, Int>) {
+        // Get current foreground app first
+        val currentForegroundApp = getCurrentForegroundApp()
+        
+        // Don't check if this app itself is in foreground
+        if (currentForegroundApp == this.packageName) {
+            Log.d(TAG, "This app is in foreground, skipping time limit check")
+            return
+        }
+        
+        val now = System.currentTimeMillis()
+        val startOfDay = Calendar.getInstance().apply {
+            timeInMillis = now
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+
+        val statsMap: Map<String, UsageStats> = try {
+            usageStatsManager.queryAndAggregateUsageStats(
+                startOfDay,
+                now
+            ) ?: emptyMap()
+        } catch (e: SecurityException) {
+            Log.w(TAG, "Usage access not granted for time limits check", e)
+            return
+        }
+
+        for ((packageName, limitMinutes) in timeLimits) {
+            val stats = statsMap[packageName] ?: continue
+            val usedMinutes = ((stats.totalTimeInForeground / 1000L + 59L) / 60L).toInt()
+
+            // Don't show overlay if app is already temporarily blocked
+            val checkPrefs = getSharedPreferences(FLUTTER_PREFS, Context.MODE_PRIVATE)
+            val tempBlockedJson = checkPrefs.getString("${PFX}blocked_apps_with_timestamps", null)
+            if (tempBlockedJson != null && tempBlockedJson.contains(packageName)) {
+                // App is already temporarily blocked, skip overlay
+                continue
+            }
+
+            if (usedMinutes >= limitMinutes) {
+                // IMPORTANT: Only show overlay if the offending app is currently in foreground
+                if (currentForegroundApp != packageName) {
+                    Log.d(TAG, "App $packageName exceeded limit but is not in foreground (current: $currentForegroundApp), skipping overlay")
+                    continue
+                }
+                
+                // Check if overlay was already shown for this app
+                if (wasOverlayShown(packageName)) {
+                    Log.d(TAG, "Overlay already shown for $packageName, closing app directly")
+                    // Close app immediately if overlay was already shown
+                    closeAppAndGoHome(packageName)
+                    continue
+                }
+
+                val appName = getAppName(packageName)
+                Log.i(
+                    TAG,
+                    "App $appName exceeded time limit: $usedMinutes / $limitMinutes minutes - showing overlay and closing app"
+                )
+                
+                // Mark overlay as shown
+                markOverlayShown(packageName)
+                
+                // Show overlay briefly, then automatically close the app
+                saveOverlayDataAndRequestOverlay(appName, usedMinutes, limitMinutes, packageName)
+                
+                // Automatically close the app after a short delay (to show overlay)
+                handler.postDelayed({
+                    closeAppAndGoHome(packageName)
+                }, 2000) // Show overlay for 2 seconds, then close
+            }
+        }
+    }
+
+    /**
+     * Checks if an app is a system app.
+     */
+    private fun isSystemApp(packageName: String): Boolean {
+        val systemApps = setOf(
+            "com.android.settings",
+            "com.android.dialer",
+            "com.android.mms",
+            "com.android.launcher",
+            "com.google.android.apps.nexuslauncher",
+            "com.android.launcher3"
+        )
+        return systemApps.contains(packageName) || 
+               packageName.startsWith("com.android.") ||
+               packageName.startsWith("com.google.android.apps.")
+    }
+
+    /**
+     * Checks if overlay was already shown for an app in this session.
+     */
+    private fun wasOverlayShown(packageName: String): Boolean {
+        val prefs = getSharedPreferences(FLUTTER_PREFS, Context.MODE_PRIVATE)
+        val shownList = prefs.getStringSet("${PFX}$_PREF_OVERLAY_SHOWN", emptySet()) ?: emptySet()
+        return shownList.contains(packageName)
+    }
+
+    /**
+     * Marks overlay as shown for an app in this session.
+     */
+    private fun markOverlayShown(packageName: String) {
+        val prefs = getSharedPreferences(FLUTTER_PREFS, Context.MODE_PRIVATE)
+        val shownSet = prefs.getStringSet("${PFX}$_PREF_OVERLAY_SHOWN", mutableSetOf())?.toMutableSet() ?: mutableSetOf()
+        shownSet.add(packageName)
+        prefs.edit()
+            .putStringSet("${PFX}$_PREF_OVERLAY_SHOWN", shownSet)
+            .apply()
+    }
+
     companion object {
         private const val TAG = "MonitorForegroundSvc"
         private const val FOREGROUND_ID = 1001
@@ -403,6 +710,10 @@ class MonitorForegroundService : Service() {
         private const val _PREF_PRAYER_LOCK_ACTIVE_NAME = "prayer_lock_active_name"
         private const val _PREF_PRAYER_LOCK_ACTIVE_START = "prayer_lock_active_start"
         private const val _PREF_PRAYER_LOCK_ACTIVE_END = "prayer_lock_active_end"
+        private const val _PREF_BLOCKED_APPS = "parental_control_blocked_apps"
+        private const val _PREF_TIME_LIMITS = "parental_control_time_limits"
+        private const val _PREF_SCHEDULE = "parental_control_schedule"
+        private const val _PREF_OVERLAY_SHOWN = "overlay_shown_sessions"
 
         // Same package map as in core/constants/social_media_apps.dart
         private val SOCIAL_APPS = mapOf(

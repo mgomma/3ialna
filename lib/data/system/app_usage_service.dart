@@ -56,6 +56,41 @@ class AppUsageService {
       );
     }
   }
+
+  /// Gets today's usage for a specific app in minutes.
+  Future<int> getTodayUsageForApp(String packageName) async {
+    final DateTime now = DateTime.now();
+    final DateTime startOfDay = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    );
+
+    try {
+      final AppUsage appUsage = AppUsage();
+      final List<AppUsageInfo> infos =
+          await appUsage.getAppUsage(startOfDay, now);
+
+      int totalMinutes = 0;
+      for (final AppUsageInfo info in infos) {
+        if (info.packageName == packageName) {
+          final int minutes = (info.usage.inSeconds + 59) ~/ 60;
+          totalMinutes += minutes;
+        }
+      }
+
+      return totalMinutes;
+    } catch (e, s) {
+      developer.log(
+        'Failed to load app usage for $packageName',
+        name: 'social_media_limiter.usage',
+        error: e,
+        stackTrace: s,
+        level: 1000,
+      );
+      return 0;
+    }
+  }
 }
 
 /// Simple data holder for usage summaries.

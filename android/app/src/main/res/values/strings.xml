@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">3ialna</string>
+    <string name="accessibility_service_description">This service helps block apps when time limits are exceeded to help manage screen time.</string>
+</resources>
+

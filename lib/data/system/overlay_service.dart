@@ -73,12 +73,12 @@ class OverlayService {
       await FlutterOverlayWindow.showOverlay(
         height: WindowSize.matchParent,
         width: WindowSize.matchParent,
-        enableDrag: true,
+        enableDrag: false, // Overlay should not be draggable
         overlayTitle: 'Time Limit Reached',
         overlayContent:
             '${data.appName}|${data.usedMinutes}|${data.limitMinutes}',
-        // Do not use clickThrough so touches are blocked until the user
-        // closes the overlay.
+        // Use flag that prevents interaction and dragging
+        // defaultFlag should work, but we also prevent gestures in the widget
         flag: OverlayFlag.defaultFlag,
         visibility: NotificationVisibility.visibilityPublic,
       );

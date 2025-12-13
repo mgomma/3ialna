@@ -16,6 +16,7 @@ import '../../domain/models/prayer.dart';
 import '../../domain/models/prayer_lock_settings.dart';
 import '../../l10n/app_localizations.dart';
 import '../prayer_settings/prayer_lock_settings_screen.dart';
+import '../parental_control/parent_dashboard_screen.dart';
 
 const MethodChannel _serviceChannel =
     MethodChannel('social_limiter/service');
@@ -414,6 +415,17 @@ class _HomeScreenState extends State<HomeScreen> {
         title: Text(context.l10n.appTitle),
         centerTitle: true,
         actions: <Widget>[
+          IconButton(
+            icon: const Icon(Icons.family_restroom),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const ParentDashboardScreen(),
+                ),
+              );
+            },
+            tooltip: 'Parental Controls',
+          ),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: _navigateToPrayerSettings,
