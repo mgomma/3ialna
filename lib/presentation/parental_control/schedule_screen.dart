@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../../domain/models/schedule.dart';
 import '../../data/local/parental_control_storage_service.dart';
 
@@ -276,7 +275,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               Card(
                 color: _schedule.isActiveNow()
                     ? colorScheme.errorContainer
-                    : colorScheme.surfaceVariant,
+                    : colorScheme.surfaceContainerHighest,
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Row(

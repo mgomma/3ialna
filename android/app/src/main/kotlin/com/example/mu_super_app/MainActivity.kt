@@ -33,6 +33,9 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
+        // Handle initial intent for hard lock
+        intent?.let { handleLockIntent(it) }
+
         // Service channel
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
@@ -212,6 +215,23 @@ class MainActivity : FlutterActivity() {
                     }
                 }
                 else -> result.notImplemented()
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleLockIntent(intent)
+    }
+
+    private fun handleLockIntent(intent: Intent) {
+        if (intent.getBooleanExtra("EXTRA_HARD_LOCK", false)) {
+            Log.i(TAG, "Received EXTRA_HARD_LOCK, starting Kiosk Mode")
+            KioskModeHelper.startKioskMode(this)
+            
+            // Notify Flutter side that device is locked
+            flutterEngine?.dartExecutor?.binaryMessenger?.let { messenger ->
+                MethodChannel(messenger, kioskChannel).invokeMethod("onDeviceLocked", null)
             }
         }
     }

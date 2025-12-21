@@ -236,7 +236,7 @@ class _PrayerLockSettingsScreenState
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: selectedName,
+              initialValue: selectedName,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
                 labelText: 'Method',

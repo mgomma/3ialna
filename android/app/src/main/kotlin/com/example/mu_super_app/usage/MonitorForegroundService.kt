@@ -41,8 +41,8 @@ class MonitorForegroundService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var usageStatsManager: UsageStatsManager
 
-    // 30 seconds between checks
-    private val pollIntervalMs = 30_000L
+    // 10 seconds between checks for better responsiveness
+    private val pollIntervalMs = 10_000L
     
     // Track last toast time to avoid spamming
     private var lastPrayerLockToastTime = 0L
@@ -69,6 +69,7 @@ class MonitorForegroundService : Service() {
             getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         startForegroundServiceWithNotification()
         handler.post(runnable)
+        showDebugToast("3ialna: Monitoring Service Active")
     }
 
     override fun onStartCommand(
@@ -78,6 +79,7 @@ class MonitorForegroundService : Service() {
     ): Int {
         if (!isMonitoringEnabled()) {
             Log.w(TAG, "Service started but monitoring disabled; stopping self")
+            showDebugToast("3ialna: Monitoring disabled")
             stopSelf()
             return START_NOT_STICKY
         }
@@ -215,9 +217,18 @@ class MonitorForegroundService : Service() {
         if (offending != null) {
             val pkg = offending.packageName
             
-            // Don't show overlay on this app itself
-            if (pkg == this.packageName) {
-                Log.d(TAG, "Skipping overlay for this app: $pkg")
+            // Get current foreground app
+            val currentForegroundApp = getCurrentForegroundApp()
+            
+            // Don't show overlay if this app is in foreground
+            if (currentForegroundApp == this.packageName) {
+                Log.d(TAG, "This app is in foreground, skipping overlay")
+                return
+            }
+            
+            // Only show overlay if the offending app is currently in foreground
+            if (currentForegroundApp != pkg) {
+                Log.d(TAG, "Offending app $pkg is not in foreground (current: $currentForegroundApp), skipping overlay")
                 return
             }
             
@@ -227,9 +238,17 @@ class MonitorForegroundService : Service() {
                 return
             }
             
-            // Check if overlay was already shown for this app in this session
-            if (wasOverlayShown(pkg)) {
-                Log.d(TAG, "Overlay already shown for $pkg this session")
+            // If NOT in strict mode, use a cooldown to avoid spamming the soft overlay.
+            // In strict mode, we always want to trigger the hard lock if they are in the app,
+            // UNLESS it has been specifically snoozed by a parent.
+            if (isSnoozed(pkg)) {
+                Log.d(TAG, "App $pkg is currently snoozed, skipping")
+                return
+            }
+
+            val isStrictMode = prefs.getBoolean("${PFX}is_strict_mode", false)
+            if (!isStrictMode && wasRecentlyShown(pkg)) {
+                Log.d(TAG, "Overlay was recently shown for $pkg, skipping")
                 return
             }
             
@@ -240,16 +259,50 @@ class MonitorForegroundService : Service() {
                 "App $appName exceeded limit: $minutes / $limitMinutes minutes"
             )
             
-            // Mark overlay as shown
+            // Mark as recently shown
             markOverlayShown(pkg)
             
-            saveOverlayDataAndRequestOverlay(appName, minutes.toInt(), limitMinutes, pkg)
+            if (isStrictMode) {
+                Log.i(TAG, "Strict Mode active, triggering Hard Lock for $pkg")
+                showDebugToast("Locking Device: $appName limit reached")
+                triggerHardLock(appName, minutes.toInt(), limitMinutes, pkg)
+            } else {
+                showDebugToast("Time limit: $appName")
+                saveOverlayDataAndRequestOverlay(appName, minutes.toInt(), limitMinutes, pkg)
+            }
             return
         }
 
         // If no single tracked app exceeded the limit, fall back to total usage.
         // Note: We don't show overlay for "All Apps" as it's not a specific app
         // The overlay should only show for specific apps that exceeded their limits
+    }
+
+    /**
+     * Triggers a hard lock by launching MainActivity with the lock flag.
+     */
+    private fun triggerHardLock(appName: String, usedMinutes: Int, limitMinutes: Int, pkg: String? = null) {
+        val prefs = getSharedPreferences(FLUTTER_PREFS, Context.MODE_PRIVATE)
+        
+        // Save overlay data so MainActivity/Flutter can display the correct message
+        // Use commit() for critical state to ensures it's readable when MainActivity launches
+        prefs.edit()
+            .putString("${PFX}overlay_app_name", appName)
+            .putInt("${PFX}overlay_used_minutes", usedMinutes)
+            .putInt("${PFX}overlay_limit_minutes", limitMinutes)
+            .putString("${PFX}overlay_package_name", pkg ?: "")
+            .putBoolean("${PFX}is_device_locked", true)
+            .commit()
+
+        Log.d(TAG, "Triggering Hard Lock for $appName (package: $pkg)")
+
+        // Launch MainActivity with the lock flag
+        val lockIntent = Intent(this, MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+            putExtra("EXTRA_HARD_LOCK", true)
+        }
+        startActivity(lockIntent)
     }
 
     private fun saveOverlayDataAndRequestOverlay(
@@ -260,15 +313,17 @@ class MonitorForegroundService : Service() {
     ) {
         val prefs = getSharedPreferences(FLUTTER_PREFS, Context.MODE_PRIVATE)
         val editor = prefs.edit()
-        editor.putString("${PFX}$_PREF_OVERLAY_APP", appName)
-        editor.putInt("${PFX}$_PREF_OVERLAY_USED", usedMinutes)
-        editor.putInt("${PFX}$_PREF_OVERLAY_LIMIT", limitMinutes)
+        editor.putString("${PFX}overlay_app_name", appName)
+        editor.putInt("${PFX}overlay_used_minutes", usedMinutes)
+        editor.putInt("${PFX}overlay_limit_minutes", limitMinutes)
         
         // Also save package name if available for blocking
         if (packageName != null) {
             editor.putString("${PFX}overlay_package_name", packageName)
         }
-        editor.apply()
+        // Mark as device locked for Flutter UI consistency
+        editor.putBoolean("${PFX}is_device_locked", true)
+        editor.commit()
         
         Log.d(TAG, "Saved overlay data for $appName (package: $packageName)")
 
@@ -297,21 +352,15 @@ class MonitorForegroundService : Service() {
     }
 
     /**
-     * Shows a toast message on the main thread.
-     * Toasts from background services need to be shown on the main thread.
+     * Shows a toast message for debugging.
      */
-    private fun showPrayerLockToast(message: String) {
+    private fun showDebugToast(message: String) {
         handler.post {
             try {
-                val toast = Toast.makeText(
-                    applicationContext,
-                    message,
-                    Toast.LENGTH_LONG
-                )
-                toast.show()
-                Log.d(TAG, "Showed prayer lock toast: $message")
+                Toast.makeText(applicationContext, message, Toast.LENGTH_SHORT).show()
+                Log.d(TAG, "Debug Toast: $message")
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to show toast", e)
+                Log.e(TAG, "Failed to show debug toast", e)
             }
         }
     }
@@ -371,6 +420,20 @@ class MonitorForegroundService : Service() {
         
         // Check if current time is within the lock period
         if (now >= lockStart && now < lockEnd) {
+            // Don't show overlay if this app is in foreground
+            val currentForegroundApp = getCurrentForegroundApp()
+            if (currentForegroundApp == this.packageName) {
+                Log.d(TAG, "This app is in foreground, skipping prayer lock overlay")
+                return
+            }
+            
+            // Check if overlay was recently shown for this prayer lock
+            val prayerLockKey = "prayer_lock_$prayerName"
+            if (wasRecentlyShown(prayerLockKey)) {
+                Log.d(TAG, "Prayer lock overlay already shown for $prayerName")
+                return
+            }
+            
             val remainingMs = lockEnd - now
             val remainingMinutes = ((remainingMs / 1000L) + 59L) / 60L
             
@@ -378,19 +441,34 @@ class MonitorForegroundService : Service() {
             
             // Show toast warning (with cooldown to avoid spamming)
             if (now - lastPrayerLockToastTime > toastCooldownMs) {
-                showPrayerLockToast("Prayer Time Lock: $prayerName\nDevice locked for ${remainingMinutes} more minutes")
+                showDebugToast("Prayer Lock: $prayerName\nLocked for ${remainingMinutes}m")
                 lastPrayerLockToastTime = now
             }
             
-            // Show overlay for prayer lock
-            saveOverlayDataAndRequestOverlay(
-                appName = "Prayer Time Lock - $prayerName",
-                usedMinutes = 0,
-                limitMinutes = remainingMinutes.toInt()
-            )
+            // Mark overlay as shown for this prayer lock
+            markOverlayShown(prayerLockKey)
+            
+            // Check if Strict Mode (Hard Lock) is enabled
+            val isStrictMode = prefs.getBoolean("${PFX}is_strict_mode", false)
+            if (isStrictMode) {
+                Log.i(TAG, "Strict Mode active, triggering Hard Lock for Prayer: $prayerName")
+                triggerHardLock("Prayer Time Lock - $prayerName", 0, remainingMinutes.toInt())
+            } else {
+                // Show overlay for prayer lock
+                saveOverlayDataAndRequestOverlay(
+                    appName = "Prayer Time Lock - $prayerName",
+                    usedMinutes = 0,
+                    limitMinutes = remainingMinutes.toInt()
+                )
+            }
         } else if (now >= lockEnd) {
             // Lock period has ended, clear it
             Log.d(TAG, "Prayer lock period ended, clearing")
+            
+            // Clear prayer lock overlay session
+            val prayerLockKey = "prayer_lock_$prayerName"
+            clearOverlayShown(prayerLockKey)
+            
             prefs.edit()
                 .remove("${PFX}$_PREF_PRAYER_LOCK_ACTIVE_NAME")
                 .remove("${PFX}$_PREF_PRAYER_LOCK_ACTIVE_START")
@@ -403,7 +481,7 @@ class MonitorForegroundService : Service() {
             if (minutesUntilStart <= 2 && minutesUntilStart > 0) {
                 // Show warning toast 2 minutes before prayer time
                 if (now - lastPrayerLockToastTime > toastCooldownMs) {
-                    showPrayerLockToast("Prayer Time Warning: $prayerName\nDevice will be locked in ${minutesUntilStart.toInt()} minute(s)")
+                    showDebugToast("Prayer Time Warning: $prayerName\nLocked in ${minutesUntilStart.toInt()}m")
                     lastPrayerLockToastTime = now
                 }
             }
@@ -518,13 +596,13 @@ class MonitorForegroundService : Service() {
             val now = System.currentTimeMillis()
             val stats = usageStatsManager.queryUsageStats(
                 UsageStatsManager.INTERVAL_DAILY,
-                now - 10000, // Last 10 seconds (more accurate)
+                now - 60_000, 
                 now
             )
             // Get the app with the most recent lastTimeUsed
             val currentApp = stats?.maxByOrNull { it.lastTimeUsed }
-            if (currentApp != null && (now - currentApp.lastTimeUsed) < 5000) {
-                // Only return if app was used in last 5 seconds (likely in foreground)
+            // Be more lenient - if any app was used in last 20 seconds
+            if (currentApp != null && (now - currentApp.lastTimeUsed) < 20_000) {
                 return currentApp.packageName
             }
             null
@@ -614,8 +692,8 @@ class MonitorForegroundService : Service() {
             val usedMinutes = ((stats.totalTimeInForeground / 1000L + 59L) / 60L).toInt()
 
             // Don't show overlay if app is already temporarily blocked
-            val checkPrefs = getSharedPreferences(FLUTTER_PREFS, Context.MODE_PRIVATE)
-            val tempBlockedJson = checkPrefs.getString("${PFX}blocked_apps_with_timestamps", null)
+            val prefs = getSharedPreferences(FLUTTER_PREFS, Context.MODE_PRIVATE)
+            val tempBlockedJson = prefs.getString("${PFX}blocked_apps_with_timestamps", null)
             if (tempBlockedJson != null && tempBlockedJson.contains(packageName)) {
                 // App is already temporarily blocked, skip overlay
                 continue
@@ -628,30 +706,38 @@ class MonitorForegroundService : Service() {
                     continue
                 }
                 
-                // Check if overlay was already shown for this app
-                if (wasOverlayShown(packageName)) {
-                    Log.d(TAG, "Overlay already shown for $packageName, closing app directly")
-                    // Close app immediately if overlay was already shown
+                // Check for snooze
+                if (isSnoozed(packageName)) {
+                    Log.d(TAG, "App $packageName is currently snoozed, skipping")
+                    continue
+                }
+
+                // Check for Strict Mode (Hard Lock)
+                val isStrictMode = prefs.getBoolean("${PFX}is_strict_mode", false)
+                
+                // If recently shown and not in strict mode, just close app
+                if (!isStrictMode && wasRecentlyShown(packageName)) {
+                    Log.d(TAG, "Overlay recently shown for $packageName, closing app directly")
                     closeAppAndGoHome(packageName)
                     continue
                 }
 
                 val appName = getAppName(packageName)
-                Log.i(
-                    TAG,
-                    "App $appName exceeded time limit: $usedMinutes / $limitMinutes minutes - showing overlay and closing app"
-                )
+                Log.i(TAG, "App $appName exceeded limit: $usedMinutes / $limitMinutes - StrictMode: $isStrictMode")
                 
-                // Mark overlay as shown
+                // Mark as recently shown
                 markOverlayShown(packageName)
                 
-                // Show overlay briefly, then automatically close the app
-                saveOverlayDataAndRequestOverlay(appName, usedMinutes, limitMinutes, packageName)
-                
-                // Automatically close the app after a short delay (to show overlay)
-                handler.postDelayed({
-                    closeAppAndGoHome(packageName)
-                }, 2000) // Show overlay for 2 seconds, then close
+                if (isStrictMode) {
+                    // Trigger Hard Lock for custom app limit
+                    triggerHardLock(appName, usedMinutes, limitMinutes, packageName)
+                } else {
+                    // Soft Lock: Show overlay briefly, then automatically close the app
+                    saveOverlayDataAndRequestOverlay(appName, usedMinutes, limitMinutes, packageName)
+                    handler.postDelayed({
+                        closeAppAndGoHome(packageName)
+                    }, 2500) // Slightly more time to see the overlay
+                }
             }
         }
     }
@@ -674,21 +760,47 @@ class MonitorForegroundService : Service() {
     }
 
     /**
-     * Checks if overlay was already shown for an app in this session.
+     * Checks if an app is currently snoozed by a parent.
      */
-    private fun wasOverlayShown(packageName: String): Boolean {
+    private fun isSnoozed(packageName: String): Boolean {
         val prefs = getSharedPreferences(FLUTTER_PREFS, Context.MODE_PRIVATE)
-        val shownList = prefs.getStringSet("${PFX}$_PREF_OVERLAY_SHOWN", emptySet()) ?: emptySet()
-        return shownList.contains(packageName)
+        val snoozeUntil = prefs.getLong("${PFX}snooze_until_$packageName", 0L)
+        return System.currentTimeMillis() < snoozeUntil
     }
 
     /**
-     * Marks overlay as shown for an app in this session.
+     * Checks if overlay was recently shown for an app (within last 5 minutes).
+     */
+    private fun wasRecentlyShown(packageName: String): Boolean {
+        val prefs = getSharedPreferences(FLUTTER_PREFS, Context.MODE_PRIVATE)
+        val lastShown = prefs.getLong("${PFX}last_shown_$packageName", 0L)
+        return (System.currentTimeMillis() - lastShown) < 5 * 60 * 1000L // 5 minutes
+    }
+
+    /**
+     * Marks overlay as shown for an app with current timestamp.
      */
     private fun markOverlayShown(packageName: String) {
         val prefs = getSharedPreferences(FLUTTER_PREFS, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putLong("${PFX}last_shown_$packageName", System.currentTimeMillis())
+            .apply()
+
+        // Also update the set for backward compatibility if needed
         val shownSet = prefs.getStringSet("${PFX}$_PREF_OVERLAY_SHOWN", mutableSetOf())?.toMutableSet() ?: mutableSetOf()
         shownSet.add(packageName)
+        prefs.edit()
+            .putStringSet("${PFX}$_PREF_OVERLAY_SHOWN", shownSet)
+            .apply()
+    }
+
+    /**
+     * Clears overlay shown status for a specific app/key.
+     */
+    private fun clearOverlayShown(key: String) {
+        val prefs = getSharedPreferences(FLUTTER_PREFS, Context.MODE_PRIVATE)
+        val shownSet = prefs.getStringSet("${PFX}$_PREF_OVERLAY_SHOWN", mutableSetOf())?.toMutableSet() ?: mutableSetOf()
+        shownSet.remove(key)
         prefs.edit()
             .putStringSet("${PFX}$_PREF_OVERLAY_SHOWN", shownSet)
             .apply()

@@ -41,7 +41,7 @@ class UsageProgressBar extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: progress,
                 minHeight: 8,
-                backgroundColor: colorScheme.surfaceVariant,
+                backgroundColor: colorScheme.surfaceContainerHighest,
                 valueColor: AlwaysStoppedAnimation<Color>(
                   isOverLimit ? colorScheme.error : colorScheme.primary,
                 ),

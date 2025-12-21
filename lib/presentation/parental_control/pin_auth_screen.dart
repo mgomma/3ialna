@@ -136,19 +136,6 @@ class _PinAuthScreenState extends State<PinAuthScreen> {
     }
   }
 
-  void _onBackspace(int index) {
-    if (_controllers[index].text.isEmpty && index > 0) {
-      _focusNodes[index - 1].requestFocus();
-      _controllers[index - 1].clear();
-    } else {
-      _controllers[index].clear();
-    }
-    _enteredPin = _controllers.map((c) => c.text).join();
-    setState(() {
-      _errorMessage = null;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);

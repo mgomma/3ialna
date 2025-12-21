@@ -17,6 +17,9 @@ class AppBlockingService {
     final duration = durationMinutes ?? 
         prefs.getInt(_keyBlockDuration) ?? defaultBlockDuration;
 
+    // Store the duration for this block
+    await prefs.setInt(_keyBlockDuration, duration);
+
     final blockedApps = await getBlockedApps();
     blockedApps[packageName] = DateTime.now().millisecondsSinceEpoch;
 

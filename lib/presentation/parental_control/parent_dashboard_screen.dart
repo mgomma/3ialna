@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../data/local/parental_control_storage_service.dart';
+import '../../data/local/settings_service.dart';
 import '../../data/system/accessibility_service_helper.dart';
 import '../../data/system/kiosk_service.dart';
 import '../../data/system/pin_auth_service.dart';
@@ -18,16 +20,16 @@ class ParentDashboardScreen extends StatefulWidget {
 
 class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
   final KioskService _kioskService = KioskService();
-  final ParentalControlStorageService _storage =
-      ParentalControlStorageService();
+  final ParentalControlStorageService _storage = ParentalControlStorageService();
   final PinAuthService _pinAuthService = PinAuthService();
-  final AccessibilityServiceHelper _accessibilityHelper =
-      AccessibilityServiceHelper();
+  final AccessibilityServiceHelper _accessibilityHelper = AccessibilityServiceHelper();
 
   bool _isAuthenticated = false;
   bool _isDeviceAdminEnabled = false;
   bool _isKioskModeActive = false;
   bool _isAccessibilityServiceEnabled = false;
+  bool _isStrictMode = false;
+  late SettingsService _settings;
   int _blockedAppsCount = 0;
   int _appsWithTimeLimits = 0;
 
@@ -48,11 +50,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
             builder: (context) => PinAuthScreen(
               isSetupMode: true,
               onAuthenticated: () {
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(
-                    builder: (context) => const ParentDashboardScreen(),
-                  ),
-                );
+                Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => const ParentDashboardScreen()));
               },
             ),
           ),
@@ -81,10 +79,12 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
   Future<void> _loadSettings() async {
     if (!_isAuthenticated) return;
 
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    _settings = SettingsService(prefs);
+
     final isDeviceAdmin = await _kioskService.isDeviceAdminEnabled();
     final isKioskActive = await _kioskService.isKioskModeActive();
-    final isAccessibilityEnabled =
-        await _accessibilityHelper.isAccessibilityServiceEnabled();
+    final isAccessibilityEnabled = await _accessibilityHelper.isAccessibilityServiceEnabled();
     final blockedApps = await _storage.getBlockedApps();
     final timeLimits = await _storage.getTimeLimits();
 
@@ -92,8 +92,16 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
       _isDeviceAdminEnabled = isDeviceAdmin;
       _isKioskModeActive = isKioskActive;
       _isAccessibilityServiceEnabled = isAccessibilityEnabled;
+      _isStrictMode = _settings.isStrictMode;
       _blockedAppsCount = blockedApps.length;
       _appsWithTimeLimits = timeLimits.length;
+    });
+  }
+
+  Future<void> _toggleStrictMode(bool value) async {
+    await _settings.setIsStrictMode(value);
+    setState(() {
+      _isStrictMode = value;
     });
   }
 
@@ -105,7 +113,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
       return;
     }
 
-      if (_isKioskModeActive) {
+    if (_isKioskModeActive) {
       await _kioskService.stopKioskMode();
     } else {
       await _kioskService.startKioskMode();
@@ -119,9 +127,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
     final colorScheme = theme.colorScheme;
 
     if (!_isAuthenticated) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
@@ -150,11 +156,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                                 isSetupMode: true,
                                 onAuthenticated: () {
                                   Navigator.of(context).pop();
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('PIN updated successfully'),
-                                    ),
-                                  );
+                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('PIN updated successfully')));
                                 },
                               ),
                             ),
@@ -164,18 +166,10 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                       ListTile(
                         leading: const Icon(Icons.accessibility_new),
                         title: const Text('Accessibility Settings'),
-                        subtitle: Text(
-                          _isAccessibilityServiceEnabled
-                              ? 'Enabled - App blocking is active'
-                              : 'Disabled - Enable for app blocking',
-                        ),
+                        subtitle: Text(_isAccessibilityServiceEnabled ? 'Enabled - App blocking is active' : 'Disabled - Enable for app blocking'),
                         trailing: Icon(
-                          _isAccessibilityServiceEnabled
-                              ? Icons.check_circle
-                              : Icons.error_outline,
-                          color: _isAccessibilityServiceEnabled
-                              ? Colors.green
-                              : Colors.orange,
+                          _isAccessibilityServiceEnabled ? Icons.check_circle : Icons.error_outline,
+                          color: _isAccessibilityServiceEnabled ? Colors.green : Colors.orange,
                         ),
                         onTap: () async {
                           Navigator.of(context).pop();
@@ -187,12 +181,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                       ),
                     ],
                   ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Close'),
-                    ),
-                  ],
+                  actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close'))],
                 ),
               );
             },
@@ -207,7 +196,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Kiosk Mode Card
+              // Kiosk Mode & Protection Card
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -216,24 +205,16 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                     children: [
                       Row(
                         children: [
-                          Icon(
-                            Icons.lock,
-                            color: colorScheme.primary,
-                          ),
+                          Icon(Icons.security, color: colorScheme.primary),
                           const SizedBox(width: 8),
-                          Text(
-                            'Kiosk Mode',
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                          Text('Protection & Hard Lock', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
                         ],
                       ),
                       const SizedBox(height: 16),
+                      Text('Device Admin status: ${_isDeviceAdminEnabled ? "Enabled" : "Disabled"}', style: theme.textTheme.titleSmall),
+                      const SizedBox(height: 8),
                       Text(
-                        _isDeviceAdminEnabled
-                            ? 'Device admin is enabled. Kiosk mode can be activated.'
-                            : 'Enable device admin to use kiosk mode.',
+                        'Enabled device admin prevents the app from being uninstalled and allows Hard Locking.',
                         style: theme.textTheme.bodyMedium,
                       ),
                       const SizedBox(height: 16),
@@ -244,19 +225,25 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                             await _loadSettings();
                           },
                           icon: const Icon(Icons.admin_panel_settings),
-                          label: const Text('Enable Device Admin'),
+                          label: const Text('Enable Anti-Uninstall Protection'),
                         )
-                      else
+                      else ...[
+                        const Divider(),
                         SwitchListTile(
-                          title: const Text('Enable Kiosk Mode'),
-                          subtitle: Text(
-                            _isKioskModeActive
-                                ? 'Active - Device is locked'
-                                : 'Inactive - Device is unlocked',
-                          ),
+                          title: const Text('Strict Mode (Hard Lock)'),
+                          subtitle: const Text('Uses Kiosk Mode to make the lock screen impossible to bypass without a PIN.'),
+                          value: _isStrictMode,
+                          onChanged: _toggleStrictMode,
+                          secondary: Icon(Icons.gpp_maybe, color: _isStrictMode ? Colors.red : Colors.grey),
+                        ),
+                        SwitchListTile(
+                          title: const Text('Kiosk Mode (Manual Lock)'),
+                          subtitle: const Text('Manually lock the entire device into this app right now.'),
                           value: _isKioskModeActive,
                           onChanged: (_) => _toggleKioskMode(),
+                          secondary: const Icon(Icons.screen_lock_portrait),
                         ),
+                      ],
                     ],
                   ),
                 ),
@@ -271,31 +258,17 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                     children: [
                       Row(
                         children: [
-                          Icon(
-                            Icons.accessibility_new,
-                            color: _isAccessibilityServiceEnabled
-                                ? Colors.green
-                                : Colors.orange,
-                          ),
+                          Icon(Icons.accessibility_new, color: _isAccessibilityServiceEnabled ? Colors.green : Colors.orange),
                           const SizedBox(width: 8),
-                          Text(
-                            'App Blocking Service',
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                          Text('App Blocking Service', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
                         ],
                       ),
                       const SizedBox(height: 16),
                       Row(
                         children: [
                           Icon(
-                            _isAccessibilityServiceEnabled
-                                ? Icons.check_circle
-                                : Icons.error_outline,
-                            color: _isAccessibilityServiceEnabled
-                                ? Colors.green
-                                : Colors.orange,
+                            _isAccessibilityServiceEnabled ? Icons.check_circle : Icons.error_outline,
+                            color: _isAccessibilityServiceEnabled ? Colors.green : Colors.orange,
                             size: 20,
                           ),
                           const SizedBox(width: 8),
@@ -318,16 +291,8 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                           await _loadSettings();
                         },
                         icon: const Icon(Icons.settings),
-                        label: Text(
-                          _isAccessibilityServiceEnabled
-                              ? 'Open Accessibility Settings'
-                              : 'Enable Accessibility Service',
-                        ),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: _isAccessibilityServiceEnabled
-                              ? Colors.green
-                              : colorScheme.primary,
-                        ),
+                        label: Text(_isAccessibilityServiceEnabled ? 'Open Accessibility Settings' : 'Enable Accessibility Service'),
+                        style: FilledButton.styleFrom(backgroundColor: _isAccessibilityServiceEnabled ? Colors.green : colorScheme.primary),
                       ),
                     ],
                   ),
@@ -338,32 +303,17 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
               Row(
                 children: [
                   Expanded(
-                    child: _StatCard(
-                      icon: Icons.block,
-                      label: 'Blocked Apps',
-                      value: '$_blockedAppsCount',
-                      color: colorScheme.error,
-                    ),
+                    child: _StatCard(icon: Icons.block, label: 'Blocked Apps', value: '$_blockedAppsCount', color: colorScheme.error),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: _StatCard(
-                      icon: Icons.timer,
-                      label: 'Time Limits',
-                      value: '$_appsWithTimeLimits',
-                      color: colorScheme.primary,
-                    ),
+                    child: _StatCard(icon: Icons.timer, label: 'Time Limits', value: '$_appsWithTimeLimits', color: colorScheme.primary),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
               // Quick Actions
-              Text(
-                'Quick Actions',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              Text('Quick Actions', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               GridView.count(
                 crossAxisCount: 2,
@@ -378,11 +328,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                     label: 'Manage Apps',
                     color: colorScheme.primary,
                     onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const AppManagementScreen(),
-                        ),
-                      );
+                      Navigator.of(context).push(MaterialPageRoute(builder: (context) => const AppManagementScreen()));
                     },
                   ),
                   _ActionCard(
@@ -390,11 +336,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                     label: 'Schedule',
                     color: colorScheme.secondary,
                     onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const ScheduleScreen(),
-                        ),
-                      );
+                      Navigator.of(context).push(MaterialPageRoute(builder: (context) => const ScheduleScreen()));
                     },
                   ),
                 ],
@@ -413,12 +355,7 @@ class _StatCard extends StatelessWidget {
   final String value;
   final Color color;
 
-  const _StatCard({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.color,
-  });
+  const _StatCard({required this.icon, required this.label, required this.value, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -432,16 +369,9 @@ class _StatCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               value,
-              style: theme.textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
+              style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold, color: color),
             ),
-            Text(
-              label,
-              style: theme.textTheme.bodySmall,
-              textAlign: TextAlign.center,
-            ),
+            Text(label, style: theme.textTheme.bodySmall, textAlign: TextAlign.center),
           ],
         ),
       ),
@@ -455,12 +385,7 @@ class _ActionCard extends StatelessWidget {
   final Color color;
   final VoidCallback onTap;
 
-  const _ActionCard({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
+  const _ActionCard({required this.icon, required this.label, required this.color, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -476,12 +401,7 @@ class _ActionCard extends StatelessWidget {
               Icon(icon, color: color),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  label,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                child: Text(label, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
               ),
               Icon(Icons.chevron_right, color: theme.colorScheme.onSurfaceVariant),
             ],
@@ -491,4 +411,3 @@ class _ActionCard extends StatelessWidget {
     );
   }
 }
-

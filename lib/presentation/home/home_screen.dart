@@ -6,7 +6,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/constants/social_media_apps.dart';
 import '../../data/local/settings_service.dart';
+import '../../data/system/accessibility_service_helper.dart';
 import '../../data/system/app_usage_service.dart';
+import '../../data/system/kiosk_service.dart';
 import '../../data/system/notification_service.dart';
 import '../../data/system/overlay_service.dart';
 import '../../data/system/prayer_lock_scheduler.dart';
@@ -15,11 +17,11 @@ import '../../domain/models/overlay_data.dart';
 import '../../domain/models/prayer.dart';
 import '../../domain/models/prayer_lock_settings.dart';
 import '../../l10n/app_localizations.dart';
-import '../prayer_settings/prayer_lock_settings_screen.dart';
 import '../parental_control/parent_dashboard_screen.dart';
+import '../parental_control/pin_auth_screen.dart';
+import '../prayer_settings/prayer_lock_settings_screen.dart';
 
-const MethodChannel _serviceChannel =
-    MethodChannel('social_limiter/service');
+const MethodChannel _serviceChannel = MethodChannel('social_limiter/service');
 
 /// Main home screen that shows usage, time limits, and monitoring controls.
 class HomeScreen extends StatefulWidget {
@@ -48,19 +50,19 @@ class _HomeScreenState extends State<HomeScreen> {
   bool isLoading = false;
 
   late SettingsService _settings;
-  final AppUsageService _usageService =
-      const AppUsageService();
-  final OverlayService _overlayService =
-      const OverlayService();
-  final PrayerTimeService _prayerTimeService =
-      const PrayerTimeService();
-  final NotificationService _notificationService =
-      NotificationService();
+  final AppUsageService _usageService = const AppUsageService();
+  final OverlayService _overlayService = const OverlayService();
+  final PrayerTimeService _prayerTimeService = const PrayerTimeService();
+  final NotificationService _notificationService = NotificationService();
   late PrayerLockScheduler _prayerLockScheduler;
 
   PrayerLockSettings? _prayerSettings;
   Timer? _prayerStatusTimer;
-  bool _prayerLockOverlayShown = false;
+
+  final AccessibilityServiceHelper _accessibilityHelper = AccessibilityServiceHelper();
+  bool _isAccessibilityEnabled = false;
+  bool _isDeviceLocked = false;
+  OverlayData? _lastOverlayData;
 
   @override
   void initState() {
@@ -69,9 +71,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _init() async {
-    final SharedPreferences prefs =
-        await SharedPreferences.getInstance();
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
     _settings = SettingsService(prefs);
+
+    // Listen for device lock events from native side
+    const MethodChannel('parental_control/kiosk').setMethodCallHandler((call) async {
+      if (call.method == 'onDeviceLocked') {
+        _loadSettings();
+      }
+    });
 
     _prayerLockScheduler = PrayerLockScheduler(
       prayerTimeService: _prayerTimeService,
@@ -93,7 +101,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
     _startPrayerStatusUpdates();
     _initializePrayerLockScheduler();
-    
+
+    // Check accessibility service status
+    _isAccessibilityEnabled = await _accessibilityHelper.isAccessibilityServiceEnabled();
+
     // Check prayer locks immediately on startup
     await _checkPrayerLocks();
   }
@@ -115,14 +126,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _startPrayerStatusUpdates() {
     _prayerStatusTimer?.cancel();
-    _prayerStatusTimer = Timer.periodic(
-      const Duration(seconds: 30),
-      (_) {
-        if (mounted) {
-          setState(() {});
-        }
-      },
-    );
+    _prayerStatusTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
+      if (mounted) {
+        final bool isEnabled = await _accessibilityHelper.isAccessibilityServiceEnabled();
+        setState(() {
+          _isAccessibilityEnabled = isEnabled;
+        });
+      }
+    });
   }
 
   @override
@@ -138,6 +149,10 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       timeLimitMinutes = _settings.timeLimitMinutes;
       isMonitoring = _settings.isMonitoring;
+      _isDeviceLocked = _settings.isDeviceLocked;
+      if (_isDeviceLocked) {
+        _lastOverlayData = _settings.loadOverlayData();
+      }
     });
   }
 
@@ -150,8 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Shows an in-app dialog before navigating to system settings
   /// for overlay permissions.
   Future<void> _askPermissionBeforeSystemSettings() async {
-    final bool alreadyGranted =
-        await _overlayService.hasOverlayPermission();
+    final bool alreadyGranted = await _overlayService.hasOverlayPermission();
     if (alreadyGranted) {
       return;
     }
@@ -165,14 +179,8 @@ class _HomeScreenState extends State<HomeScreen> {
           title: Text(context.l10n.overlayPermissionTitle),
           content: Text(context.l10n.overlayPermissionBody),
           actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text(context.l10n.notNow),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: Text(context.l10n.continueLabel),
-            ),
+            TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(context.l10n.notNow)),
+            TextButton(onPressed: () => Navigator.of(context).pop(true), child: Text(context.l10n.continueLabel)),
           ],
         );
       },
@@ -197,12 +205,7 @@ class _HomeScreenState extends State<HomeScreen> {
         return AlertDialog(
           title: Text(context.l10n.usageAccessTitle),
           content: Text(context.l10n.usageAccessBody),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(context.l10n.gotIt),
-            ),
-          ],
+          actions: <Widget>[TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(context.l10n.gotIt))],
         );
       },
     );
@@ -223,11 +226,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// Fetches app usage for today and updates state.
-  ///
-  /// Also triggers overlay when any social app or total usage exceeds the limit.
   Future<void> _checkAppUsage() async {
-    final AppUsageSummary usageSummary =
-        await _usageService.loadTodayUsageSummary();
+    final AppUsageSummary usageSummary = await _usageService.loadTodayUsageSummary();
 
     if (!mounted) {
       return;
@@ -238,57 +238,17 @@ class _HomeScreenState extends State<HomeScreen> {
       totalUsageMinutes = usageSummary.totalMinutes;
     });
 
-    bool overlayShown = false;
-    for (final MapEntry<String, int> entry
-        in usageDataMinutes.entries) {
-      // Trigger blocker as soon as usage meets or exceeds the limit.
-      if (entry.value >= timeLimitMinutes) {
-        overlayShown = true;
-        await _showOverlayWarning(
-          packageName: entry.key,
-          minutesUsed: entry.value,
-        );
-        break;
-      }
-    }
-
-    if (!overlayShown &&
-        usageSummary.totalMinutes >= timeLimitMinutes) {
-      await _showOverlayWarning(
-        packageName: totalUsagePackage,
-        minutesUsed: usageSummary.totalMinutes,
-      );
-    }
-  }
-
-  /// Shows an overlay warning for the specified app.
-  Future<void> _showOverlayWarning({
-    required String packageName,
-    required int minutesUsed,
-  }) async {
-    final String appName =
-        socialMediaApps[packageName] ?? packageName;
-
-    final OverlayData data = OverlayData(
-      appName: appName,
-      usedMinutes: minutesUsed,
-      limitMinutes: timeLimitMinutes,
-    );
-
-    await _settings.saveOverlayData(data);
-    await _overlayService.showLimitWarning(data);
+    // DON'T show overlay from Flutter side - let native service handle it
+    // The native MonitorForegroundService has proper foreground app checks
   }
 
   /// Starts periodic monitoring every 30 seconds.
   void _startMonitoring() {
     monitoringTimer?.cancel();
-    monitoringTimer = Timer.periodic(
-      const Duration(seconds: 30),
-      (_) {
-        _checkAppUsage();
-        _checkPrayerLocks();
-      },
-    );
+    monitoringTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      _checkAppUsage();
+      _checkPrayerLocks();
+    });
   }
 
   /// Checks if we're in a prayer lock period and shows overlay if needed.
@@ -297,51 +257,29 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    if (_prayerSettings!.latitude == null ||
-        _prayerSettings!.longitude == null) {
+    if (_prayerSettings!.latitude == null || _prayerSettings!.longitude == null) {
       return;
     }
 
     final DateTime now = DateTime.now();
-    final Map<Prayer, DateTime>? prayerTimes =
-        _prayerTimeService.calculatePrayerTimes(now, _prayerSettings!);
+    final Map<Prayer, DateTime>? prayerTimes = _prayerTimeService.calculatePrayerTimes(now, _prayerSettings!);
 
     if (prayerTimes == null) {
       return;
     }
 
     // Check each prayer to see if we're in its lock period
-    bool inLockPeriod = false;
     for (final MapEntry<Prayer, DateTime> entry in prayerTimes.entries) {
       final Prayer prayer = entry.key;
       final DateTime prayerTime = entry.value;
-      final int lockDuration =
-          _prayerSettings!.getLockDuration(prayer, prayerTime);
-      final DateTime lockEndTime =
-          prayerTime.add(Duration(minutes: lockDuration));
+      final int lockDuration = _prayerSettings!.getLockDuration(prayer, prayerTime);
+      final DateTime lockEndTime = prayerTime.add(Duration(minutes: lockDuration));
 
       // Check if current time is between prayer time and lock end time
       if (now.isAfter(prayerTime) && now.isBefore(lockEndTime)) {
-        inLockPeriod = true;
-        // We're in a lock period - show overlay if not already shown
-        if (!_prayerLockOverlayShown) {
-          final OverlayData data = OverlayData(
-            appName: 'Prayer Time Lock - ${prayer.displayName}',
-            usedMinutes: 0,
-            limitMinutes: lockDuration,
-          );
-
-          await _settings.saveOverlayData(data);
-          await _overlayService.showLimitWarning(data);
-          _prayerLockOverlayShown = true;
-        }
+        // DON'T show overlay from Flutter side - let native service handle it
         break; // Only one prayer can be active at a time
       }
-    }
-    
-    // Reset flag if we're not in any lock period
-    if (!inLockPeriod) {
-      _prayerLockOverlayShown = false;
     }
   }
 
@@ -371,8 +309,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Adjusts the time limit in 5-minute increments.
   Future<void> _adjustTimeLimit(int delta) async {
-    final int newLimit = (timeLimitMinutes + delta)
-        .clamp(5, 24 * 60);
+    final int newLimit = (timeLimitMinutes + delta).clamp(5, 24 * 60);
     if (newLimit == timeLimitMinutes) {
       return;
     }
@@ -386,9 +323,7 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Starts the native Android foreground service for real background checks.
   Future<void> _startBackgroundMonitoring() async {
     try {
-      await _serviceChannel.invokeMethod(
-        'startMonitoringService',
-      );
+      await _serviceChannel.invokeMethod('startMonitoringService');
     } catch (_) {
       // On non-Android platforms this will fail; we can safely ignore.
     }
@@ -397,9 +332,7 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Stops the native Android foreground service.
   Future<void> _stopBackgroundMonitoring() async {
     try {
-      await _serviceChannel.invokeMethod(
-        'stopMonitoringService',
-      );
+      await _serviceChannel.invokeMethod('stopMonitoringService');
     } catch (_) {
       // Ignore errors on unsupported platforms.
     }
@@ -407,54 +340,122 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final ColorScheme colorScheme =
-        Theme.of(context).colorScheme;
+    final colorScheme = Theme.of(context).colorScheme;
+    return Stack(
+      children: [
+        Scaffold(
+          appBar: _buildAppBar(),
+          floatingActionButton: FloatingActionButton(onPressed: _refreshUsage, child: const Icon(Icons.refresh)),
+          body: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  _buildPrayerStatusCard(),
+                  const SizedBox(height: 16),
+                  _buildAccessibilityStatusCard(colorScheme),
+                  const SizedBox(height: 16),
+                  _buildTimeLimitCard(),
+                  const SizedBox(height: 16),
+                  _buildMonitorToggle(),
+                  const SizedBox(height: 16),
+                  Expanded(child: isLoading ? const Center(child: CircularProgressIndicator()) : _buildUsageList(colorScheme)),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (_isDeviceLocked) _buildLockOverlay(),
+      ],
+    );
+  }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(context.l10n.appTitle),
-        centerTitle: true,
-        actions: <Widget>[
-          IconButton(
-            icon: const Icon(Icons.family_restroom),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const ParentDashboardScreen(),
-                ),
-              );
-            },
-            tooltip: 'Parental Controls',
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      title: Text(context.l10n.appTitle),
+      centerTitle: true,
+      actions: <Widget>[
+        IconButton(
+          icon: const Icon(Icons.family_restroom),
+          onPressed: () {
+            Navigator.of(context).push(MaterialPageRoute(builder: (context) => const ParentDashboardScreen()));
+          },
+          tooltip: 'Parental Controls',
+        ),
+        IconButton(icon: const Icon(Icons.settings), onPressed: _navigateToPrayerSettings, tooltip: 'Prayer Lock Settings'),
+      ],
+    );
+  }
+
+  Widget _buildLockOverlay() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+    final data = _lastOverlayData ?? _settings.loadOverlayData();
+
+    return Container(
+      color: Colors.black.withAlpha(230),
+      width: double.infinity,
+      height: double.infinity,
+      child: Center(
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 32),
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: colorScheme.errorContainer,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: colorScheme.error, width: 2),
+            boxShadow: [BoxShadow(color: Colors.black.withAlpha(100), blurRadius: 20, spreadRadius: 5)],
           ),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: _navigateToPrayerSettings,
-            tooltip: 'Prayer Lock Settings',
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _refreshUsage,
-        child: const Icon(Icons.refresh),
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              _buildPrayerStatusCard(colorScheme),
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.lock, size: 64, color: colorScheme.error),
+              const SizedBox(height: 24),
+              Text(
+                'Device Locked',
+                style: textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onErrorContainer),
+                textAlign: TextAlign.center,
+              ),
               const SizedBox(height: 16),
-              _buildTimeLimitCard(colorScheme),
-              const SizedBox(height: 16),
-              _buildMonitorToggle(colorScheme),
-              const SizedBox(height: 16),
-              Expanded(
-                child: isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(),
-                      )
-                    : _buildUsageList(colorScheme),
+              Text(
+                'Time limit reached for:\n${data.appName}',
+                style: textTheme.titleMedium?.copyWith(color: colorScheme.onErrorContainer),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Used: ${data.usedMinutes}m / Limit: ${data.limitMinutes}m',
+                style: textTheme.bodyLarge?.copyWith(color: colorScheme.onErrorContainer.withAlpha(200)),
+                textAlign: TextAlign.center,
+              ),
+              Wrap(
+                spacing: 16,
+                runSpacing: 16,
+                alignment: WrapAlignment.center,
+                children: [
+                  FilledButton.icon(
+                    onPressed: _showUnlockPinAuth,
+                    icon: const Icon(Icons.security),
+                    label: const Text('Parent Unlock'),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      backgroundColor: colorScheme.error,
+                      foregroundColor: colorScheme.onError,
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _showAdjustLimitPinAuth,
+                    icon: const Icon(Icons.edit),
+                    label: const Text('Adjust Limit'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      foregroundColor: colorScheme.onErrorContainer,
+                      side: BorderSide(color: colorScheme.onErrorContainer),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -463,64 +464,113 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildTimeLimitCard(ColorScheme colorScheme) {
+  Future<void> _showUnlockPinAuth() async {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => PinAuthScreen(
+          onAuthenticated: () async {
+            Navigator.of(context).pop();
+            await _unlockDevice();
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showAdjustLimitPinAuth() async {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => PinAuthScreen(
+          onAuthenticated: () async {
+            Navigator.of(context).pop();
+            await _showAdjustLimitDialog();
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showAdjustLimitDialog() async {
+    final result = await showDialog<int>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Adjust Daily Limit'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Add more minutes to today\'s limit?'),
+            const SizedBox(height: 16),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [_buildAdjustOption(5), _buildAdjustOption(15), _buildAdjustOption(30)]),
+          ],
+        ),
+        actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel'))],
+      ),
+    );
+
+    if (result != null) {
+      await _adjustTimeLimit(result);
+      await _unlockDevice();
+    }
+  }
+
+  Widget _buildAdjustOption(int minutes) {
+    return Column(
+      children: [
+        InkWell(
+          onTap: () => Navigator.of(context).pop(minutes),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: Theme.of(context).colorScheme.primaryContainer, borderRadius: BorderRadius.circular(12)),
+            child: Text('+$minutes', style: const TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ),
+        const SizedBox(height: 4),
+        const Text('min', style: TextStyle(fontSize: 10)),
+      ],
+    );
+  }
+
+  Future<void> _unlockDevice() async {
+    final kioskService = KioskService();
+    await kioskService.stopKioskMode();
+    await _settings.setIsDeviceLocked(false);
+    setState(() {
+      _isDeviceLocked = false;
+    });
+  }
+
+  Widget _buildTimeLimitCard() {
     return Card(
       elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 20,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         child: Row(
           children: <Widget>[
             Expanded(
               child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text(
-                    context.l10n.dailyTimeLimit,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium,
-                  ),
+                  Text(context.l10n.dailyTimeLimit, style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 8),
                   Text(
                     '$timeLimitMinutes '
                     '${context.l10n.minutesSuffix}',
-                    style: Theme.of(context)
-                        .textTheme
-                        .headlineMedium
-                        ?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'Used today: $totalUsageMinutes '
                     '${context.l10n.minutesSuffix}',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall,
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
               ),
             ),
             Row(
               children: <Widget>[
-                IconButton(
-                  icon: const Icon(Icons.remove),
-                  onPressed: () =>
-                      _adjustTimeLimit(-5),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.add),
-                  onPressed: () =>
-                      _adjustTimeLimit(5),
-                ),
+                IconButton(icon: const Icon(Icons.remove), onPressed: () => _adjustTimeLimit(-5)),
+                IconButton(icon: const Icon(Icons.add), onPressed: () => _adjustTimeLimit(5)),
               ],
             ),
           ],
@@ -529,16 +579,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildMonitorToggle(ColorScheme colorScheme) {
+  Widget _buildMonitorToggle() {
     final bool active = isMonitoring;
-    final Color backgroundColor = active
-        ? Colors.red
-        : Colors.green;
-    final IconData icon =
-        active ? Icons.pause : Icons.play_arrow;
-    final String label = active
-        ? context.l10n.stopMonitoring
-        : context.l10n.startMonitoring;
+    final Color backgroundColor = active ? Colors.red : Colors.green;
+    final IconData icon = active ? Icons.pause : Icons.play_arrow;
+    final String label = active ? context.l10n.stopMonitoring : context.l10n.startMonitoring;
 
     return SizedBox(
       height: 52,
@@ -546,9 +591,7 @@ class _HomeScreenState extends State<HomeScreen> {
         style: FilledButton.styleFrom(
           backgroundColor: backgroundColor,
           foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         onPressed: _toggleMonitoring,
         icon: Icon(icon),
@@ -562,129 +605,68 @@ class _HomeScreenState extends State<HomeScreen> {
       return Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          Icon(
-            Icons.analytics_outlined,
-            size: 64,
-            color: colorScheme.primary,
-          ),
+          Icon(Icons.analytics_outlined, size: 64, color: colorScheme.primary),
           const SizedBox(height: 16),
-          Text(
-            context.l10n.noUsageTitle,
-            style:
-                Theme.of(context).textTheme.titleMedium,
-          ),
+          Text(context.l10n.noUsageTitle, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
-          Text(
-            context.l10n.noUsageSubtitle,
-            textAlign: TextAlign.center,
-            style: Theme.of(context)
-                .textTheme
-                .bodyMedium,
-          ),
+          Text(context.l10n.noUsageSubtitle, textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyMedium),
         ],
       );
     }
 
-    final List<MapEntry<String, int>> entries =
-        usageDataMinutes.entries.toList()
-          ..sort(
-            (MapEntry<String, int> a,
-                    MapEntry<String, int> b) =>
-                b.value.compareTo(a.value),
-          );
+    final List<MapEntry<String, int>> entries = usageDataMinutes.entries.toList()
+      ..sort((MapEntry<String, int> a, MapEntry<String, int> b) => b.value.compareTo(a.value));
 
     return ListView.separated(
       itemCount: entries.length,
-      separatorBuilder: (_, _) =>
-          const SizedBox(height: 8),
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
       itemBuilder: (BuildContext context, int index) {
-        final MapEntry<String, int> entry =
-            entries[index];
+        final MapEntry<String, int> entry = entries[index];
         final String packageName = entry.key;
         final int usedMinutes = entry.value;
-        final String appName =
-            socialMediaApps[packageName] ??
-                packageName;
+        final String appName = socialMediaApps[packageName] ?? packageName;
 
-        final double progress =
-            (usedMinutes / timeLimitMinutes)
-                .clamp(0, 2)
-                .toDouble();
-        final bool overLimit =
-            usedMinutes > timeLimitMinutes;
+        final double progress = (usedMinutes / timeLimitMinutes).clamp(0, 2).toDouble();
+        final bool overLimit = usedMinutes > timeLimitMinutes;
 
-        final Color progressColor =
-            overLimit ? Colors.red : Colors.blue;
+        final Color progressColor = overLimit ? Colors.red : Colors.blue;
 
         return Card(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 10,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Row(
               children: <Widget>[
                 CircleAvatar(
-                  backgroundColor:
-                      colorScheme.primaryContainer,
-                  child: Text(
-                    appName.isNotEmpty
-                        ? appName[0]
-                        : '?',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  backgroundColor: colorScheme.primaryContainer,
+                  child: Text(appName.isNotEmpty ? appName[0] : '?', style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Row(
                         children: <Widget>[
-                          Expanded(
-                            child: Text(
-                              appName,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium,
-                            ),
-                          ),
-                          if (overLimit)
-                            Icon(
-                              Icons.warning_amber,
-                              color: Colors.red,
-                            ),
+                          Expanded(child: Text(appName, style: Theme.of(context).textTheme.titleMedium)),
+                          if (overLimit) Icon(Icons.warning_amber, color: Colors.red),
                         ],
                       ),
                       const SizedBox(height: 6),
                       ClipRRect(
-                        borderRadius:
-                            BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(8),
                         child: LinearProgressIndicator(
-                          value: progress > 1
-                              ? 1
-                              : progress,
+                          value: progress > 1 ? 1 : progress,
                           minHeight: 8,
-                          backgroundColor:
-                              colorScheme.surfaceContainerHighest,
-                          valueColor:
-                              AlwaysStoppedAnimation<
-                                  Color>(progressColor),
+                          backgroundColor: colorScheme.surfaceContainerHighest,
+                          valueColor: AlwaysStoppedAnimation<Color>(progressColor),
                         ),
                       ),
                       const SizedBox(height: 6),
                       Text(
                         '$usedMinutes min / '
                         '$timeLimitMinutes min',
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodySmall,
+                        style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],
                   ),
@@ -698,13 +680,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _navigateToPrayerSettings() async {
-    final PrayerLockSettings? result =
-        await Navigator.of(context).push<PrayerLockSettings>(
-      MaterialPageRoute<PrayerLockSettings>(
-        builder: (BuildContext context) =>
-            const PrayerLockSettingsScreen(),
-      ),
-    );
+    final PrayerLockSettings? result = await Navigator.of(
+      context,
+    ).push<PrayerLockSettings>(MaterialPageRoute<PrayerLockSettings>(builder: (BuildContext context) => const PrayerLockSettingsScreen()));
 
     if (result != null) {
       await _settings.savePrayerLockSettings(result);
@@ -712,13 +690,12 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Widget _buildPrayerStatusCard(ColorScheme colorScheme) {
+  Widget _buildPrayerStatusCard() {
     if (_prayerSettings == null || !_prayerSettings!.enabled) {
       return const SizedBox.shrink();
     }
 
-    final ({Prayer prayer, DateTime time})? nextPrayer =
-        _prayerTimeService.getNextPrayer(_prayerSettings!);
+    final ({Prayer prayer, DateTime time})? nextPrayer = _prayerTimeService.getNextPrayer(_prayerSettings!);
 
     if (nextPrayer == null) {
       return Card(
@@ -729,10 +706,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const Icon(Icons.location_off, color: Colors.grey),
               const SizedBox(width: 12),
               const Expanded(
-                child: Text(
-                  'Location not set for prayer times',
-                  style: TextStyle(color: Colors.grey),
-                ),
+                child: Text('Location not set for prayer times', style: TextStyle(color: Colors.grey)),
               ),
             ],
           ),
@@ -745,18 +719,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Card(
       elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
           children: <Widget>[
-            const Icon(
-              Icons.access_time,
-              size: 32,
-              color: Colors.blue,
-            ),
+            const Icon(Icons.access_time, size: 32, color: Colors.blue),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -764,25 +732,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: <Widget>[
                   Text(
                     'Next Prayer: ${nextPrayer.prayer.displayName}',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    timeString,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  Text(
-                    'At ${_formatTime(nextPrayer.time)}',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: Colors.grey),
-                  ),
+                  Text(timeString, style: Theme.of(context).textTheme.bodyMedium),
+                  Text('At ${_formatTime(nextPrayer.time)}', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey)),
                 ],
               ),
             ),
@@ -813,26 +767,82 @@ class _HomeScreenState extends State<HomeScreen> {
     final int minute = localTime.minute;
     final String period = hour >= 12 ? 'PM' : 'AM';
     final int displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
-    
+
     // Get timezone abbreviation if available
     final String timeZoneName = _getTimeZoneAbbreviation(localTime);
-    
+
     return '$displayHour:${minute.toString().padLeft(2, '0')} $period $timeZoneName';
   }
-  
+
   String _getTimeZoneAbbreviation(DateTime dateTime) {
     // Get timezone offset
     final Duration offset = dateTime.timeZoneOffset;
     final int hours = offset.inHours;
     final int minutes = (offset.inMinutes % 60).abs();
-    
+
     // Format as +/-HH:MM
     final String sign = hours >= 0 ? '+' : '-';
     final String hoursStr = hours.abs().toString().padLeft(2, '0');
     final String minutesStr = minutes.toString().padLeft(2, '0');
-    
+
     return 'UTC$sign$hoursStr:$minutesStr';
   }
+
+  Widget _buildAccessibilityStatusCard(ColorScheme colorScheme) {
+    final bool isEnabled = _isAccessibilityEnabled;
+    final Color statusColor = isEnabled ? Colors.green : Colors.orange;
+    final IconData statusIcon = isEnabled ? Icons.check_circle : Icons.warning_amber;
+    final String statusText = isEnabled ? 'App Blocking Enabled' : 'App Blocking Disabled';
+    final String subtitleText = isEnabled ? 'Apps can be blocked when limits are exceeded' : 'Tap to enable Accessibility Service for app blocking';
+
+    return Card(
+      elevation: isEnabled ? 2 : 4,
+      color: isEnabled ? null : colorScheme.errorContainer.withValues(alpha: 0.3),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: isEnabled ? BorderSide.none : BorderSide(color: colorScheme.error.withValues(alpha: 0.5), width: 2),
+      ),
+      child: InkWell(
+        onTap: isEnabled
+            ? null
+            : () async {
+                await _accessibilityHelper.openAccessibilitySettings();
+                // Recheck status after a delay
+                await Future.delayed(const Duration(seconds: 2));
+                if (mounted) {
+                  final bool newStatus = await _accessibilityHelper.isAccessibilityServiceEnabled();
+                  setState(() {
+                    _isAccessibilityEnabled = newStatus;
+                  });
+                }
+              },
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: <Widget>[
+              Icon(statusIcon, size: 32, color: statusColor),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      statusText,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: isEnabled ? null : colorScheme.error),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(subtitleText, style: Theme.of(context).textTheme.bodySmall),
+                  ],
+                ),
+              ),
+              if (!isEnabled) Icon(Icons.arrow_forward_ios, size: 16, color: colorScheme.error),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
-
-

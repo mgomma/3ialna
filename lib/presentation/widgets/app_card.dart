@@ -44,7 +44,7 @@ class AppCard extends StatelessWidget {
                   height: 48,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(8),
-                    color: colorScheme.surfaceVariant,
+                    color: colorScheme.surfaceContainerHighest,
                   ),
                       child: appInfo.iconBase64 != null && appInfo.iconBase64!.isNotEmpty
                       ? ClipRRect(
@@ -128,7 +128,7 @@ class AppCard extends StatelessWidget {
                   value: timeLimitMinutes != null && timeLimitMinutes! > 0
                       ? (currentUsageMinutes! / timeLimitMinutes!).clamp(0.0, 1.0)
                       : null,
-                  backgroundColor: colorScheme.surfaceVariant,
+                  backgroundColor: colorScheme.surfaceContainerHighest,
                   valueColor: AlwaysStoppedAnimation<Color>(
                     currentUsageMinutes != null &&
                             timeLimitMinutes != null &&
