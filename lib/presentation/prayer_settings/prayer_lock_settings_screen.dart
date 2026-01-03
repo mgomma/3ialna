@@ -5,18 +5,17 @@ import '../../data/local/settings_service.dart';
 import '../../data/system/location_service.dart';
 import '../../domain/models/prayer.dart';
 import '../../domain/models/prayer_lock_settings.dart';
+import '../widgets/disclosure_dialog.dart';
 
 /// Screen for configuring prayer time lock settings.
 class PrayerLockSettingsScreen extends StatefulWidget {
   const PrayerLockSettingsScreen({super.key});
 
   @override
-  State<PrayerLockSettingsScreen> createState() =>
-      _PrayerLockSettingsScreenState();
+  State<PrayerLockSettingsScreen> createState() => _PrayerLockSettingsScreenState();
 }
 
-class _PrayerLockSettingsScreenState
-    extends State<PrayerLockSettingsScreen> {
+class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
   late SettingsService _settingsService;
   final LocationService _locationService = const LocationService();
 
@@ -31,8 +30,7 @@ class _PrayerLockSettingsScreenState
   }
 
   Future<void> _init() async {
-    final SharedPreferences prefs =
-        await SharedPreferences.getInstance();
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
     _settingsService = SettingsService(prefs);
 
     setState(() {
@@ -40,8 +38,7 @@ class _PrayerLockSettingsScreenState
     });
 
     // Load location if not set
-    if (_settings.latitude == null ||
-        _settings.longitude == null) {
+    if (_settings.latitude == null || _settings.longitude == null) {
       await _refreshLocation();
     }
   }
@@ -52,20 +49,42 @@ class _PrayerLockSettingsScreenState
       _locationError = null;
     });
 
-    final ({double latitude, double longitude})? coords =
-        await _locationService.getCoordinates();
+    // Check permission first
+    final bool hasPermission = await _locationService.hasLocationPermission();
+
+    if (!hasPermission) {
+      if (!mounted) return;
+
+      // Show prominent disclosure
+      final bool agreed = await DisclosureDialog.show(
+        context: context,
+        title: 'Location Access Required',
+        message:
+            'This app collects location data to calculate accurate prayer times for your specific area, enabling the automated prayer lock feature.\n\nLocation data is calculated locally and is not shared with third parties.',
+        icon: Icons.location_on,
+        onAgree: () {}, // The actual request happens in getCoordinates
+      );
+
+      if (!agreed) {
+        setState(() {
+          _locationError = 'Location permission is required for prayer times.';
+          _isLoading = false;
+        });
+        return;
+      }
+    }
+
+    final ({double latitude, double longitude})? coords = await _locationService.getCoordinates();
 
     if (coords != null) {
       setState(() {
-        _settings = _settings.copyWith(
-          latitude: coords.latitude,
-          longitude: coords.longitude,
-        );
+        _settings = _settings.copyWith(latitude: coords.latitude, longitude: coords.longitude);
         _isLoading = false;
       });
     } else {
       setState(() {
-        _locationError = 'Failed to get location. '
+        _locationError =
+            'Failed to get location. '
             'Please check location permissions.';
         _isLoading = false;
       });
@@ -84,12 +103,7 @@ class _PrayerLockSettingsScreenState
     return Scaffold(
       appBar: AppBar(
         title: const Text('Prayer Lock Settings'),
-        actions: <Widget>[
-          TextButton(
-            onPressed: _saveSettings,
-            child: const Text('Save'),
-          ),
-        ],
+        actions: <Widget>[TextButton(onPressed: _saveSettings, child: const Text('Save'))],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -117,9 +131,7 @@ class _PrayerLockSettingsScreenState
     return Card(
       child: SwitchListTile(
         title: const Text('Enable Prayer Locks'),
-        subtitle: const Text(
-          'Lock your device during prayer times',
-        ),
+        subtitle: const Text('Lock your device during prayer times'),
         value: _settings.enabled,
         onChanged: (bool value) {
           setState(() {
@@ -137,33 +149,20 @@ class _PrayerLockSettingsScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const Text(
-              'Location',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            const Text('Location', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            if (_settings.latitude != null &&
-                _settings.longitude != null)
+            if (_settings.latitude != null && _settings.longitude != null)
               Text(
                 'Lat: ${_settings.latitude!.toStringAsFixed(4)}, '
                 'Lng: ${_settings.longitude!.toStringAsFixed(4)}',
                 style: Theme.of(context).textTheme.bodyMedium,
               )
             else
-              const Text(
-                'Location not set',
-                style: TextStyle(color: Colors.grey),
-              ),
+              const Text('Location not set', style: TextStyle(color: Colors.grey)),
             if (_locationError != null)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  _locationError!,
-                  style: const TextStyle(color: Colors.red),
-                ),
+                child: Text(_locationError!, style: const TextStyle(color: Colors.red)),
               ),
             const SizedBox(height: 12),
             SizedBox(
@@ -171,13 +170,7 @@ class _PrayerLockSettingsScreenState
               child: ElevatedButton.icon(
                 onPressed: _isLoading ? null : _refreshLocation,
                 icon: _isLoading
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                        ),
-                      )
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                     : const Icon(Icons.refresh),
                 label: const Text('Refresh Location'),
               ),
@@ -190,26 +183,14 @@ class _PrayerLockSettingsScreenState
 
   Widget _buildCalculationMethodSection() {
     final List<({String name, String methodName})> methods = [
-      (
-        name: 'Muslim World League',
-        methodName: 'muslim_world_league',
-      ),
-      (
-        name: 'Egyptian General Authority',
-        methodName: 'egyptian',
-      ),
-      (
-        name: 'University of Karachi',
-        methodName: 'karachi',
-      ),
+      (name: 'Muslim World League', methodName: 'muslim_world_league'),
+      (name: 'Egyptian General Authority', methodName: 'egyptian'),
+      (name: 'University of Karachi', methodName: 'karachi'),
       (
         name: 'Umm al-Qura, Makkah',
         methodName: 'muslim_world_league', // Using MWL as fallback
       ),
-      (
-        name: 'Islamic Society of North America',
-        methodName: 'isna',
-      ),
+      (name: 'Islamic Society of North America', methodName: 'isna'),
     ];
 
     // Find the currently selected method
@@ -227,37 +208,20 @@ class _PrayerLockSettingsScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const Text(
-              'Calculation Method',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            const Text('Calculation Method', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: selectedName,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: 'Method',
-              ),
+              decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'Method'),
               items: methods
-                  .map(
-                    (({String name, String methodName}) method) =>
-                        DropdownMenuItem<String>(
-                      value: method.name,
-                      child: Text(method.name),
-                    ),
-                  )
+                  .map((({String name, String methodName}) method) => DropdownMenuItem<String>(value: method.name, child: Text(method.name)))
                   .toList(),
               onChanged: (String? value) {
                 if (value != null) {
                   for (final method in methods) {
                     if (method.name == value) {
                       setState(() {
-                        _settings = _settings.copyWith(
-                          calculationMethodName: method.methodName,
-                        );
+                        _settings = _settings.copyWith(calculationMethodName: method.methodName);
                       });
                       break;
                     }
@@ -271,7 +235,6 @@ class _PrayerLockSettingsScreenState
     );
   }
 
-
   Widget _buildLockDurationsSection() {
     return Card(
       child: Padding(
@@ -279,52 +242,28 @@ class _PrayerLockSettingsScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const Text(
-              'Lock Durations (minutes)',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            const Text('Lock Durations (minutes)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             ...Prayer.values.map(
               (Prayer prayer) => Padding(
                 padding: const EdgeInsets.only(bottom: 16),
                 child: Row(
                   children: <Widget>[
-                    Expanded(
-                      child: Text(prayer.displayName),
-                    ),
+                    Expanded(child: Text(prayer.displayName)),
                     SizedBox(
                       width: 100,
                       child: TextField(
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                        ),
-                        controller: TextEditingController(
-                          text: (_settings.lockDurations[prayer] ?? 30)
-                              .toString(),
-                        )..selection = TextSelection.fromPosition(
-                            TextPosition(
-                              offset: (_settings.lockDurations[prayer] ?? 30)
-                                  .toString()
-                                  .length,
-                            ),
-                          ),
+                        decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true),
+                        controller: TextEditingController(text: (_settings.lockDurations[prayer] ?? 30).toString())
+                          ..selection = TextSelection.fromPosition(TextPosition(offset: (_settings.lockDurations[prayer] ?? 30).toString().length)),
                         onChanged: (String value) {
                           final int? duration = int.tryParse(value);
                           if (duration != null && duration > 0) {
                             setState(() {
-                              final Map<Prayer, int> newDurations =
-                                  Map<Prayer, int>.from(
-                                _settings.lockDurations,
-                              );
+                              final Map<Prayer, int> newDurations = Map<Prayer, int>.from(_settings.lockDurations);
                               newDurations[prayer] = duration;
-                              _settings = _settings.copyWith(
-                                lockDurations: newDurations,
-                              );
+                              _settings = _settings.copyWith(lockDurations: newDurations);
                             });
                           }
                         },
@@ -347,41 +286,22 @@ class _PrayerLockSettingsScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const Text(
-              'Friday Dhuhr Duration',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            const Text('Friday Dhuhr Duration', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            const Text(
-              'Special lock duration for Friday Dhuhr prayer',
-              style: TextStyle(color: Colors.grey),
-            ),
+            const Text('Special lock duration for Friday Dhuhr prayer', style: TextStyle(color: Colors.grey)),
             const SizedBox(height: 12),
             SizedBox(
               width: 150,
               child: TextField(
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Minutes',
-                ),
-                controller: TextEditingController(
-                  text: _settings.fridayDhuhrDuration.toString(),
-                )..selection = TextSelection.fromPosition(
-                    TextPosition(
-                      offset: _settings.fridayDhuhrDuration.toString().length,
-                    ),
-                  ),
+                decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'Minutes'),
+                controller: TextEditingController(text: _settings.fridayDhuhrDuration.toString())
+                  ..selection = TextSelection.fromPosition(TextPosition(offset: _settings.fridayDhuhrDuration.toString().length)),
                 onChanged: (String value) {
                   final int? duration = int.tryParse(value);
                   if (duration != null && duration > 0) {
                     setState(() {
-                      _settings = _settings.copyWith(
-                        fridayDhuhrDuration: duration,
-                      );
+                      _settings = _settings.copyWith(fridayDhuhrDuration: duration);
                     });
                   }
                 },
@@ -400,18 +320,9 @@ class _PrayerLockSettingsScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const Text(
-              'Notification Messages',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            const Text('Notification Messages', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            const Text(
-              'Custom messages shown 2 minutes before each prayer',
-              style: TextStyle(color: Colors.grey),
-            ),
+            const Text('Custom messages shown 2 minutes before each prayer', style: TextStyle(color: Colors.grey)),
             const SizedBox(height: 16),
             ...Prayer.values.map(
               (Prayer prayer) => Padding(
@@ -419,37 +330,18 @@ class _PrayerLockSettingsScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
-                      prayer.displayName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                    Text(prayer.displayName, style: const TextStyle(fontWeight: FontWeight.w500)),
                     const SizedBox(height: 8),
                     TextField(
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
-                        hintText: 'Enter notification message',
-                      ),
+                      decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'Enter notification message'),
                       maxLines: 2,
-                      controller: TextEditingController(
-                        text: _settings.notificationMessages[prayer] ?? '',
-                      )..selection = TextSelection.fromPosition(
-                          TextPosition(
-                            offset: (_settings.notificationMessages[prayer] ?? '')
-                                .length,
-                          ),
-                        ),
+                      controller: TextEditingController(text: _settings.notificationMessages[prayer] ?? '')
+                        ..selection = TextSelection.fromPosition(TextPosition(offset: (_settings.notificationMessages[prayer] ?? '').length)),
                       onChanged: (String value) {
                         setState(() {
-                          final Map<Prayer, String> newMessages =
-                              Map<Prayer, String>.from(
-                            _settings.notificationMessages,
-                          );
+                          final Map<Prayer, String> newMessages = Map<Prayer, String>.from(_settings.notificationMessages);
                           newMessages[prayer] = value;
-                          _settings = _settings.copyWith(
-                            notificationMessages: newMessages,
-                          );
+                          _settings = _settings.copyWith(notificationMessages: newMessages);
                         });
                       },
                     ),
@@ -463,4 +355,3 @@ class _PrayerLockSettingsScreenState
     );
   }
 }
-

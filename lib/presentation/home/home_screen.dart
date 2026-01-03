@@ -20,6 +20,7 @@ import '../../l10n/app_localizations.dart';
 import '../parental_control/parent_dashboard_screen.dart';
 import '../parental_control/pin_auth_screen.dart';
 import '../prayer_settings/prayer_lock_settings_screen.dart';
+import '../widgets/disclosure_dialog.dart';
 
 const MethodChannel _serviceChannel = MethodChannel('social_limiter/service');
 
@@ -806,15 +807,25 @@ class _HomeScreenState extends State<HomeScreen> {
         onTap: isEnabled
             ? null
             : () async {
-                await _accessibilityHelper.openAccessibilitySettings();
-                // Recheck status after a delay
-                await Future.delayed(const Duration(seconds: 2));
-                if (mounted) {
-                  final bool newStatus = await _accessibilityHelper.isAccessibilityServiceEnabled();
-                  setState(() {
-                    _isAccessibilityEnabled = newStatus;
-                  });
-                }
+                // Show prominent disclosure first
+                await DisclosureDialog.show(
+                  context: context,
+                  title: 'Accessibility Service Required',
+                  message:
+                      'This app uses Accessibility Services to detect when a restricted app is in the foreground and block it if time limits are exceeded.\n\nThis service is required for the parental control features to work. We do not collect or transmit your personal data.',
+                  icon: Icons.accessibility_new,
+                  onAgree: () async {
+                    await _accessibilityHelper.openAccessibilitySettings();
+                    // Recheck status after a delay
+                    await Future.delayed(const Duration(seconds: 2));
+                    if (mounted) {
+                      final bool newStatus = await _accessibilityHelper.isAccessibilityServiceEnabled();
+                      setState(() {
+                        _isAccessibilityEnabled = newStatus;
+                      });
+                    }
+                  },
+                );
               },
         borderRadius: BorderRadius.circular(16),
         child: Padding(

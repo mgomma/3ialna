@@ -82,7 +82,11 @@
         <service
             android:name=".usage.MonitorForegroundService"
             android:exported="false"
-            android:foregroundServiceType="dataSync" />
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.property.FOREGROUND_SERVICE_TYPE_SPECIAL_USE_DESCRIPTION"
+                android:value="Monitoring app usage for parental controls" />
+        </service>
 
         <!-- AccessibilityService for app blocking -->
         <service

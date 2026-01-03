@@ -145,7 +145,7 @@ class MonitorForegroundService : Service() {
                 FOREGROUND_ID,
                 notification,
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
                 } else {
                     ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
                 }
@@ -303,6 +303,28 @@ class MonitorForegroundService : Service() {
             putExtra("EXTRA_HARD_LOCK", true)
         }
         startActivity(lockIntent)
+
+        // Physical Lock (Screen Off)
+        lockDeviceNow()
+    }
+
+    /**
+     * Physically locks the device (turns screen off) using DevicePolicyManager.
+     * Requires Device Admin permission to be active.
+     */
+    private fun lockDeviceNow() {
+        try {
+            val dpm = getSystemService(Context.DEVICE_POLICY_SERVICE) as android.app.admin.DevicePolicyManager
+            val adminComponent = android.content.ComponentName(this, com.example.mu_super_app.DeviceAdminReceiver::class.java)
+            if (dpm.isAdminActive(adminComponent)) {
+                dpm.lockNow()
+                Log.d(TAG, "Device physically locked via DevicePolicyManager")
+            } else {
+                Log.w(TAG, "Cannot lock device: Admin not active")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error trying to lock device", e)
+        }
     }
 
     private fun saveOverlayDataAndRequestOverlay(
