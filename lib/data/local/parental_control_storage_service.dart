@@ -9,6 +9,10 @@ class ParentalControlStorageService {
   static const String _keySchedule = 'parental_control_schedule';
   static const String _keyParentPin = 'parental_control_parent_pin';
   static const String _keyKioskModeEnabled = 'parental_control_kiosk_mode_enabled';
+  
+  // Keys for timestamp-based blocking (used by native AccessibilityService)
+  static const String _keyBlockedAppsWithTimestamps = 'blocked_apps_with_timestamps';
+  static const String _keyBlockDuration = 'block_duration_minutes';
 
   /// Gets the list of blocked app package names.
   Future<List<String>> getBlockedApps() async {
@@ -36,6 +40,23 @@ class ParentalControlStorageService {
       blocked.add(packageName);
       await setBlockedApps(blocked);
     }
+    
+    // Also add to timestamp-based blocks for native service
+    final prefs = await SharedPreferences.getInstance();
+    final timestampedJson = prefs.getString(_keyBlockedAppsWithTimestamps);
+    Map<String, int> timestamped = {};
+    if (timestampedJson != null && timestampedJson.isNotEmpty) {
+      try {
+        timestamped = Map<String, int>.from(jsonDecode(timestampedJson));
+      } catch (_) {}
+    }
+    // Use a very long duration (10 years) for "permanent" blocks from dashboard
+    timestamped[packageName] = DateTime.now().millisecondsSinceEpoch;
+    await prefs.setString(_keyBlockedAppsWithTimestamps, jsonEncode(timestamped));
+    // Set a long duration if not already set
+    if (prefs.getInt(_keyBlockDuration) == null) {
+      await prefs.setInt(_keyBlockDuration, 5256000); // 10 years in minutes
+    }
   }
 
   /// Removes an app from the blocked list.
@@ -43,6 +64,17 @@ class ParentalControlStorageService {
     final blocked = await getBlockedApps();
     blocked.remove(packageName);
     await setBlockedApps(blocked);
+    
+    // Also remove from timestamp-based blocks
+    final prefs = await SharedPreferences.getInstance();
+    final timestampedJson = prefs.getString(_keyBlockedAppsWithTimestamps);
+    if (timestampedJson != null && timestampedJson.isNotEmpty) {
+      try {
+        final Map<String, dynamic> timestamped = jsonDecode(timestampedJson);
+        timestamped.remove(packageName);
+        await prefs.setString(_keyBlockedAppsWithTimestamps, jsonEncode(timestamped));
+      } catch (_) {}
+    }
   }
 
   /// Checks if an app is blocked.
@@ -83,11 +115,19 @@ class ParentalControlStorageService {
     limits.remove(packageName);
     await setTimeLimits(limits);
   }
-
-  /// Gets the time limit for an app (in minutes), returns null if not set.
+  /// Gets time limit for a specific app (in minutes), returns null if not set.
   Future<int?> getAppTimeLimit(String packageName) async {
     final limits = await getTimeLimits();
     return limits[packageName];
+  }
+
+  /// Gets current usage for a specific app (in minutes) from SharedPreferences.
+  /// This is used for real-time updates in the UI.
+  Future<int> getAppUsage(String packageName) async {
+    final prefs = await SharedPreferences.getInstance();
+    // Native service might store usage under specific keys if we implement that,
+    // for now we rely on the AppUsageService which queries the OS.
+    return 0; 
   }
 
   /// Gets the schedule settings.

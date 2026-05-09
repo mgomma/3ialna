@@ -553,10 +553,52 @@ class MonitorForegroundService : Service() {
      * Checks if schedule restrictions are currently active.
      */
     private fun checkScheduleActive(scheduleJson: String): Boolean {
-        // Simplified check - full implementation would parse JSON properly
-        // For now, assume restrictions are active if schedule is enabled
-        // In production, parse the JSON and check current time against start/end times
-        return true
+        try {
+            // Check if enabled: true
+            if (!scheduleJson.contains("\"enabled\":true")) return false
+
+            val calendar = Calendar.getInstance()
+            val currentDay = (calendar.get(Calendar.DAY_OF_WEEK) + 5) % 7 // Convert to 0=Monday, ..., 6=Sunday
+            
+            // Check activeDays: [1,2,3,4,5]
+            if (!scheduleJson.contains("\"activeDays\":[") || !scheduleJson.contains(currentDay.toString())) {
+                // Check if currentDay is in the activeDays list
+                // Very basic string check for MVP
+                val activeDaysMatch = "\"activeDays\":\\[(.*?)\\]".toRegex().find(scheduleJson)
+                val activeDaysStr = activeDaysMatch?.groupValues?.get(1) ?: ""
+                if (!activeDaysStr.contains(currentDay.toString())) {
+                    return false
+                }
+            }
+
+            val nowHour = calendar.get(Calendar.HOUR_OF_DAY)
+            val nowMinute = calendar.get(Calendar.MINUTE)
+            val nowTotalMinutes = nowHour * 60 + nowMinute
+
+            // Extract startTime and endTime (format "HH:mm")
+            val startTimeMatch = "\"startTime\":\"(\\d{2}):(\\d{2})\"".toRegex().find(scheduleJson)
+            val endTimeMatch = "\"endTime\":\"(\\d{2}):(\\d{2})\"".toRegex().find(scheduleJson)
+
+            if (startTimeMatch != null && endTimeMatch != null) {
+                val startH = startTimeMatch.groupValues[1].toInt()
+                val startM = startTimeMatch.groupValues[2].toInt()
+                val endH = endTimeMatch.groupValues[1].toInt()
+                val endM = endTimeMatch.groupValues[2].toInt()
+
+                val startTotal = startH * 60 + startM
+                val endTotal = endH * 60 + endM
+
+                return if (startTotal <= endTotal) {
+                    nowTotalMinutes in startTotal..endTotal
+                } else {
+                    // Overnights
+                    nowTotalMinutes >= startTotal || nowTotalMinutes <= endTotal
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error parsing schedule JSON", e)
+        }
+        return true // Default to active if parsing fails for safety
     }
 
     /**
@@ -765,20 +807,37 @@ class MonitorForegroundService : Service() {
     }
 
     /**
-     * Checks if an app is a system app.
+     * Checks if an app is a system app that should NEVER be blocked.
      */
     private fun isSystemApp(packageName: String): Boolean {
-        val systemApps = setOf(
+        // Essential system packages that must always be accessible
+        val essentialPackages = setOf(
             "com.android.settings",
             "com.android.dialer",
             "com.android.mms",
             "com.android.launcher",
+            "com.android.launcher3",
             "com.google.android.apps.nexuslauncher",
-            "com.android.launcher3"
+            "com.google.android.packageinstaller",
+            "com.android.packageinstaller",
+            "com.google.android.permissioncontroller",
+            "com.android.permissioncontroller",
+            "com.android.systemui",
+            "com.google.android.gsf",
+            "com.google.android.gms"
         )
-        return systemApps.contains(packageName) || 
-               packageName.startsWith("com.android.") ||
-               packageName.startsWith("com.google.android.apps.")
+        
+        if (essentialPackages.contains(packageName)) return true
+        
+        // Also allow the default launcher
+        try {
+            val intent = Intent(Intent.ACTION_MAIN)
+            intent.addCategory(Intent.CATEGORY_HOME)
+            val resolveInfo = packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
+            if (resolveInfo?.activityInfo?.packageName == packageName) return true
+        } catch (e: Exception) {}
+
+        return false
     }
 
     /**

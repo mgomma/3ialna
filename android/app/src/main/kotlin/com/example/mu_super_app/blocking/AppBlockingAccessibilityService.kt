@@ -169,20 +169,37 @@ class AppBlockingAccessibilityService : AccessibilityService() {
     }
 
     /**
-     * Checks if an app is a system app.
+     * Checks if an app is a system app that should NEVER be blocked.
      */
     private fun isSystemApp(packageName: String): Boolean {
-        val systemApps = setOf(
+        // Essential system packages that must always be accessible
+        val essentialPackages = setOf(
             "com.android.settings",
             "com.android.dialer",
             "com.android.mms",
             "com.android.launcher",
+            "com.android.launcher3",
             "com.google.android.apps.nexuslauncher",
-            "com.android.launcher3"
+            "com.google.android.packageinstaller",
+            "com.android.packageinstaller",
+            "com.google.android.permissioncontroller",
+            "com.android.permissioncontroller",
+            "com.android.systemui",
+            "com.google.android.gsf",
+            "com.google.android.gms"
         )
-        return systemApps.contains(packageName) || 
-               packageName.startsWith("com.android.") ||
-               packageName.startsWith("com.google.android.apps.")
+        
+        if (essentialPackages.contains(packageName)) return true
+        
+        // Also allow the default launcher
+        try {
+            val intent = Intent(Intent.ACTION_MAIN)
+            intent.addCategory(Intent.CATEGORY_HOME)
+            val resolveInfo = packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
+            if (resolveInfo?.activityInfo?.packageName == packageName) return true
+        } catch (e: Exception) {}
+
+        return false
     }
 
     /**
