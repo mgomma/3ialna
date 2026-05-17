@@ -8,14 +8,20 @@ import '../../core/constants/social_media_apps.dart';
 import '../../data/local/settings_service.dart';
 import '../../data/system/accessibility_service_helper.dart';
 import '../../data/system/app_usage_service.dart';
+import '../../data/system/drupal_sync_service.dart';
+import '../../data/system/social_auth_service.dart';
 import '../../data/system/kiosk_service.dart';
 import '../../data/system/notification_service.dart';
 import '../../data/system/overlay_service.dart';
 import '../../data/system/prayer_lock_scheduler.dart';
 import '../../data/system/prayer_time_service.dart';
+import '../../domain/models/daily_usage_report.dart';
+import '../../domain/models/country_word_profile.dart';
+import '../../domain/models/local_user_profile.dart';
 import '../../domain/models/overlay_data.dart';
 import '../../domain/models/prayer.dart';
 import '../../domain/models/prayer_lock_settings.dart';
+import '../../domain/models/social_auth_profile.dart';
 import '../../l10n/app_localizations.dart';
 import '../parental_control/parent_dashboard_screen.dart';
 import '../parental_control/pin_auth_screen.dart';
@@ -64,6 +70,10 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isAccessibilityEnabled = false;
   bool _isDeviceLocked = false;
   OverlayData? _lastOverlayData;
+  CountryWordProfile? _countryWordProfile;
+  final DrupalSyncService _drupalSyncService = DrupalSyncService();
+  final SocialAuthService _socialAuthService = SocialAuthService();
+  LocalUserProfile? _profile;
 
   @override
   void initState() {
@@ -94,6 +104,8 @@ class _HomeScreenState extends State<HomeScreen> {
     await _askPermissionBeforeSystemSettings();
     await _askUsageAccessInfoDialog();
     await _refreshUsage();
+    _loadCountryWordProfile();
+    _profile = await _drupalSyncService.getProfile();
 
     if (isMonitoring) {
       await _startBackgroundMonitoring();
@@ -102,6 +114,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     _startPrayerStatusUpdates();
     _initializePrayerLockScheduler();
+    await _ensureCountryProfileSelected();
 
     // Check accessibility service status
     _isAccessibilityEnabled = await _accessibilityHelper.isAccessibilityServiceEnabled();
@@ -155,6 +168,352 @@ class _HomeScreenState extends State<HomeScreen> {
         _lastOverlayData = _settings.loadOverlayData();
       }
     });
+  }
+
+  void _loadCountryWordProfile() {
+    setState(() {
+      _countryWordProfile = _settings.countryWordProfile;
+    });
+  }
+
+  Future<void> _showRegisterDialog() async {
+    final TextEditingController emailController = TextEditingController(text: _profile?.email ?? '');
+    final TextEditingController passwordController = TextEditingController();
+    final TextEditingController firstNameController = TextEditingController(text: _profile?.firstName ?? '');
+    final TextEditingController lastNameController = TextEditingController(text: _profile?.lastName ?? '');
+    final TextEditingController phoneController = TextEditingController(text: _profile?.phone ?? '');
+    String selectedCountry = _profile?.country.isNotEmpty == true ? _profile!.country : 'SA';
+    String selectedLanguage = _profile?.language.isNotEmpty == true ? _profile!.language : 'ar';
+
+    final String? action = await showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setDialogState) {
+            return AlertDialog(
+              title: Text(context.l10n.registerTitle),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    TextField(controller: firstNameController, decoration: InputDecoration(labelText: context.l10n.firstNameLabel)),
+                    TextField(controller: lastNameController, decoration: InputDecoration(labelText: context.l10n.lastNameLabel)),
+                    TextField(controller: emailController, keyboardType: TextInputType.emailAddress, decoration: InputDecoration(labelText: context.l10n.emailLabel)),
+                    TextField(controller: passwordController, obscureText: true, decoration: InputDecoration(labelText: context.l10n.passwordLabel)),
+                    TextField(controller: phoneController, keyboardType: TextInputType.phone, decoration: InputDecoration(labelText: context.l10n.phoneLabel)),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      value: selectedCountry,
+                      decoration: InputDecoration(labelText: context.l10n.countryProfileCountryLabel),
+                      items: const <DropdownMenuItem<String>>[
+                        DropdownMenuItem<String>(value: 'SA', child: Text('Saudi Arabia')),
+                        DropdownMenuItem<String>(value: 'EG', child: Text('Egypt')),
+                        DropdownMenuItem<String>(value: 'AE', child: Text('UAE')),
+                        DropdownMenuItem<String>(value: 'KW', child: Text('Kuwait')),
+                        DropdownMenuItem<String>(value: 'QA', child: Text('Qatar')),
+                        DropdownMenuItem<String>(value: 'BH', child: Text('Bahrain')),
+                        DropdownMenuItem<String>(value: 'IQ', child: Text('Iraq')),
+                        DropdownMenuItem<String>(value: 'LB', child: Text('Lebanon')),
+                        DropdownMenuItem<String>(value: 'JO', child: Text('Jordan')),
+                        DropdownMenuItem<String>(value: 'SY', child: Text('Syria')),
+                        DropdownMenuItem<String>(value: 'SD', child: Text('Sudan')),
+                        DropdownMenuItem<String>(value: 'TN', child: Text('Tunisia')),
+                        DropdownMenuItem<String>(value: 'DZ', child: Text('Algeria')),
+                        DropdownMenuItem<String>(value: 'MA', child: Text('Maroc')),
+                      ],
+                      onChanged: (String? value) {
+                        if (value == null) return;
+                        setDialogState(() {
+                          selectedCountry = value;
+                        });
+                      },
+                    ),
+                    DropdownButtonFormField<String>(
+                      value: selectedLanguage,
+                      decoration: InputDecoration(labelText: context.l10n.languageLabel),
+                      items: const <DropdownMenuItem<String>>[
+                        DropdownMenuItem<String>(value: 'ar', child: Text('Arabic')),
+                        DropdownMenuItem<String>(value: 'en', child: Text('English')),
+                      ],
+                      onChanged: (String? value) {
+                        if (value == null) return;
+                        setDialogState(() {
+                          selectedLanguage = value;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: () => Navigator.of(context).pop('google'),
+                      icon: const Icon(Icons.g_mobiledata),
+                      label: Text(context.l10n.registerWithGoogle),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () => Navigator.of(context).pop('facebook'),
+                      icon: const Icon(Icons.facebook),
+                      label: Text(context.l10n.registerWithFacebook),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () => Navigator.of(context).pop('apple'),
+                      icon: const Icon(Icons.apple),
+                      label: Text(context.l10n.registerWithApple),
+                    ),
+                  ],
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(onPressed: () => Navigator.of(context).pop('cancel'), child: Text(context.l10n.notNow)),
+                FilledButton(onPressed: () => Navigator.of(context).pop('manual'), child: Text(context.l10n.registerButton)),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (action == null || action == 'cancel') {
+      return;
+    }
+
+    if (action == 'google' || action == 'facebook' || action == 'apple') {
+      await _registerWithSocialProvider(
+        action,
+        country: selectedCountry,
+        language: selectedLanguage,
+      );
+      return;
+    }
+
+    final LocalUserProfile draft = LocalUserProfile(
+      email: emailController.text.trim(),
+      firstName: firstNameController.text.trim(),
+      lastName: lastNameController.text.trim(),
+      phone: phoneController.text.trim(),
+      country: selectedCountry,
+      language: selectedLanguage,
+      isRegistered: false,
+    );
+
+    await _drupalSyncService.saveLocalProfile(draft);
+
+    if (draft.email.isEmpty || passwordController.text.trim().isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.profileSavedLocalOnly)));
+      setState(() {
+        _profile = draft;
+      });
+      return;
+    }
+
+    try {
+      final LocalUserProfile registered = await _drupalSyncService.registerAndLinkDevice(
+        profile: draft,
+        password: passwordController.text.trim(),
+      );
+      if (!mounted) return;
+      setState(() {
+        _profile = registered;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.registerSuccess)));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _profile = draft;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.registerFailedLocalMode)));
+    }
+  }
+
+  Future<void> _registerWithSocialProvider(
+    String provider, {
+    required String country,
+    required String language,
+  }) async {
+    SocialAuthProfile? social;
+    try {
+      switch (provider) {
+        case 'google':
+          social = await _socialAuthService.signInWithGoogle();
+          break;
+        case 'facebook':
+          social = await _socialAuthService.signInWithFacebook();
+          break;
+        case 'apple':
+          social = await _socialAuthService.signInWithApple();
+          break;
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.socialSignInFailed)),
+      );
+      return;
+    }
+
+    if (social == null) {
+      return;
+    }
+
+    if (social.email.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.socialMissingEmail)),
+      );
+      return;
+    }
+
+    final LocalUserProfile draft = LocalUserProfile(
+      email: social.email,
+      firstName: social.firstName,
+      lastName: social.lastName,
+      phone: _profile?.phone ?? '',
+      country: country,
+      language: language,
+      authProvider: social.provider,
+      providerUserId: social.providerUserId,
+      isRegistered: false,
+    );
+
+    await _drupalSyncService.saveLocalProfile(draft);
+
+    try {
+      final LocalUserProfile registered = await _drupalSyncService.registerAndLinkDeviceWithSocial(
+        profile: draft,
+        social: social,
+      );
+      if (!mounted) return;
+      setState(() {
+        _profile = registered;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.registerSuccess)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _profile = draft;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.registerFailedLocalMode)),
+      );
+    }
+  }
+
+  Future<void> _submitDailyReport() async {
+    await _refreshUsage();
+
+    final String date = DateTime.now().toIso8601String().split('T').first;
+    final DailyUsageReport report = DailyUsageReport(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      date: date,
+      totalUsageMinutes: totalUsageMinutes,
+      appUsage: usageDataMinutes,
+      categoryUsage: <String, int>{
+        'social_media': usageDataMinutes.values.fold<int>(0, (int acc, int v) => acc + v),
+      },
+      isSynced: false,
+    );
+
+    await _drupalSyncService.submitReport(report);
+    await _drupalSyncService.syncPendingReports();
+    _profile = await _drupalSyncService.getProfile();
+
+    if (!mounted) return;
+    final bool isRegistered = _profile?.isRegistered ?? false;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(isRegistered ? context.l10n.reportSubmittedOrQueued : context.l10n.reportSavedLocally),
+      ),
+    );
+  }
+
+  Future<void> _ensureCountryProfileSelected() async {
+    if (_settings.selectedCountry != null) {
+      return;
+    }
+    await _showCountryProfileDialog(isMandatory: true);
+  }
+
+  Future<void> _showCountryProfileDialog({bool isMandatory = false}) async {
+    String selectedCountry = _settings.selectedCountry ?? CountryWordProfile.supportedCountries.first;
+
+    final String? result = await showDialog<String>(
+      context: context,
+      barrierDismissible: !isMandatory,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setStateDialog) {
+            return AlertDialog(
+              title: Text(context.l10n.countryProfileTitle),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(context.l10n.countryProfileHint),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: selectedCountry,
+                    decoration: InputDecoration(
+                      labelText: context.l10n.countryProfileCountryLabel,
+                      border: const OutlineInputBorder(),
+                    ),
+                    items: CountryWordProfile.supportedCountries
+                        .map(
+                          (String country) => DropdownMenuItem<String>(
+                            value: country,
+                            child: Text(country),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (String? value) {
+                      if (value == null) {
+                        return;
+                      }
+                      setStateDialog(() {
+                        selectedCountry = value;
+                      });
+                    },
+                  ),
+                ],
+              ),
+              actions: <Widget>[
+                if (!isMandatory)
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: Text(context.l10n.notNow),
+                  ),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(selectedCountry),
+                  child: Text(context.l10n.save),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (result == null) {
+      return;
+    }
+
+    await _settings.setSelectedCountry(result);
+    _loadCountryWordProfile();
+
+    if (!mounted || _countryWordProfile == null) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          context.l10n.countryProfileSaved(
+            country: _countryWordProfile!.country,
+            word: _countryWordProfile!.welcomeWord,
+          ),
+        ),
+      ),
+    );
   }
 
   /// Saves time limit and monitoring state to settings.
@@ -353,6 +712,10 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
+                  if (_countryWordProfile != null) ...<Widget>[
+                    _buildCountryWordCard(),
+                    const SizedBox(height: 16),
+                  ],
                   _buildPrayerStatusCard(),
                   const SizedBox(height: 16),
                   _buildAccessibilityStatusCard(colorScheme),
@@ -384,8 +747,55 @@ class _HomeScreenState extends State<HomeScreen> {
           },
           tooltip: 'Parental Controls',
         ),
+        IconButton(
+          icon: const Icon(Icons.app_registration),
+          onPressed: _showRegisterDialog,
+          tooltip: context.l10n.registerButton,
+        ),
+        IconButton(
+          icon: const Icon(Icons.cloud_upload),
+          onPressed: _submitDailyReport,
+          tooltip: context.l10n.submitReportButton,
+        ),
+        IconButton(
+          icon: const Icon(Icons.public),
+          onPressed: () => _showCountryProfileDialog(),
+          tooltip: context.l10n.countryProfileTitle,
+        ),
         IconButton(icon: const Icon(Icons.settings), onPressed: _navigateToPrayerSettings, tooltip: 'Prayer Lock Settings'),
       ],
+    );
+  }
+
+  Widget _buildCountryWordCard() {
+    final CountryWordProfile profile = _countryWordProfile!;
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              context.l10n.countryProfileCardTitle,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: <Widget>[
+                Chip(label: Text('${profile.country}')),
+                Chip(label: Text(profile.welcomeWord)),
+                Chip(label: Text(profile.childWord)),
+                Chip(label: Text(profile.praiseWord)),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -626,8 +1036,9 @@ class _HomeScreenState extends State<HomeScreen> {
         final String packageName = entry.key;
         final int usedMinutes = entry.value;
         final String appName = socialMediaApps[packageName] ?? packageName;
+        final int safeTimeLimit = timeLimitMinutes <= 0 ? 1 : timeLimitMinutes;
 
-        final double progress = (usedMinutes / timeLimitMinutes).clamp(0, 2).toDouble();
+        final double progress = (usedMinutes / safeTimeLimit).clamp(0, 2).toDouble();
         final bool overLimit = usedMinutes > timeLimitMinutes;
 
         final Color progressColor = overLimit ? Colors.red : Colors.blue;

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../domain/models/overlay_data.dart';
+import '../../domain/models/country_word_profile.dart';
 import '../../domain/models/prayer.dart';
 import '../../domain/models/prayer_lock_settings.dart';
 
@@ -19,6 +20,7 @@ const String _prefsKeyPrayerLockActiveEnd = 'prayer_lock_active_end';
 const String _prefsKeyPrayerLockActiveName = 'prayer_lock_active_name';
 const String _prefsKeyIsStrictMode = 'is_strict_mode';
 const String _prefsKeyIsDeviceLocked = 'is_device_locked';
+const String _prefsKeySelectedCountry = 'selected_country_profile';
 
 /// Thin wrapper around [SharedPreferences] to keep persistence logic in one
 /// place and out of widgets.
@@ -36,6 +38,16 @@ class SettingsService {
   bool get isStrictMode => _prefs.getBool(_prefsKeyIsStrictMode) ?? false;
 
   bool get isDeviceLocked => _prefs.getBool(_prefsKeyIsDeviceLocked) ?? false;
+
+  String? get selectedCountry => _prefs.getString(_prefsKeySelectedCountry);
+
+  CountryWordProfile? get countryWordProfile {
+    final String? country = selectedCountry;
+    if (country == null || country.isEmpty) {
+      return null;
+    }
+    return CountryWordProfile.fromCountry(country);
+  }
 
   Future<void> setTimeLimitMinutes(int value) async {
     await _prefs.setInt(_prefsKeyTimeLimit, value);
@@ -55,6 +67,10 @@ class SettingsService {
 
   Future<void> setIsDeviceLocked(bool value) async {
     await _prefs.setBool(_prefsKeyIsDeviceLocked, value);
+  }
+
+  Future<void> setSelectedCountry(String country) async {
+    await _prefs.setString(_prefsKeySelectedCountry, country);
   }
 
   Future<void> saveOverlayData(OverlayData data) async {

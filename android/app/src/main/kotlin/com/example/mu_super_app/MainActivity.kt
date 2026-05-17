@@ -20,6 +20,7 @@ import android.graphics.drawable.BitmapDrawable
 import android.util.Base64
 import android.util.Log
 import java.io.ByteArrayOutputStream
+import org.json.JSONObject
 
 class MainActivity : FlutterActivity() {
 
@@ -305,34 +306,13 @@ class MainActivity : FlutterActivity() {
         // Save to SharedPreferences for AccessibilityService to read
         val prefs = getSharedPreferences(FLUTTER_PREFS, Context.MODE_PRIVATE)
         val blockedAppsJson = prefs.getString("${PFX}blocked_apps_with_timestamps", "{}") ?: "{}"
-        
-        // Parse and update
-        val blockedApps = mutableMapOf<String, Long>()
-        try {
-            if (blockedAppsJson != "{}") {
-                val cleaned = blockedAppsJson.replace("{", "").replace("}", "").replace("\"", "")
-                cleaned.split(",").forEach { entry ->
-                    val parts = entry.split(":")
-                    if (parts.size == 2) {
-                        val pkg = parts[0].trim()
-                        val timestamp = parts[1].trim().toLongOrNull()
-                        if (timestamp != null) {
-                            blockedApps[pkg] = timestamp
-                        }
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error parsing blocked apps", e)
-        }
+        val blockedApps = parseBlockedAppsJson(blockedAppsJson)
         
         // Add new block
         blockedApps[packageName] = System.currentTimeMillis()
         
-        // Save back
-        val newJson = blockedApps.entries.joinToString(",") { "\"${it.key}\":${it.value}" }
         prefs.edit()
-            .putString("${PFX}blocked_apps_with_timestamps", "{$newJson}")
+            .putString("${PFX}blocked_apps_with_timestamps", toBlockedAppsJson(blockedApps))
             .putLong("${PFX}block_duration_minutes", durationMinutes.toLong())
             .apply()
         
@@ -343,6 +323,37 @@ class MainActivity : FlutterActivity() {
         
         // Then go home
         closeAppAndGoHome()
+    }
+
+    private fun parseBlockedAppsJson(json: String): MutableMap<String, Long> {
+        val blockedApps = mutableMapOf<String, Long>()
+        try {
+            val obj = JSONObject(json)
+            val keys = obj.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                val value = obj.opt(key)
+                val timestamp = when (value) {
+                    is Number -> value.toLong()
+                    is String -> value.toLongOrNull()
+                    else -> null
+                }
+                if (timestamp != null) {
+                    blockedApps[key] = timestamp
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error parsing blocked apps JSON", e)
+        }
+        return blockedApps
+    }
+
+    private fun toBlockedAppsJson(blockedApps: Map<String, Long>): String {
+        val obj = JSONObject()
+        blockedApps.forEach { (pkg, timestamp) ->
+            obj.put(pkg, timestamp)
+        }
+        return obj.toString()
     }
 
     private fun forceCloseApp(packageName: String) {

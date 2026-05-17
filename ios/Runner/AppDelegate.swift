@@ -7,8 +7,11 @@ import UIKit
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    
-    let controller : FlutterViewController = window?.rootViewController as! FlutterViewController
+    guard let controller = window?.rootViewController as? FlutterViewController else {
+      GeneratedPluginRegistrant.register(with: self)
+      return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+    }
+
     let blockingChannel = FlutterMethodChannel(name: "app_blocking/block",
                                               binaryMessenger: controller.binaryMessenger)
     
@@ -16,13 +19,21 @@ import UIKit
       (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in
       
       if call.method == "blockApp" {
-          // iOS Screen Time API implementation would go here
-          // Note: Requires FamilyControls entitlement and physical device
-          result(true)
+          result(
+            FlutterError(
+              code: "UNSUPPORTED_ON_IOS",
+              message: "Direct app blocking is Android-only in this build.",
+              details: "Use iOS Screen Time / Family Controls integration for iOS-native restrictions."
+            )
+          )
       } else if call.method == "closeAppAndGoHome" {
-          // iOS doesn't allow apps to close themselves or go home programmatically
-          // The Screen Time API handles this via ManagedSettings
-          result(true)
+          result(
+            FlutterError(
+              code: "UNSUPPORTED_ON_IOS",
+              message: "Programmatic close/go-home is not available on iOS.",
+              details: "This capability is intentionally unavailable by iOS platform rules."
+            )
+          )
       } else {
         result(FlutterMethodNotImplemented)
       }

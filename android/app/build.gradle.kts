@@ -5,10 +5,46 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val keystoreProperties = java.util.Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+val hasReleaseKeystore = keystorePropertiesFile.exists()
+val allowDebugReleaseSigning =
+    project.findProperty("allowDebugReleaseSigning")
+        ?.toString()
+        ?.toBooleanStrictOrNull() ?: false
+val requestedTasks = gradle.startParameter.taskNames.joinToString(" ").lowercase()
+val isReleaseTaskRequested =
+    requestedTasks.contains("release") || requestedTasks.contains("publish")
+
+if (hasReleaseKeystore) {
+    keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
+}
+
+if (isReleaseTaskRequested && !hasReleaseKeystore && !allowDebugReleaseSigning) {
+    throw org.gradle.api.GradleException(
+        "Release signing is required for release/publish tasks. " +
+            "Create android/key.properties or run with -PallowDebugReleaseSigning=true for local-only checks."
+    )
+}
+
 android {
     namespace = "com.example.mu_super_app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
+
+    signingConfigs {
+        create("release") {
+            if (hasReleaseKeystore) {
+                val storePath = keystoreProperties.getProperty("storeFile")
+                if (!storePath.isNullOrBlank()) {
+                    storeFile = rootProject.file(storePath)
+                }
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -33,9 +69,14 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Uses release signing for production builds.
+            // Debug signing fallback is allowed only when explicitly enabled via
+            // -PallowDebugReleaseSigning=true for local non-publish checks.
+            signingConfig = if (hasReleaseKeystore) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
 }

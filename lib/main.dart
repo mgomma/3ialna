@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'data/system/error_report_service.dart';
 import 'l10n/app_localizations.dart';
 import 'presentation/home/home_screen.dart';
 import 'presentation/overlay/overlay_warning_screen.dart';
 
 /// Entry point for the main application.
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await ErrorReportService.initialize();
   runApp(const SocialMediaLimiterApp());
 }
 
@@ -16,8 +18,9 @@ void main() {
 /// This needs to be a top-level function so that it can be used from the
 /// background isolate started by `flutter_overlay_window`.
 @pragma('vm:entry-point')
-void overlayMain() {
+Future<void> overlayMain() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await ErrorReportService.initialize();
   runApp(const OverlayWarningApp());
 }
 

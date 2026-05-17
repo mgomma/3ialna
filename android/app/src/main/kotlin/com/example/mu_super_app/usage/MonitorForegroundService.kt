@@ -24,7 +24,9 @@ import com.example.mu_super_app.R
 import java.util.Calendar
 import android.app.usage.UsageStats
 import android.app.usage.UsageStatsManager
+import android.content.pm.PackageManager
 import flutter.overlay.window.flutter_overlay_window.OverlayService
+import org.json.JSONObject
 /**
  * Foreground service that periodically checks app usage in the background.
  *
@@ -520,11 +522,13 @@ class MonitorForegroundService : Service() {
         // Check if schedule is active
         val scheduleJson = prefs.getString("${PFX}$_PREF_SCHEDULE", null)
         if (scheduleJson != null) {
-            val scheduleEnabled = scheduleJson.contains("\"enabled\":true")
+            val scheduleEnabled = try {
+                JSONObject(scheduleJson).optBoolean("enabled", false)
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to parse schedule enabled state", e)
+                true
+            }
             if (scheduleEnabled) {
-                // Parse schedule and check if restrictions should be active
-                // For now, we'll check if we're in the active time window
-                // This is a simplified check - full implementation would parse JSON properly
                 val isInActiveWindow = checkScheduleActive(scheduleJson)
                 if (!isInActiveWindow) {
                     Log.d(TAG, "Schedule restrictions not active")
@@ -554,19 +558,23 @@ class MonitorForegroundService : Service() {
      */
     private fun checkScheduleActive(scheduleJson: String): Boolean {
         try {
-            // Check if enabled: true
-            if (!scheduleJson.contains("\"enabled\":true")) return false
+            val scheduleObj = JSONObject(scheduleJson)
+            if (!scheduleObj.optBoolean("enabled", false)) return false
 
             val calendar = Calendar.getInstance()
-            val currentDay = (calendar.get(Calendar.DAY_OF_WEEK) + 5) % 7 // Convert to 0=Monday, ..., 6=Sunday
-            
-            // Check activeDays: [1,2,3,4,5]
-            if (!scheduleJson.contains("\"activeDays\":[") || !scheduleJson.contains(currentDay.toString())) {
-                // Check if currentDay is in the activeDays list
-                // Very basic string check for MVP
-                val activeDaysMatch = "\"activeDays\":\\[(.*?)\\]".toRegex().find(scheduleJson)
-                val activeDaysStr = activeDaysMatch?.groupValues?.get(1) ?: ""
-                if (!activeDaysStr.contains(currentDay.toString())) {
+            val currentDay = calendar.get(Calendar.DAY_OF_WEEK) % 7
+            val isWeekend = currentDay == 0 || currentDay == 6
+
+            val activeDaysArray = scheduleObj.optJSONArray("activeDays")
+            if (activeDaysArray != null && activeDaysArray.length() > 0) {
+                var dayEnabled = false
+                for (i in 0 until activeDaysArray.length()) {
+                    if (activeDaysArray.optInt(i, -1) == currentDay) {
+                        dayEnabled = true
+                        break
+                    }
+                }
+                if (!dayEnabled) {
                     return false
                 }
             }
@@ -575,30 +583,46 @@ class MonitorForegroundService : Service() {
             val nowMinute = calendar.get(Calendar.MINUTE)
             val nowTotalMinutes = nowHour * 60 + nowMinute
 
-            // Extract startTime and endTime (format "HH:mm")
-            val startTimeMatch = "\"startTime\":\"(\\d{2}):(\\d{2})\"".toRegex().find(scheduleJson)
-            val endTimeMatch = "\"endTime\":\"(\\d{2}):(\\d{2})\"".toRegex().find(scheduleJson)
+            val differentWeekendRules = scheduleObj.optBoolean("differentWeekendRules", false)
+            val startTimeRaw = if (differentWeekendRules && isWeekend) {
+                scheduleObj.optString("weekendStartTime", scheduleObj.optString("startTime", "09:00"))
+            } else {
+                scheduleObj.optString("startTime", "09:00")
+            }
+            val endTimeRaw = if (differentWeekendRules && isWeekend) {
+                scheduleObj.optString("weekendEndTime", scheduleObj.optString("endTime", "21:00"))
+            } else {
+                scheduleObj.optString("endTime", "21:00")
+            }
 
-            if (startTimeMatch != null && endTimeMatch != null) {
-                val startH = startTimeMatch.groupValues[1].toInt()
-                val startM = startTimeMatch.groupValues[2].toInt()
-                val endH = endTimeMatch.groupValues[1].toInt()
-                val endM = endTimeMatch.groupValues[2].toInt()
+            val startTotal = parseTimeToMinutes(startTimeRaw)
+            val endTotal = parseTimeToMinutes(endTimeRaw)
 
-                val startTotal = startH * 60 + startM
-                val endTotal = endH * 60 + endM
+            if (startTotal == null || endTotal == null) {
+                Log.w(TAG, "Invalid schedule time format start=$startTimeRaw end=$endTimeRaw")
+                return true
+            }
 
-                return if (startTotal <= endTotal) {
-                    nowTotalMinutes in startTotal..endTotal
-                } else {
-                    // Overnights
-                    nowTotalMinutes >= startTotal || nowTotalMinutes <= endTotal
-                }
+            return if (startTotal <= endTotal) {
+                nowTotalMinutes >= startTotal && nowTotalMinutes < endTotal
+            } else {
+                nowTotalMinutes >= startTotal || nowTotalMinutes < endTotal
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error parsing schedule JSON", e)
         }
         return true // Default to active if parsing fails for safety
+    }
+
+    private fun parseTimeToMinutes(time: String): Int? {
+        val parts = time.split(":")
+        if (parts.size != 2) return null
+
+        val hour = parts[0].toIntOrNull() ?: return null
+        val minute = parts[1].toIntOrNull() ?: return null
+        if (hour !in 0..23 || minute !in 0..59) return null
+
+        return hour * 60 + minute
     }
 
     /**

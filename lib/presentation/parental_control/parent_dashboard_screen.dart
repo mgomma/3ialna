@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -32,6 +34,8 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
   late SettingsService _settings;
   int _blockedAppsCount = 0;
   int _appsWithTimeLimits = 0;
+
+  bool get _isIos => Platform.isIOS;
 
   @override
   void initState() {
@@ -218,7 +222,20 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                         style: theme.textTheme.bodyMedium,
                       ),
                       const SizedBox(height: 16),
-                      if (!_isDeviceAdminEnabled)
+                      if (_isIos) ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Text(
+                            'iOS limitation: Kiosk mode, accessibility-based blocking, and anti-uninstall protection are Android-only. '
+                            'On iOS, use Screen Time / Family Controls for stronger enforcement.',
+                          ),
+                        ),
+                      ] else if (!_isDeviceAdminEnabled)
                         FilledButton.icon(
                           onPressed: () async {
                             await _kioskService.requestDeviceAdmin();
@@ -284,14 +301,20 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                       ),
                       const SizedBox(height: 16),
                       FilledButton.icon(
-                        onPressed: () async {
-                          await _accessibilityHelper.openAccessibilitySettings();
-                          // Refresh status after returning
-                          await Future.delayed(const Duration(seconds: 1));
-                          await _loadSettings();
-                        },
+                        onPressed: _isIos
+                            ? null
+                            : () async {
+                                await _accessibilityHelper.openAccessibilitySettings();
+                                // Refresh status after returning
+                                await Future.delayed(const Duration(seconds: 1));
+                                await _loadSettings();
+                              },
                         icon: const Icon(Icons.settings),
-                        label: Text(_isAccessibilityServiceEnabled ? 'Open Accessibility Settings' : 'Enable Accessibility Service'),
+                        label: Text(
+                          _isIos
+                              ? 'Android-only feature'
+                              : (_isAccessibilityServiceEnabled ? 'Open Accessibility Settings' : 'Enable Accessibility Service'),
+                        ),
                         style: FilledButton.styleFrom(backgroundColor: _isAccessibilityServiceEnabled ? Colors.green : colorScheme.primary),
                       ),
                     ],

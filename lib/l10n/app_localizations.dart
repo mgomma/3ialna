@@ -58,6 +58,37 @@ class AppLocalizations {
               'Settings → Apps → Special access → Usage access, '
               'then choosing this app and turning access on.',
       'gotIt': 'Got it',
+      'countryProfileTitle': 'Country profile',
+      'countryProfileHint': 'Select your country to personalize words.',
+      'countryProfileCountryLabel': 'Country',
+      'save': 'Save',
+      'countryProfileSaved': 'Words updated for {country}: {word}',
+      'countryProfileCardTitle': 'Personalized words',
+        'registerTitle': 'Register',
+        'registerButton': 'Register',
+        'submitReportButton': 'Submit Report',
+        'firstNameLabel': 'First name',
+        'lastNameLabel': 'Last name',
+        'emailLabel': 'Email',
+        'passwordLabel': 'Password',
+        'phoneLabel': 'Phone',
+        'languageLabel': 'Language',
+        'registerSuccess': 'Registration complete and profile linked.',
+        'registerFailedLocalMode':
+          'Registration is unavailable now. Profile saved locally and app continues normally.',
+        'profileSavedLocalOnly':
+          'Profile saved locally. You can register later anytime.',
+        'reportSubmittedOrQueued':
+          'Report submitted (or queued if offline).',
+        'reportSavedLocally':
+          'Report saved locally. Register later to sync to your account.',
+          'registerWithGoogle': 'Continue with Google',
+          'registerWithFacebook': 'Continue with Facebook',
+          'registerWithApple': 'Continue with Apple',
+          'socialSignInFailed':
+            'Could not complete social sign-in. Please try again or use email registration.',
+          'socialMissingEmail':
+            'This social account did not provide email. Please register with email/password.',
     },
     'ar': <String, String>{
       'appTitle': 'عيالنا',
@@ -89,6 +120,37 @@ class AppLocalizations {
               'الإعدادات → التطبيقات → وصول خاص → الوصول إلى '
               'الاستخدام، ثم اختيار هذا التطبيق وتفعيل الوصول.',
       'gotIt': 'حسنًا',
+      'countryProfileTitle': 'الملف اللفظي حسب الدولة',
+      'countryProfileHint': 'اختر دولتك لتخصيص الكلمات داخل التطبيق.',
+      'countryProfileCountryLabel': 'الدولة',
+      'save': 'حفظ',
+      'countryProfileSaved': 'تم تحديث الكلمات لـ {country}: {word}',
+      'countryProfileCardTitle': 'كلمات مخصصة',
+        'registerTitle': 'تسجيل',
+        'registerButton': 'تسجيل',
+        'submitReportButton': 'إرسال التقرير',
+        'firstNameLabel': 'الاسم الأول',
+        'lastNameLabel': 'اسم العائلة',
+        'emailLabel': 'البريد الإلكتروني',
+        'passwordLabel': 'كلمة المرور',
+        'phoneLabel': 'رقم الهاتف',
+        'languageLabel': 'اللغة',
+        'registerSuccess': 'تم التسجيل وربط الملف الشخصي بنجاح.',
+        'registerFailedLocalMode':
+          'التسجيل غير متاح الآن. تم حفظ الملف محليا وسيستمر التطبيق بشكل طبيعي.',
+        'profileSavedLocalOnly':
+          'تم حفظ الملف محليا. يمكنك التسجيل لاحقا في أي وقت.',
+        'reportSubmittedOrQueued':
+          'تم إرسال التقرير (أو وضعه في الانتظار عند عدم الاتصال).',
+        'reportSavedLocally':
+          'تم حفظ التقرير محليا. سجل لاحقا لمزامنته مع حسابك.',
+          'registerWithGoogle': 'المتابعة باستخدام Google',
+          'registerWithFacebook': 'المتابعة باستخدام Facebook',
+          'registerWithApple': 'المتابعة باستخدام Apple',
+          'socialSignInFailed':
+            'تعذر إكمال تسجيل الدخول الاجتماعي. حاول مرة أخرى أو استخدم التسجيل بالبريد الإلكتروني.',
+          'socialMissingEmail':
+            'هذا الحساب الاجتماعي لم يزوّد بريدا إلكترونيا. يرجى التسجيل بالبريد وكلمة المرور.',
     },
   };
 
@@ -121,6 +183,30 @@ class AppLocalizations {
   String get usageAccessTitle => _text('usageAccessTitle');
   String get usageAccessBody => _text('usageAccessBody');
   String get gotIt => _text('gotIt');
+  String get countryProfileTitle => _text('countryProfileTitle');
+  String get countryProfileHint => _text('countryProfileHint');
+  String get countryProfileCountryLabel => _text('countryProfileCountryLabel');
+  String get save => _text('save');
+  String get countryProfileCardTitle => _text('countryProfileCardTitle');
+  String get registerTitle => _text('registerTitle');
+  String get registerButton => _text('registerButton');
+  String get submitReportButton => _text('submitReportButton');
+  String get firstNameLabel => _text('firstNameLabel');
+  String get lastNameLabel => _text('lastNameLabel');
+  String get emailLabel => _text('emailLabel');
+  String get passwordLabel => _text('passwordLabel');
+  String get phoneLabel => _text('phoneLabel');
+  String get languageLabel => _text('languageLabel');
+  String get registerSuccess => _text('registerSuccess');
+  String get registerFailedLocalMode => _text('registerFailedLocalMode');
+  String get profileSavedLocalOnly => _text('profileSavedLocalOnly');
+  String get reportSubmittedOrQueued => _text('reportSubmittedOrQueued');
+  String get reportSavedLocally => _text('reportSavedLocally');
+  String get registerWithGoogle => _text('registerWithGoogle');
+  String get registerWithFacebook => _text('registerWithFacebook');
+  String get registerWithApple => _text('registerWithApple');
+  String get socialSignInFailed => _text('socialSignInFailed');
+  String get socialMissingEmail => _text('socialMissingEmail');
 
   String timeLimitReachedMessage({
     required String appName,
@@ -141,6 +227,13 @@ class AppLocalizations {
       '{limit}',
       '$limitMinutes',
     );
+    return template;
+  }
+
+  String countryProfileSaved({required String country, required String word}) {
+    String template = _text('countryProfileSaved');
+    template = template.replaceAll('{country}', country);
+    template = template.replaceAll('{word}', word);
     return template;
   }
 }

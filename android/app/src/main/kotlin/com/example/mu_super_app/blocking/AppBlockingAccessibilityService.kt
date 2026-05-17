@@ -3,6 +3,7 @@ package com.example.mu_super_app.blocking
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.widget.Toast
@@ -10,6 +11,7 @@ import android.os.Handler
 import android.os.Looper
 import android.content.Context
 import android.content.SharedPreferences
+import org.json.JSONObject
 
 /**
  * AccessibilityService that monitors app launches and blocks apps that are in the blocked list.
@@ -96,18 +98,18 @@ class AppBlockingAccessibilityService : AccessibilityService() {
     private fun parseBlockedApps(json: String): Map<String, Long> {
         val blockedApps = mutableMapOf<String, Long>()
         try {
-            // Simple JSON parsing: {"package.name": timestamp, ...}
-            val cleaned = json.replace("{", "").replace("}", "").replace("\"", "").trim()
-            if (cleaned.isEmpty()) return blockedApps
-
-            cleaned.split(",").forEach { entry ->
-                val parts = entry.split(":")
-                if (parts.size == 2) {
-                    val pkg = parts[0].trim()
-                    val timestamp = parts[1].trim().toLongOrNull()
-                    if (timestamp != null) {
-                        blockedApps[pkg] = timestamp
-                    }
+            val obj = JSONObject(json)
+            val keys = obj.keys()
+            while (keys.hasNext()) {
+                val pkg = keys.next()
+                val value = obj.opt(pkg)
+                val timestamp = when (value) {
+                    is Number -> value.toLong()
+                    is String -> value.toLongOrNull()
+                    else -> null
+                }
+                if (timestamp != null) {
+                    blockedApps[pkg] = timestamp
                 }
             }
         } catch (e: Exception) {
@@ -126,9 +128,13 @@ class AppBlockingAccessibilityService : AccessibilityService() {
             blockedApps.remove(packageName)
             
             // Save back to preferences
-            val newJson = blockedApps.entries.joinToString(",") { "\"${it.key}\":${it.value}" }
+            val newJson = JSONObject().apply {
+                blockedApps.forEach { (pkg, timestamp) ->
+                    put(pkg, timestamp)
+                }
+            }.toString()
             prefs.edit()
-                .putString("${PFX}blocked_apps_with_timestamps", "{$newJson}")
+                .putString("${PFX}blocked_apps_with_timestamps", newJson)
                 .apply()
         } catch (e: Exception) {
             Log.e(TAG, "Error removing blocked app", e)
