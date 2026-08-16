@@ -58,6 +58,14 @@ jobs:
             flutter test --coverage
           fi
 
+      - name: Upload coverage report
+        if: hashFiles('coverage/lcov.info') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-coverage
+          path: coverage/lcov.info
+          if-no-files-found: error
+
   android-build:
     name: Build Android APK
     runs-on: ubuntu-latest
