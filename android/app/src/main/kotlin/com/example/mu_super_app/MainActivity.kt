@@ -7,6 +7,8 @@ import android.content.ActivityNotFoundException
 import android.app.ActivityManager
 import android.os.Build
 import android.provider.Settings
+import android.net.VpnService
+import com.example.mu_super_app.network.SafeContentVpnService
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
@@ -29,6 +31,8 @@ class MainActivity : FlutterActivity() {
     private val appChannel = "parental_control/apps"
     private val blockingChannel = "app_blocking/block"
     private val accessibilityChannel = "app_blocking/accessibility"
+    private val safeContentVpnChannel = "safe_content/vpn"
+    private val vpnPermissionRequestCode = 1002
     private val deviceAdminRequestCode = 1001
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -188,6 +192,45 @@ class MainActivity : FlutterActivity() {
                     } catch (e: Exception) {
                         result.error("ERROR", "Failed to close app: ${e.message}", null)
                     }
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        // Safe-content VPN channel
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            safeContentVpnChannel
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "isVpnPermissionGranted" -> {
+                    result.success(VpnService.prepare(this) == null)
+                }
+                "requestVpnPermission" -> {
+                    val permissionIntent = VpnService.prepare(this)
+                    if (permissionIntent == null) {
+                        result.success(true)
+                    } else {
+                        startActivityForResult(permissionIntent, vpnPermissionRequestCode)
+                        result.success(false)
+                    }
+                }
+                "startVpn" -> {
+                    if (VpnService.prepare(this) != null) {
+                        result.error("PERMISSION_REQUIRED", "VPN permission is required", null)
+                    } else {
+                        val serviceIntent = Intent(this, SafeContentVpnService::class.java)
+                        ContextCompat.startForegroundService(this, serviceIntent)
+                        result.success(true)
+                    }
+                }
+                "stopVpn" -> {
+                    stopService(Intent(this, SafeContentVpnService::class.java))
+                    result.success(true)
+                }
+                "isVpnRunning" -> {
+                    val preferences = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+                    result.success(preferences.getBoolean(SafeContentVpnService.PREF_RUNNING, false))
                 }
                 else -> result.notImplemented()
             }

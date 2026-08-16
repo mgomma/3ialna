@@ -88,6 +88,12 @@
                 android:value="Monitoring app usage for parental controls" />
         </service>
 
+        <!-- Safe-content VPN for parent-configured domain filtering -->
+        <service
+            android:name=".network.SafeContentVpnService"
+            android:permission="android.permission.BIND_VPN_SERVICE"
+            android:exported="false" />
+
         <!-- AccessibilityService for app blocking -->
         <service
             android:name=".blocking.AppBlockingAccessibilityService"

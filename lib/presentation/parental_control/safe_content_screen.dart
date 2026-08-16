@@ -1,7 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../data/local/safe_content_policy_storage_service.dart';
 import '../../domain/models/safe_content_policy.dart';
+import '../../data/system/safe_content_vpn_service.dart';
 
 class SafeContentScreen extends StatefulWidget {
   const SafeContentScreen({super.key});
@@ -13,6 +17,7 @@ class SafeContentScreen extends StatefulWidget {
 class _SafeContentScreenState extends State<SafeContentScreen> {
   final SafeContentPolicyStorageService _storage =
       SafeContentPolicyStorageService();
+  final SafeContentVpnService _vpnService = SafeContentVpnService();
   final TextEditingController _blockedDomainController =
       TextEditingController();
   final TextEditingController _allowedDomainController =
@@ -21,6 +26,8 @@ class _SafeContentScreenState extends State<SafeContentScreen> {
   SafeContentPolicy _policy = SafeContentPolicy.defaultPolicy;
   bool _isLoading = true;
   bool _isSaving = false;
+  bool _vpnPermissionGranted = false;
+  bool _vpnRunning = false;
 
   @override
   void initState() {
@@ -37,11 +44,57 @@ class _SafeContentScreenState extends State<SafeContentScreen> {
 
   Future<void> _loadPolicy() async {
     final policy = await _storage.getPolicy();
+    await _refreshVpnStatus();
     if (!mounted) return;
     setState(() {
       _policy = policy;
       _isLoading = false;
     });
+  }
+
+  Future<void> _refreshVpnStatus() async {
+    if (!Platform.isAndroid) return;
+    try {
+      final permissionGranted = await _vpnService.isPermissionGranted();
+      final running = await _vpnService.isRunning();
+      if (!mounted) return;
+      setState(() {
+        _vpnPermissionGranted = permissionGranted;
+        _vpnRunning = running;
+      });
+    } catch (_) {
+      // The VPN channel is Android-only; keep the UI disabled elsewhere.
+    }
+  }
+
+  Future<void> _toggleVpn(bool enabled) async {
+    if (!Platform.isAndroid) return;
+    try {
+      if (!enabled) {
+        await _vpnService.stop();
+      } else {
+        var permissionGranted = await _vpnService.isPermissionGranted();
+        if (!permissionGranted) {
+          permissionGranted = await _vpnService.requestPermission();
+          if (!permissionGranted) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Approve VPN permission, then enable filtering again.')),
+              );
+            }
+            return;
+          }
+        }
+        await _vpnService.start();
+      }
+      await _refreshVpnStatus();
+    } on PlatformException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('VPN could not be changed: ${error.message ?? error.code}')),
+        );
+      }
+    }
   }
 
   Future<void> _savePolicy(SafeContentPolicy policy) async {
@@ -128,10 +181,31 @@ class _SafeContentScreenState extends State<SafeContentScreen> {
             ),
           ),
           const SizedBox(height: 12),
+          Card(
+            child: SwitchListTile(
+              title: const Text('Enable Android web filtering'),
+              subtitle: Text(
+                Platform.isAndroid
+                    ? (_vpnRunning
+                        ? 'VPN filtering is active. Only DNS policy decisions are applied.'
+                        : (_vpnPermissionGranted
+                            ? 'Start the privacy-preserving DNS filter for this device.'
+                            : 'Android will ask for VPN permission before filtering starts.'))
+                    : 'Web filtering integration is currently Android-only.',
+              ),
+              value: Platform.isAndroid && _vpnRunning,
+              onChanged: Platform.isAndroid ? _toggleVpn : null,
+              secondary: Icon(
+                _vpnRunning ? Icons.vpn_lock : Icons.vpn_key_outlined,
+                color: _vpnRunning ? Colors.green : null,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
           Text('Content categories', style: theme.textTheme.titleLarge),
           const SizedBox(height: 4),
           Text(
-            'These rules are transparent and parent-configurable. A future Android VPN or browser integration can enforce the same policy.',
+            'These rules are transparent and parent-configurable. The Android DNS VPN applies the same policy to supported system DNS traffic.',
             style: theme.textTheme.bodyMedium,
           ),
           const SizedBox(height: 8),
@@ -176,7 +250,7 @@ class _SafeContentScreenState extends State<SafeContentScreen> {
             child: const Padding(
               padding: EdgeInsets.all(16),
               child: Text(
-                'Privacy note: this first policy layer stores only rule configuration. It does not read messages, photos, or page content. Android web enforcement requires a separate VPN/browser integration and explicit user permission.',
+                'Privacy note: the VPN stores only rule configuration and does not read messages, photos, or page content. It requires explicit Android VPN permission and does not cover direct-IP traffic, encrypted DNS that bypasses the system resolver, or arbitrary page-content inspection.',
               ),
             ),
           ),
