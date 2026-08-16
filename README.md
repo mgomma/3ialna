@@ -56,21 +56,8 @@ A comprehensive Flutter mobile application with Drupal backend integration for I
 
 ```
 lib/
-├── core/
-│   ├── constants/          # App constants and API endpoints
-│   ├── models/            # Data models
-│   ├── providers/         # State management providers
-│   ├── routes/            # App routing
-│   ├── services/          # API and business logic services
-│   ├── theme/             # App theming
-│   └── utils/             # Utilities and helpers
-├── features/
-│   ├── auth/              # Authentication pages
-│   ├── child_devices/     # Child device management
-│   ├── home/              # Home dashboard
-│   ├── master_parents/    # Master parent features
-│   ├── reports/           # Activity reports
-│   └── settings/          # App settings
+├── core/                  # App constants, models, providers, routes, services, theme, utils
+├── features/              # Feature-specific modules (auth, child_devices, home, master_parents, reports, settings)
 └── main.dart              # App entry point
 ```
 
@@ -84,41 +71,41 @@ lib/
 
 ### Installation
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd parental_control_app
-   ```
+1.  **Clone the repository**
+    ```bash
+    git clone <repository-url>
+    cd parental_control_app
+    ```
 
-2. **Install dependencies**
-   ```bash
-   flutter pub get
-   ```
+2.  **Install dependencies**
+    ```bash
+    flutter pub get
+    ```
 
-3. **Generate code (if needed)**
-   ```bash
-   flutter packages pub run build_runner build
-   ```
+3.  **Generate code (if needed)**
+    ```bash
+    flutter packages pub run build_runner build
+    ```
 
-4. **Run the app**
-   ```bash
-   flutter run
-   ```
+4.  **Run the app**
+    ```bash
+    flutter run
+    ```
 
 ### Configuration
 
-1. **API Configuration**
-   - Update `lib/core/constants/app_constants.dart`
-   - Set the correct base URL for your Drupal backend
-   - Configure API endpoints as needed
+1.  **API Configuration**
+    - Update `lib/core/constants/app_constants.dart`
+    - Set the correct base URL for your Drupal backend
+    - Configure API endpoints as needed
 
-2. **Localization**
-   - Add translation files in `assets/translations/`
-   - Update `lib/core/utils/app_localizations.dart` for new languages
+2.  **Localization**
+    - Add translation files in `assets/translations/`
+    - Update `lib/core/utils/app_localizations.dart` for new languages
 
-3. **Theme Customization**
-   - Modify `lib/core/theme/app_theme.dart`
-   - Update colors, fonts, and styling as needed
+3.  **Theme Customization**
+    - Modify `lib/core/theme/app_theme.dart`
+    - Update colors, fonts, and styling as needed
 
 ## Dependencies
 
@@ -181,11 +168,11 @@ The app integrates with a Drupal backend at `https://3ialna.net`. See `DRUPAL_AP
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+1.  Fork the repository
+2.  Create a feature branch
+3.  Make your changes
+4.  Add tests if applicable
+5.  Submit a pull request
 
 ## License
 
@@ -195,25 +182,93 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 For support and questions, please contact the development team or create an issue in the repository.
 
-## Roadmap
+## Development Roadmap
 
-### Phase 1 (Current)
-- [x] Basic app structure
-- [x] Authentication system
-- [x] User role management
-- [x] Prayer time integration
-- [x] Localization support
+This roadmap outlines the planned development phases for the 3ialna Parental Control & Family Safety App, integrating core parental control features with Islamic functionalities and cultural considerations for Arab countries.
 
-### Phase 2 (Next)
-- [ ] Child device management
-- [ ] App usage tracking
-- [ ] Daily reports
-- [ ] Master parent profiles
-- [ ] Push notifications
+### Phase 1: Core Parental Control Features (MVP) - Android First
 
-### Phase 3 (Future)
-- [ ] Advanced analytics
-- [ ] Machine learning insights
-- [ ] Social features
-- [ ] Web dashboard
-- [ ] Multi-platform support
+*   **User Authentication & Profile Management**:
+    *   Implement secure JWT-based authentication.
+    *   Develop user role management (Admin, Master Parent, Parent).
+    *   Create UI for registration, login, and profile editing.
+*   **App & Game Blocker**:
+    *   **Android**: Implement `AccessibilityService` to detect and block app launches.
+*   **Web Blocker (Basic)**:
+    *   **Android**: Implement basic web filtering using a local VPN service.
+*   **Daily Usage Limits**:
+    *   **Android**: Utilize `UsageStatsManager` and `AccessibilityService` to track and enforce daily screen time limits.
+*   **Family Locator**:
+    *   Implement real-time location tracking and display on a map.
+*   **SOS/Panic Button**:
+    *   Implement sending emergency alerts with location data.
+
+### Phase 2: Islamic Features Integration
+
+*   **Prayer Time API Integration**:
+    *   Integrate `adhan` package for prayer time calculations.
+    *   Implement location-based prayer times and manual city selection.
+    *   Develop customizable notification system for each prayer time with Adhan sounds.
+*   **Qibla Direction**:
+    *   Implement compass feature using device sensors.
+*   **Islamic Content Filtering (Initial Halal Mode)**:
+    *   Integrate with a chosen Islamic filtering service or implement basic keyword-based filtering.
+
+### Phase 3: Advanced Features & Refinements
+
+*   **Schedule Screen Time & Downtime**:
+    *   Implement advanced scheduling for device usage.
+*   **Individual App Limits**:
+    *   Extend app limits to all installed applications.
+*   **FamilyPause (Instant Lock)**:
+    *   Implement instant device locking functionality.
+*   **Activity Reports Enhancement**:
+    *   Improve data visualization and reporting for app usage, browsing history, and location history.
+*   **Social Media Monitoring (Enhanced)**:
+    *   **Android**: Refine `AccessibilityService` for more comprehensive in-app monitoring.
+    *   **iOS**: Investigate and implement any feasible (privacy-compliant) social media monitoring.
+*   **TeenSafe Drive**:
+    *   Implement speed monitoring and alert system.
+*   **Low Battery Alerts**:
+    *   Implement notifications for low battery levels.
+*   **UI/UX Refinements**:
+    *   Conduct user testing with Arab users and refine UI/UX based on feedback, ensuring cultural appropriateness.
+
+### Phase 4: Testing & Deployment
+
+*   **Comprehensive Testing**:
+    *   Perform unit, integration, UI, performance, and security testing.
+*   **Beta Testing**:
+    *   Conduct beta testing with a diverse group of users in Arab countries.
+*   **Deployment**:
+    *   Prepare for deployment to Google Play Store.
+
+### Future Enhancements
+
+*   **iOS Version**: Develop an iOS version of the application.
+*   **Multi-Language Support Expansion**:
+    *   Expand language options beyond Arabic and English.
+*   **Educational Content Integration**:
+    *   Integrate Islamic educational content for children.
+*   **Community Features**:
+    *   Develop features for parents to connect and share.
+
+## Changelog
+
+### 2026-05-09
+
+*   **Android Core Functionality Improvements**:
+    *   **Unified Storage Layer**: Aligned Flutter `ParentalControlStorageService` with native Android background services. This ensures that app blocks, time limits, and schedules configured in the UI are now correctly recognized and enforced by the native layer.
+    *   **Enhanced Schedule Enforcement**: Implemented more robust schedule checking in the native `MonitorForegroundService`. The service now correctly parses the JSON schedule format from Flutter and enforces restrictions during the specified time windows.
+    *   **Robust System App Filtering**: Improved the filtering logic in both `AppBlockingAccessibilityService.kt` and `MonitorForegroundService.kt` to prevent essential system components (like settings, dialer, and the default launcher) from being accidentally blocked, ensuring the device remains functional.
+
+## References
+
+[1] Aladhan API. (n.d.). *Prayer Times API*. Retrieved from [https://aladhan.com/prayer-times-api](https://aladhan.com/prayer-times-api)
+[2] Aladhan API. (n.d.). *Calculation Methods*. Retrieved from [https://aladhan.com/calculation-methods](https://aladhan.com/calculation-times-api)
+[3] Kahf Guard. (n.d.). *Shield Up Against Online Haram*. Retrieved from [https://kahfguard.com/](https://kahfguard.com/)
+[4] Al-Hudud. (n.d.). *Block Haram, Browse Halal for Muslims*. Retrieved from [https://github.com/HamzaaAkmal/Al-Hudud-Blocks-Haram-Browse-Halal](https://github.com/HamzaaAkmal/Al-Hudud-Blocks-Haram-Browse-Halal)
+[5] Material Design. (n.d.). *Bidirectionality*. Retrieved from [https://m2.material.io/design/usability/bidirectionality.html](https://m2.material.io/design/usability/bidirectionality.html)
+[6] Material Design 3. (n.d.). *Bidirectionality & RTL - Layout*. Retrieved from [https://m3.material.io/foundations/layout/understanding-layout/bidirectionality-rtl](https://m3.material.io/foundations/layout/understanding-layout/bidirectionality-rtl)
+[7] Toru, C. (2021, July 26). *Supporting RTL Design on Android*. ProAndroidDev. Retrieved from [https://proandroiddev.com/supporting-rtl-design-on-android-d6ef0ac31874](https://proandroiddev.com/supporting-rtl-design-on-android-d6ef0ac31874)
+[8] Alashwali, E. (2022). Saudi parents’ privacy concerns about their children’s smart device apps. *ScienceDirect*. Retrieved from [https://www.sciencedirect.com/science/article/abs/pii/S2212868922000216](https://www.sciencedirect.com/science/article/abs/pii/S2212868922000216)
