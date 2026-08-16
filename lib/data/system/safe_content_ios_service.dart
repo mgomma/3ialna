@@ -11,6 +11,10 @@ class SafeContentIosService {
     return await _channel.invokeMethod<bool>('requestAuthorization') ?? false;
   }
 
+  Future<bool> requestNetworkPermission() async {
+    return await _channel.invokeMethod<bool>('requestNetworkPermission') ?? false;
+  }
+
   Future<bool> startWebProtection() async {
     return await _channel.invokeMethod<bool>('startWebProtection') ?? false;
   }

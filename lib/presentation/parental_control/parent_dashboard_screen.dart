@@ -12,6 +12,7 @@ import 'app_management_screen.dart';
 import 'pin_auth_screen.dart';
 import 'schedule_screen.dart';
 import 'safe_content_screen.dart';
+import 'ios_authorization_onboarding_screen.dart';
 
 /// Main dashboard screen for parental controls.
 class ParentDashboardScreen extends StatefulWidget {
@@ -371,6 +372,17 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                       Navigator.of(context).push(MaterialPageRoute(builder: (context) => const SafeContentScreen()));
                     },
                   ),
+                  if (_isIos)
+                    _ActionCard(
+                      icon: Icons.family_restroom,
+                      label: 'إعداد رقابة iOS',
+                      color: colorScheme.primary,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (context) => const IosAuthorizationOnboardingScreen()),
+                        );
+                      },
+                    ),
                 ],
               ),
             ],

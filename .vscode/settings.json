@@ -1,0 +1,8 @@
+{
+  "dart.flutterSdkPath": "/home/mhmd/projects/flutter",
+  "terminal.integrated.env.linux": {
+    "ANDROID_HOME": "/home/mhmd/Android/Sdk",
+    "ANDROID_SDK_ROOT": "/home/mhmd/Android/Sdk",
+    "PATH": "${env:PATH}:/home/mhmd/projects/flutter/bin:/home/mhmd/Android/Sdk/cmdline-tools/latest/bin:/home/mhmd/Android/Sdk/platform-tools:/home/mhmd/Android/Sdk/emulator"
+  }
+}
