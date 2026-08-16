@@ -11,7 +11,7 @@ class OverlayService {
 
   Future<bool> hasOverlayPermission() async {
     try {
-      return FlutterOverlayWindow.isPermissionGranted();
+      return await FlutterOverlayWindow.isPermissionGranted();
     } catch (e, s) {
       developer.log(
         'Failed to check overlay permission',

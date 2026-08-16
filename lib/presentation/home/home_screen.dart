@@ -203,7 +203,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     TextField(controller: phoneController, keyboardType: TextInputType.phone, decoration: InputDecoration(labelText: context.l10n.phoneLabel)),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
-                      value: selectedCountry,
+                      initialValue: selectedCountry,
                       decoration: InputDecoration(labelText: context.l10n.countryProfileCountryLabel),
                       items: const <DropdownMenuItem<String>>[
                         DropdownMenuItem<String>(value: 'SA', child: Text('Saudi Arabia')),
@@ -229,7 +229,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                     ),
                     DropdownButtonFormField<String>(
-                      value: selectedLanguage,
+                      initialValue: selectedLanguage,
                       decoration: InputDecoration(labelText: context.l10n.languageLabel),
                       items: const <DropdownMenuItem<String>>[
                         DropdownMenuItem<String>(value: 'ar', child: Text('Arabic')),
@@ -452,7 +452,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   Text(context.l10n.countryProfileHint),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    value: selectedCountry,
+                    initialValue: selectedCountry,
                     decoration: InputDecoration(
                       labelText: context.l10n.countryProfileCountryLabel,
                       border: const OutlineInputBorder(),
@@ -787,7 +787,7 @@ class _HomeScreenState extends State<HomeScreen> {
               spacing: 8,
               runSpacing: 8,
               children: <Widget>[
-                Chip(label: Text('${profile.country}')),
+                Chip(label: Text(profile.country)),
                 Chip(label: Text(profile.welcomeWord)),
                 Chip(label: Text(profile.childWord)),
                 Chip(label: Text(profile.praiseWord)),

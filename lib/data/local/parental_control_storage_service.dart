@@ -124,7 +124,6 @@ class ParentalControlStorageService {
   /// Gets current usage for a specific app (in minutes) from SharedPreferences.
   /// This is used for real-time updates in the UI.
   Future<int> getAppUsage(String packageName) async {
-    final prefs = await SharedPreferences.getInstance();
     // Native service might store usage under specific keys if we implement that,
     // for now we rely on the AppUsageService which queries the OS.
     return 0; 
