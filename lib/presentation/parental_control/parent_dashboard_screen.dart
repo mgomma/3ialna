@@ -11,6 +11,7 @@ import '../../data/system/pin_auth_service.dart';
 import 'app_management_screen.dart';
 import 'pin_auth_screen.dart';
 import 'schedule_screen.dart';
+import 'safe_content_screen.dart';
 
 /// Main dashboard screen for parental controls.
 class ParentDashboardScreen extends StatefulWidget {
@@ -360,6 +361,14 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                     color: colorScheme.secondary,
                     onTap: () {
                       Navigator.of(context).push(MaterialPageRoute(builder: (context) => const ScheduleScreen()));
+                    },
+                  ),
+                  _ActionCard(
+                    icon: Icons.shield_outlined,
+                    label: 'Safe Content',
+                    color: colorScheme.tertiary,
+                    onTap: () {
+                      Navigator.of(context).push(MaterialPageRoute(builder: (context) => const SafeContentScreen()));
                     },
                   ),
                 ],
