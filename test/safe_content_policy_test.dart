@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mu_super_app/domain/models/safe_content_policy.dart';
 import 'package:mu_super_app/domain/services/safe_content_filter.dart';
 
-defaultSafePolicy() => SafeContentPolicy.defaultPolicy;
+SafeContentPolicy defaultSafePolicy() => SafeContentPolicy.defaultPolicy;
 
 void main() {
   group('SafeContentPolicy', () {

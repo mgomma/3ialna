@@ -83,9 +83,10 @@ class _SafeContentScreenState extends State<SafeContentScreen> {
   }
 
   void _removeDomain(String domain, {required bool blocked}) {
-    final domains = blocked
-        ? {..._policy.blockedDomains}..remove(domain)
-        : {..._policy.allowedDomains}..remove(domain);
+    final domains = <String>{
+      ...(blocked ? _policy.blockedDomains : _policy.allowedDomains),
+    };
+    domains.remove(domain);
     _savePolicy(blocked
         ? _policy.copyWith(blockedDomains: domains)
         : _policy.copyWith(allowedDomains: domains));
