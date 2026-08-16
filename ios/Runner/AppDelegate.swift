@@ -12,6 +12,15 @@ import UIKit
       return super.application(application, didFinishLaunchingWithOptions: launchOptions)
     }
 
+    let safeContentIosChannel = FlutterMethodChannel(
+      name: IosSafeContentBridge.channelName,
+      binaryMessenger: controller.binaryMessenger
+    )
+    let safeContentIosBridge = IosSafeContentBridge()
+    safeContentIosChannel.setMethodCallHandler { call, result in
+      safeContentIosBridge.handle(call, result: result)
+    }
+
     let blockingChannel = FlutterMethodChannel(name: "app_blocking/block",
                                               binaryMessenger: controller.binaryMessenger)
     
