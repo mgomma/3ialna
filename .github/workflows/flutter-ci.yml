@@ -136,7 +136,7 @@ jobs:
 
   manual-android-apk:
     name: Manual installable Android APK
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
