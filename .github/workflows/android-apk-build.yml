@@ -1,0 +1,56 @@
+name: Android APK Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: APK build type
+        required: true
+        default: debug
+        type: choice
+        options:
+          - debug
+          - profile
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    name: Build installable Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build debug APK
+        if: inputs.build_type == 'debug'
+        run: flutter build apk --debug
+
+      - name: Build profile APK
+        if: inputs.build_type == 'profile'
+        run: flutter build apk --profile
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: 3ialna-${{ inputs.build_type }}-apk
+          path: build/app/outputs/flutter-apk/*.apk
+          if-no-files-found: error
+          retention-days: 14
