@@ -1,20 +1,21 @@
 import { FormEvent, useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, ArrowUpRight, Check, ChevronDown, CircleHelp, Clock3, Download, Globe2, LockKeyhole, Mail, Mic2, RotateCcw, Send, ShieldCheck, Smartphone, Sparkles } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpRight, Check, ChevronDown, CircleHelp, Clock3, Download, ExternalLink, Globe2, LockKeyhole, Mail, Mic2, RotateCcw, Send, ShieldCheck, Smartphone, Sparkles } from "lucide-react";
 
 const heroImage = "./assets/3ialna-hero-family.jpg";
 const profileImage = "linear-gradient(135deg, rgba(23,74,59,.96), rgba(30,103,82,.72)), radial-gradient(circle at 72% 28%, rgba(231,184,104,.85) 0 9%, transparent 10%), linear-gradient(140deg, #c9b18a, #547b63 58%, #174a3b)";
 const voiceImage = "linear-gradient(145deg, rgba(23,74,59,.9), rgba(23,74,59,.22)), radial-gradient(circle at 70% 30%, rgba(231,184,104,.92) 0 12%, transparent 13%), linear-gradient(35deg, #d9c7a9, #547b63 55%, #174a3b)";
 const privacyIcons = [LockKeyhole, Mic2, RotateCcw, Clock3];
+const firebaseReleaseUrl = "https://appdistribution.firebase.google.com/testerapps/1:747121514030:android:ba89b9172571366f4631bf/releases/2rr0nofjj0mt0";
 
 type Language = "ar" | "en";
 
 const copy = {
   ar: {
-    nav: ["كيف يعمل", "الإعداد", "الملفات العمرية", "الخصوصية", "تواصل"],
+    nav: ["كيف يعمل", "تنزيل", "الإعداد", "الملفات العمرية", "الخصوصية", "تواصل"],
     badge: "دليل الإعداد الرسمي · عيالنا",
     title: "احمِ وقت العائلة، لا خصوصيتها.",
     intro: "عيالنا يساعد الوالدين على بناء روتين رقمي هادئ يناسب عمر الطفل، مع رسائل صوتية بصوت الوالدين وإعدادات يمكن الرجوع عنها في أي وقت.",
-    cta: "ابدأ الإعداد في 5 دقائق",
+    cta: "تنزيل النسخة التجريبية",
     secondary: "استكشف الخصائص",
     note: "متاح للاختبار على أجهزة Android. يتطلب منح أذونات الجهاز يدويًا.",
     guide: "من الفكرة إلى الإعداد",
@@ -24,7 +25,7 @@ const copy = {
     install: "التثبيت والإعداد",
     installIntro: "اتبع هذه الخطوات بالترتيب على هاتف الوالد أو الجهاز الذي ستديره.",
     steps: [
-      ["نزّل ملف APK", "حمّل أحدث ملف اختبار من زر التنزيل، ثم اسمح بالتثبيت من هذا المصدر عند ظهور رسالة Android."],
+      ["افتح رابط Firebase", "استخدم رابط الإصدار في هذه الصفحة بعد أن تصلك دعوة اختبار إلى بريدك الإلكتروني."],
       ["أنشئ حماية الوالدين", "افتح عيالنا، أنشئ رقمًا سريًا، ثم فعّل البصمة لتصبح طريقة التحقق الافتراضية مع بقاء الرقم السري كخيار احتياطي."],
       ["فعّل الأذونات", "فعّل Usage Access وAccessibility وOverlay وDevice Admin عند الحاجة لتشغيل مراقبة الوقت والحظر الصارم."],
       ["اختر ملفًا عمريًا", "اختر الإعداد المناسب، عدّل الحدود، ثم احفظ. يمكنك تغيير الملف أو إرجاعه إلى إعداداته الأصلية لاحقًا."],
@@ -43,6 +44,15 @@ const copy = {
     finalCta: "اجعل الإعداد مفهومًا من اليوم الأول.",
     finalBody: "شارك هذه الصفحة مع العائلة، ثم افتح التطبيق واختر الملف الذي يناسب طفلك.",
     download: "تنزيل APK للاختبار",
+    releaseKicker: "03 / إصدار Android التجريبي",
+    releaseTitle: "نسخة الاختبار جاهزة للوالدين المدعوين",
+    releaseBody: "تم رفع الإصدار 0.1.0 (البنية 1) إلى Firebase App Distribution. افتح الرابط من هاتف Android وسجّل الدخول بحساب البريد الذي تلقى دعوة الاختبار.",
+    releasePlatform: "Android",
+    releaseVersion: "0.1.0 · البنية 1",
+    releaseChannel: "Firebase App Distribution",
+    releaseButton: "فتح إصدار الاختبار",
+    releaseNotice: "رابط التثبيت متاح للمختبرين المدعوين فقط. إذا لم تصلك دعوة، اطلب إضافتك أولًا.",
+    requestInvite: "اطلب دعوة اختبار",
     footer: "عيالنا · أمان رقمي يحترم العائلة",
     contactKicker: "08 / تواصل",
     contactTitle: "هل تحتاج إلى مساعدة في الإعداد؟",
@@ -57,11 +67,11 @@ const copy = {
     contactError: "تعذر إرسال الرسالة الآن. حاول مرة أخرى لاحقًا.",
   },
   en: {
-    nav: ["How it works", "Setup", "Age profiles", "Privacy", "Contact"],
+    nav: ["How it works", "Download", "Setup", "Age profiles", "Privacy", "Contact"],
     badge: "Official setup guide · 3ialna",
     title: "Protect family time, not private conversations.",
     intro: "3ialna helps parents build a calmer digital routine by age, with parent-recorded voice messages and settings they can edit or reset at any time.",
-    cta: "Start setup in 5 minutes",
+    cta: "Download the test release",
     secondary: "Explore the features",
     note: "Available for Android testing. Device permissions must be granted manually.",
     guide: "From intention to setup",
@@ -70,7 +80,7 @@ const copy = {
     privacyBody: "Controls are based on time, apps, domains, and prayer-aware routines. The app does not need to read a child’s conversations or analyze what they type.",
     install: "Install and configure",
     installIntro: "Follow these steps in order on the parent phone or the device you manage.",
-    steps: [["Download the APK", "Download the latest test file, then allow installation from this source when Android asks."], ["Create parent protection", "Open 3ialna, create a PIN, and enable biometrics as the preferred method with PIN fallback."], ["Grant permissions", "Enable Usage Access, Accessibility, Overlay, and Device Admin when needed for monitoring and hard lock."], ["Choose an age profile", "Select a starting configuration, edit the limits, and save. You can switch profiles or reset defaults later."], ["Record your voice", "Open Parent voice from Settings, record a short message, preview it, and keep it stored on-device." ]],
+    steps: [["Open the Firebase link", "Use the release link on this page after receiving a tester invitation at your email address."], ["Create parent protection", "Open 3ialna, create a PIN, and enable biometrics as the preferred method with PIN fallback."], ["Grant permissions", "Enable Usage Access, Accessibility, Overlay, and Device Admin when needed for monitoring and hard lock."], ["Choose an age profile", "Select a starting configuration, edit the limits, and save. You can switch profiles or reset defaults later."], ["Record your voice", "Open Parent voice from Settings, record a short message, preview it, and keep it stored on-device." ]],
     profiles: "Ready-made age profiles",
     profilesIntro: "Start with an age-appropriate baseline, then tune it for your family. Reset returns the selected profile to its original defaults.",
     profileNames: ["Under 5", "Ages 5–9", "Ages 9–13", "Teenagers 13–18"],
@@ -84,6 +94,15 @@ const copy = {
     finalCta: "Make setup understandable from day one.",
     finalBody: "Share this page with your family, then open the app and choose the profile that fits your child.",
     download: "Download test APK",
+    releaseKicker: "03 / Android test release",
+    releaseTitle: "The test release is ready for invited parents",
+    releaseBody: "Version 0.1.0 (build 1) is available through Firebase App Distribution. Open the link on an Android phone and sign in with the email address that received the tester invitation.",
+    releasePlatform: "Android",
+    releaseVersion: "0.1.0 · Build 1",
+    releaseChannel: "Firebase App Distribution",
+    releaseButton: "Open test release",
+    releaseNotice: "The install link is available to invited testers only. If you have not received an invitation, request access first.",
+    requestInvite: "Request a tester invitation",
     footer: "3ialna · Family digital safety",
     contactKicker: "08 / Contact",
     contactTitle: "Need help with setup?",
@@ -127,10 +146,10 @@ export default function Home() {
     <div dir={isArabic ? "rtl" : "ltr"} className="site-shell">
       <header className="topbar">
         <a className="brand" href="#top"><span className="brand-mark" aria-hidden="true" /><span>3ialna</span><small>عيالنا</small></a>
-        <nav>{t.nav.map((item, index) => <a key={item} href={["#how", "#setup", "#profiles", "#privacy", "#contact"][index]}>{item}</a>)}</nav>
+        <nav>{t.nav.map((item, index) => <a key={item} href={["#how", "#download", "#setup", "#profiles", "#privacy", "#contact"][index]}>{item}</a>)}</nav>
         <div className="top-actions">
           <button className="lang-switch" onClick={() => setLanguage(isArabic ? "en" : "ar")}><Globe2 size={16} />{isArabic ? "English" : "العربية"}</button>
-          <a className="mini-cta" href="#setup">{isArabic ? "ابدأ" : "Begin"}<ArrowUpRight size={15} /></a>
+          <a className="mini-cta" href="#download">{isArabic ? "النسخة التجريبية" : "Test release"}<ArrowUpRight size={15} /></a>
         </div>
       </header>
 
@@ -140,7 +159,7 @@ export default function Home() {
             <div className="eyebrow"><span className="seed-dot" />{t.badge}</div>
             <h1>{t.title}</h1>
             <p>{t.intro}</p>
-            <div className="hero-actions"><a className="button primary" href="#setup"><Download size={18} />{t.cta}</a><a className="button text-button" href="#how">{t.secondary}<ArrowDown size={17} /></a></div>
+            <div className="hero-actions"><a className="button primary" href="#download"><Download size={18} />{t.cta}</a><a className="button text-button" href="#how">{t.secondary}<ArrowDown size={17} /></a></div>
             <div className="hero-note"><ShieldCheck size={16} />{t.note}</div>
           </div>
           <div className="hero-caption"><span>01</span><b>{isArabic ? "روتين رقمي هادئ" : "A calmer digital rhythm"}</b></div>
@@ -148,19 +167,21 @@ export default function Home() {
 
         <section id="how" className="intro-band section-grid"><div><span className="section-kicker">02 / {isArabic ? "لماذا عيالنا" : "Why 3ialna"}</span><h2>{t.guide}</h2></div><p>{t.guideIntro}</p><div className="privacy-callout"><LockKeyhole size={20} /><div><b>{t.privacy}</b><span>{t.privacyBody}</span></div></div></section>
 
-        <section id="setup" className="setup-section section-grid"><div className="sticky-heading"><span className="section-kicker">03 / {isArabic ? "الدليل العملي" : "The practical guide"}</span><h2>{t.install}</h2><p>{t.installIntro}</p><a className="button dark-button" href="#profiles"><ArrowDown size={17} />{isArabic ? "تابع إلى الملفات" : "Continue to profiles"}</a></div><div className="steps">{t.steps.map(([title, body], index) => <article className="step" key={title}><div className="step-index">{String(index + 1).padStart(2, "0")}</div><div><h3>{title}</h3><p>{body}</p></div><Check size={18} className="step-check" /></article>)}</div></section>
+        <section id="download" className="release-section section-grid"><div className="release-copy"><span className="section-kicker">{t.releaseKicker}</span><h2>{t.releaseTitle}</h2><p>{t.releaseBody}</p><a className="release-request" href="#contact"><Mail size={16} />{t.requestInvite}<ArrowUpRight size={15} /></a></div><div className="release-panel"><div className="release-status"><span className="release-pulse" aria-hidden="true" />{isArabic ? "إصدار متاح" : "Release available"}</div><div className="release-facts"><div><span>{isArabic ? "المنصة" : "Platform"}</span><b>{t.releasePlatform}</b></div><div><span>{isArabic ? "الإصدار" : "Version"}</span><b>{t.releaseVersion}</b></div><div><span>{isArabic ? "قناة التثبيت" : "Install channel"}</span><b>{t.releaseChannel}</b></div></div><a className="button release-button" href={firebaseReleaseUrl} target="_blank" rel="noreferrer"><Download size={18} />{t.releaseButton}<ExternalLink size={16} /></a><p className="release-notice"><ShieldCheck size={17} />{t.releaseNotice}</p></div></section>
 
-        <section id="profiles" className="profiles-section"><div className="section-heading"><div><span className="section-kicker">04 / {isArabic ? "مرونة الوالدين" : "Parent-controlled flexibility"}</span><h2>{t.profiles}</h2></div><p>{t.profilesIntro}</p></div><div className="profile-feature"><div className="profile-image" style={{ backgroundImage: profileImage }}><span>{isArabic ? "ابدأ من الأساس المناسب" : "Start from the right baseline"}</span></div><div className="profile-list">{t.profileNames.map((name, index) => <div className="profile-row" key={name}><span className="profile-number">0{index + 1}</span><div><h3>{name}</h3><p>{t.profileDetails[index]}</p></div><ChevronDown size={18} /></div>)}</div></div></section>
+        <section id="setup" className="setup-section section-grid"><div className="sticky-heading"><span className="section-kicker">04 / {isArabic ? "الدليل العملي" : "The practical guide"}</span><h2>{t.install}</h2><p>{t.installIntro}</p><a className="button dark-button" href="#profiles"><ArrowDown size={17} />{isArabic ? "تابع إلى الملفات" : "Continue to profiles"}</a></div><div className="steps">{t.steps.map(([title, body], index) => <article className="step" key={title}><div className="step-index">{String(index + 1).padStart(2, "0")}</div><div><h3>{title}</h3><p>{body}</p></div><Check size={18} className="step-check" /></article>)}</div></section>
 
-        <section className="voice-section section-grid"><div className="voice-image" style={{ backgroundImage: voiceImage }}><span className="voice-tag"><Mic2 size={15} />{isArabic ? "محلي على الجهاز" : "Stored on-device"}</span></div><div className="voice-copy"><span className="section-kicker">05 / {isArabic ? "التنبيهات" : "Notifications"}</span><h2>{t.voice}</h2><p>{t.voiceBody}</p><div className="voice-points"><div><Mic2 size={20} /><span>{isArabic ? "تسجيل واستبدال وحذف" : "Record, replace, and delete"}</span></div><div><Smartphone size={20} /><span>{isArabic ? "لا رفع إلى السحابة" : "No cloud upload"}</span></div></div></div></section>
+        <section id="profiles" className="profiles-section"><div className="section-heading"><div><span className="section-kicker">05 / {isArabic ? "مرونة الوالدين" : "Parent-controlled flexibility"}</span><h2>{t.profiles}</h2></div><p>{t.profilesIntro}</p></div><div className="profile-feature"><div className="profile-image" style={{ backgroundImage: profileImage }}><span>{isArabic ? "ابدأ من الأساس المناسب" : "Start from the right baseline"}</span></div><div className="profile-list">{t.profileNames.map((name, index) => <div className="profile-row" key={name}><span className="profile-number">0{index + 1}</span><div><h3>{name}</h3><p>{t.profileDetails[index]}</p></div><ChevronDown size={18} /></div>)}</div></div></section>
 
-        <section id="privacy" className="privacy-section"><div className="section-heading"><div><span className="section-kicker">06 / {isArabic ? "ما لا نفعله" : "What we do not do"}</span><h2>{t.privacyTitle}</h2></div></div><div className="privacy-grid">{t.privacyPoints.map((point, index) => { const Icon = privacyIcons[index]; return <div key={point} className="privacy-item"><span><Icon size={20} /></span><p>{point}</p></div>; })}</div></section>
+        <section className="voice-section section-grid"><div className="voice-image" style={{ backgroundImage: voiceImage }}><span className="voice-tag"><Mic2 size={15} />{isArabic ? "محلي على الجهاز" : "Stored on-device"}</span></div><div className="voice-copy"><span className="section-kicker">06 / {isArabic ? "التنبيهات" : "Notifications"}</span><h2>{t.voice}</h2><p>{t.voiceBody}</p><div className="voice-points"><div><Mic2 size={20} /><span>{isArabic ? "تسجيل واستبدال وحذف" : "Record, replace, and delete"}</span></div><div><Smartphone size={20} /><span>{isArabic ? "لا رفع إلى السحابة" : "No cloud upload"}</span></div></div></div></section>
 
-        <section className="faq-section section-grid"><div><span className="section-kicker">07 / FAQ</span><h2>{t.faq}</h2><CircleHelp size={34} className="faq-mark" /></div><div className="faq-list">{t.faqItems.map(([question, answer], index) => <div className={`faq-item ${openFaq === index ? "open" : ""}`} key={question}><button onClick={() => setOpenFaq(openFaq === index ? null : index)}><span>{question}</span>{openFaq === index ? <ArrowUp size={18} /> : <ArrowDown size={18} />}</button>{openFaq === index && <p>{answer}</p>}</div>)}</div></section>
+        <section id="privacy" className="privacy-section"><div className="section-heading"><div><span className="section-kicker">07 / {isArabic ? "ما لا نفعله" : "What we do not do"}</span><h2>{t.privacyTitle}</h2></div></div><div className="privacy-grid">{t.privacyPoints.map((point, index) => { const Icon = privacyIcons[index]; return <div key={point} className="privacy-item"><span><Icon size={20} /></span><p>{point}</p></div>; })}</div></section>
+
+        <section className="faq-section section-grid"><div><span className="section-kicker">08 / FAQ</span><h2>{t.faq}</h2><CircleHelp size={34} className="faq-mark" /></div><div className="faq-list">{t.faqItems.map(([question, answer], index) => <div className={`faq-item ${openFaq === index ? "open" : ""}`} key={question}><button onClick={() => setOpenFaq(openFaq === index ? null : index)}><span>{question}</span>{openFaq === index ? <ArrowUp size={18} /> : <ArrowDown size={18} />}</button>{openFaq === index && <p>{answer}</p>}</div>)}</div></section>
 
         <section id="contact" className="contact-section section-grid"><div className="contact-copy"><span className="section-kicker">{t.contactKicker}</span><h2>{t.contactTitle}</h2><p>{t.contactBody}</p><div className="contact-address"><Mail size={18} /><span>3ialna.app@gmail.com</span></div></div><form className="contact-form" onSubmit={submitContact}><input type="hidden" name="_subject" value="3ialna website inquiry" /><input type="hidden" name="_template" value="table" /><input className="form-honeypot" type="text" name="_honey" tabIndex={-1} autoComplete="off" /><label>{t.name}<input required name="name" autoComplete="name" /></label><label>{t.email}<input required type="email" name="email" autoComplete="email" /></label><label>{t.subject}<input required name="subject" /></label><label>{t.message}<textarea required name="message" rows={5} /></label><button className="button dark-button contact-submit" type="submit" disabled={contactState === "sending"}><Send size={17} />{contactState === "sending" ? t.sending : t.submit}</button>{contactState === "sent" && <p className="form-state success" role="status"><Check size={16} />{t.contactSuccess}</p>}{contactState === "error" && <p className="form-state error" role="alert">{t.contactError}</p>}</form></section>
 
-        <section className="final-cta"><div><Sparkles size={22} /><h2>{t.finalCta}</h2><p>{t.finalBody}</p></div><a className="button primary light" href="#setup"><Download size={18} />{t.download}</a></section>
+        <section className="final-cta"><div><Sparkles size={22} /><h2>{t.finalCta}</h2><p>{t.finalBody}</p></div><a className="button primary light" href="#download"><Download size={18} />{t.download}</a></section>
       </main>
       <footer><div className="brand footer-brand"><span className="brand-mark" aria-hidden="true" /><span>3ialna</span><small>عيالنا</small></div><span>{t.footer}</span><span>© 2026</span></footer>
     </div>
