@@ -100,6 +100,14 @@ class _ParentVoiceNotificationScreenState extends State<ParentVoiceNotificationS
             icon: Icon(_recordingNow ? Icons.stop : Icons.mic),
             label: Text(_recordingNow ? (_ar ? 'إيقاف التسجيل' : 'Stop recording') : (_ar ? 'بدء التسجيل' : 'Start recording')),
           ),
+          if (Platform.isAndroid) ...[
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: _voiceService.requestExactAlarmPermission,
+              icon: const Icon(Icons.alarm),
+              label: Text(_ar ? 'السماح بالتنبيه في الخلفية' : 'Allow background alarm playback'),
+            ),
+          ],
           if (_recording != null) ...[
             const SizedBox(height: 18),
             ListTile(

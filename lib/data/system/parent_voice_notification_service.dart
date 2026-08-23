@@ -65,6 +65,8 @@ class ParentVoiceNotificationService {
     return await _backgroundChannel.invokeMethod<bool>('isVoicePlaybackScheduled') ?? false;
   }
 
+  Future<void> requestExactAlarmPermission() => _backgroundChannel.invokeMethod<void>('requestExactAlarmPermission');
+
   Future<void> deleteRecording() async {
     await cancelBackgroundPlayback();
     final File file = File(await _filePath);

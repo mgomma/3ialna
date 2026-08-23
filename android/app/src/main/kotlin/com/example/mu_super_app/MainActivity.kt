@@ -7,6 +7,7 @@ import android.content.ActivityNotFoundException
 import android.app.ActivityManager
 import android.os.Build
 import android.provider.Settings
+import android.net.Uri
 import android.net.VpnService
 import com.example.mu_super_app.network.SafeContentVpnService
 import com.example.mu_super_app.voice.VoicePlaybackScheduler
@@ -259,6 +260,12 @@ class MainActivity : FlutterActivity() {
                 }
                 "isVoicePlaybackScheduled" -> {
                     result.success(VoicePlaybackScheduler.isScheduled(this))
+                }
+                "requestExactAlarmPermission" -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:$packageName")))
+                    }
+                    result.success(true)
                 }
                 else -> result.notImplemented()
             }
