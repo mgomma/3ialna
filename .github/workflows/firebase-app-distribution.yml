@@ -25,30 +25,51 @@ concurrency:
 
 jobs:
   distribute:
-    if: ${{ secrets.FIREBASE_APP_ID != '' && secrets.FIREBASE_SERVICE_ACCOUNT_JSON != '' }}
     runs-on: ubuntu-latest
     steps:
+      - name: Check Firebase configuration
+        id: firebase_configuration
+        env:
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -n "$FIREBASE_APP_ID" ] && [ -n "$FIREBASE_SERVICE_ACCOUNT_JSON" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "Firebase distribution is not configured; build distribution will be skipped."
+          fi
       - name: Check out source
+        if: steps.firebase_configuration.outputs.configured == 'true'
         uses: actions/checkout@v4
       - name: Set up Java
+        if: steps.firebase_configuration.outputs.configured == 'true'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
       - name: Set up Flutter
+        if: steps.firebase_configuration.outputs.configured == 'true'
         uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
       - name: Install Flutter packages
+        if: steps.firebase_configuration.outputs.configured == 'true'
         run: flutter pub get --enforce-lockfile
       - name: Build Android debug APK
+        if: steps.firebase_configuration.outputs.configured == 'true'
         run: flutter build apk --debug
       - name: Install Firebase CLI
+        if: steps.firebase_configuration.outputs.configured == 'true'
         run: npm install --global firebase-tools
       - name: Write Firebase service account credential
-        run: printf '%s' '${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}' > "$RUNNER_TEMP/firebase-service-account.json"
+        if: steps.firebase_configuration.outputs.configured == 'true'
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        run: printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > "$RUNNER_TEMP/firebase-service-account.json"
       - name: Upload APK to Firebase App Distribution
+        if: steps.firebase_configuration.outputs.configured == 'true'
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
           FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
@@ -65,14 +86,5 @@ jobs:
             $group_args \
             --non-interactive
       - name: Remove service account credential
-        if: always()
+        if: always() && steps.firebase_configuration.outputs.configured == 'true'
         run: rm -f "$RUNNER_TEMP/firebase-service-account.json"
-
-  firebase-not-configured:
-    if: ${{ secrets.FIREBASE_APP_ID == '' || secrets.FIREBASE_SERVICE_ACCOUNT_JSON == '' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Explain required configuration
-        run: |
-          echo "Firebase distribution was skipped because FIREBASE_APP_ID or FIREBASE_SERVICE_ACCOUNT_JSON is not configured."
-          echo "See docs/firebase-app-distribution.md for the one-time setup."
