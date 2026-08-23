@@ -11,7 +11,7 @@ class ParentVoiceNotificationService {
 
   final AudioRecorder _recorder;
   final AudioPlayer _player = AudioPlayer();
-  static const String fileName = 'parent_voice_notification.m4a';
+  String get fileName => Platform.isIOS ? 'parent_voice_notification.wav' : 'parent_voice_notification.m4a';
   static const MethodChannel _backgroundChannel = MethodChannel('parent_voice_notifications');
 
   Future<String> get _filePath async {
@@ -26,7 +26,10 @@ class ParentVoiceNotificationService {
       throw StateError('Microphone permission is required.');
     }
     await _recorder.start(
-      const RecordConfig(encoder: AudioEncoder.aacLc),
+      RecordConfig(
+        encoder: Platform.isIOS ? AudioEncoder.wav : AudioEncoder.aacLc,
+        maxDuration: const Duration(seconds: 30),
+      ),
       path: await _filePath,
     );
   }
@@ -66,6 +69,10 @@ class ParentVoiceNotificationService {
   }
 
   Future<void> requestExactAlarmPermission() => _backgroundChannel.invokeMethod<void>('requestExactAlarmPermission');
+
+  Future<bool> requestVoiceNotificationPermission() async {
+    return await _backgroundChannel.invokeMethod<bool>('requestVoiceNotificationPermission') ?? false;
+  }
 
   Future<void> deleteRecording() async {
     await cancelBackgroundPlayback();

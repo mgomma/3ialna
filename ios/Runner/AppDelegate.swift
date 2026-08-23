@@ -21,6 +21,15 @@ import UIKit
       safeContentIosBridge.handle(call, result: result)
     }
 
+    let parentVoiceChannel = FlutterMethodChannel(
+      name: IosParentVoiceNotificationBridge.channelName,
+      binaryMessenger: controller.binaryMessenger
+    )
+    let parentVoiceBridge = IosParentVoiceNotificationBridge()
+    parentVoiceChannel.setMethodCallHandler { call, result in
+      parentVoiceBridge.handle(call, result: result)
+    }
+
     let blockingChannel = FlutterMethodChannel(name: "app_blocking/block",
                                               binaryMessenger: controller.binaryMessenger)
     

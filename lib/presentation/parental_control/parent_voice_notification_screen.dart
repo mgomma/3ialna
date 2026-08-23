@@ -108,6 +108,14 @@ class _ParentVoiceNotificationScreenState extends State<ParentVoiceNotificationS
               label: Text(_ar ? 'السماح بالتنبيه في الخلفية' : 'Allow background alarm playback'),
             ),
           ],
+          if (Platform.isIOS) ...[
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: _voiceService.requestVoiceNotificationPermission,
+              icon: const Icon(Icons.notifications_active_outlined),
+              label: Text(_ar ? 'السماح بالتنبيه الصوتي' : 'Allow voice notification'),
+            ),
+          ],
           if (_recording != null) ...[
             const SizedBox(height: 18),
             ListTile(
