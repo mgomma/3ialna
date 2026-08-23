@@ -56,7 +56,7 @@ jobs:
           cache: true
       - name: Install Flutter packages
         if: steps.firebase_configuration.outputs.configured == 'true'
-        run: flutter pub get --enforce-lockfile
+        run: flutter pub get
       - name: Build Android debug APK
         if: steps.firebase_configuration.outputs.configured == 'true'
         run: flutter build apk --debug
