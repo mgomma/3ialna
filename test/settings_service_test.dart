@@ -11,12 +11,17 @@ void main() {
 
     await settings.setPrayerCalculationMethodOverride('isna');
     await settings.savePrayerLockSettings(
-      PrayerLockSettings.defaults().copyWith(calculationMethodName: 'isna'),
+      PrayerLockSettings.defaults().copyWith(
+        calculationMethodName: 'isna',
+        voiceNotificationsEnabled: false,
+      ),
     );
 
     final SettingsService reloaded = SettingsService(prefs);
     expect(reloaded.isPrayerCalculationMethodManuallySelected, isTrue);
     expect(reloaded.prayerCalculationMethodOverride, 'isna');
-    expect(reloaded.loadPrayerLockSettings().calculationMethodName, 'isna');
+    final PrayerLockSettings loaded = reloaded.loadPrayerLockSettings();
+    expect(loaded.calculationMethodName, 'isna');
+    expect(loaded.voiceNotificationsEnabled, isFalse);
   });
 }

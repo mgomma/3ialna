@@ -112,6 +112,7 @@ class SettingsService {
       'fridayDhuhrDuration': settings.fridayDhuhrDuration,
       'calculationMethod': settings.calculationMethodName,
       'notificationMessages': settings.notificationMessages.map((Prayer key, String value) => MapEntry(key.name, value)),
+      'voiceNotificationsEnabled': settings.voiceNotificationsEnabled,
       if (settings.latitude != null) 'latitude': settings.latitude,
       if (settings.longitude != null) 'longitude': settings.longitude,
     };
@@ -160,6 +161,7 @@ class SettingsService {
             json['calculationMethod'] as String? ??
             'makkah',
         notificationMessages: notificationMessages.isEmpty ? PrayerLockSettings.defaults().notificationMessages : notificationMessages,
+        voiceNotificationsEnabled: json['voiceNotificationsEnabled'] as bool? ?? true,
         latitude: json['latitude'] as double?,
         longitude: json['longitude'] as double?,
       );

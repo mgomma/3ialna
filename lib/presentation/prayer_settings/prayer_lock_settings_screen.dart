@@ -343,8 +343,19 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             const Text('Notification Messages', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Voice notifications'),
+              subtitle: const Text('Speak the same written message when the prayer lock begins'),
+              value: _settings.voiceNotificationsEnabled,
+              onChanged: (bool value) {
+                setState(() {
+                  _settings = _settings.copyWith(voiceNotificationsEnabled: value);
+                });
+              },
+            ),
             const SizedBox(height: 8),
-            const Text('Custom messages shown 2 minutes before each prayer', style: TextStyle(color: Colors.grey)),
+            const Text('Custom messages shown 2 minutes before each prayer and spoken when the lock begins', style: TextStyle(color: Colors.grey)),
             const SizedBox(height: 16),
             ...Prayer.values.map(
               (Prayer prayer) => Padding(

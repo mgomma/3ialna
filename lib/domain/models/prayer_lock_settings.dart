@@ -8,6 +8,7 @@ class PrayerLockSettings {
     required this.fridayDhuhrDuration,
     required this.calculationMethodName,
     required this.notificationMessages,
+    this.voiceNotificationsEnabled = true,
     this.latitude,
     this.longitude,
   });
@@ -27,6 +28,9 @@ class PrayerLockSettings {
 
   /// Custom notification messages for each prayer.
   final Map<Prayer, String> notificationMessages;
+
+  /// Whether the written prayer message should also be spoken aloud.
+  final bool voiceNotificationsEnabled;
 
   /// Latitude coordinate for prayer time calculations.
   final double? latitude;
@@ -54,6 +58,7 @@ class PrayerLockSettings {
     int? fridayDhuhrDuration,
     String? calculationMethodName,
     Map<Prayer, String>? notificationMessages,
+    bool? voiceNotificationsEnabled,
     double? latitude,
     double? longitude,
   }) {
@@ -66,6 +71,8 @@ class PrayerLockSettings {
           calculationMethodName ?? this.calculationMethodName,
       notificationMessages:
           notificationMessages ?? this.notificationMessages,
+      voiceNotificationsEnabled:
+          voiceNotificationsEnabled ?? this.voiceNotificationsEnabled,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
     );

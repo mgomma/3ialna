@@ -6,6 +6,7 @@ import '../../domain/models/overlay_data.dart';
 import '../../domain/models/prayer.dart';
 import '../../domain/models/prayer_lock_settings.dart';
 import 'notification_service.dart';
+import 'voice_notification_service.dart';
 import 'overlay_service.dart';
 import 'prayer_time_service.dart';
 
@@ -25,6 +26,7 @@ class PrayerLockScheduler {
   final NotificationService _notificationService;
   final OverlayService _overlayService;
   final SettingsService? _settingsService;
+  final VoiceNotificationService _voiceNotificationService = VoiceNotificationService();
 
   Timer? _monitoringTimer;
   Timer? _checkTimer;
@@ -238,8 +240,13 @@ class PrayerLockScheduler {
       ),
     );
 
-    // Create a custom overlay data for prayer locks
-    // For now, we'll reuse the existing overlay system
+    if (settings.voiceNotificationsEnabled) {
+      final String message = settings.notificationMessages[prayer] ??
+          'Prayer time is approaching. Your device will be locked in 2 minutes.';
+      await _voiceNotificationService.speak(message);
+    }
+
+    // Create a custom overlay data for prayer locks.
     await _overlayService.showLimitWarning(data);
   }
 
