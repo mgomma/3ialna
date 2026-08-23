@@ -92,7 +92,7 @@ class AppCard extends StatelessWidget {
                       : null,
                 ),
               ],
-            ],
+            ),
             if (onSetCategory != null) ...[
               const SizedBox(height: 8),
               SizedBox(

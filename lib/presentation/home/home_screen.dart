@@ -91,7 +91,7 @@ class _HomeScreenState extends State<HomeScreen> {
     await childProfiles.ensureDefaultChild();
     ChildShortcutService.listen((String childId) async {
       await childProfiles.setActiveChild(childId);
-      await _loadSettings();
+      _loadSettings();
     });
     final String? shortcutChildId = await ChildShortcutService.consumeInitialChildId();
     if (shortcutChildId != null) await childProfiles.setActiveChild(shortcutChildId);
