@@ -82,7 +82,8 @@ class _AgeSafetyProfilesScreenState extends State<AgeSafetyProfilesScreen> {
                 },
               ),
               DropdownButtonFormField<ChildGender>(
-                value: gender,
+                key: ValueKey<ChildGender>(gender),
+                initialValue: gender,
                 decoration: InputDecoration(labelText: _ar ? 'النوع' : 'Gender'),
                 items: <DropdownMenuItem<ChildGender>>[
                   DropdownMenuItem(value: ChildGender.unspecified, child: Text(_ar ? 'غير محدد' : 'Not specified')),
@@ -143,7 +144,8 @@ class _AgeSafetyProfilesScreenState extends State<AgeSafetyProfilesScreen> {
         Text(_ar ? 'عرّف الأطفال الذين يستخدمون الجهاز واختر الطفل النشط. الإعدادات التالية تخص الطفل المختار فقط.' : 'Define the children who use this device and choose the active child. The settings below apply only to the selected child.'),
         const SizedBox(height: 14),
         DropdownButtonFormField<String>(
-          value: _active!.id,
+          key: ValueKey<String>(_active!.id),
+          initialValue: _active!.id,
           decoration: InputDecoration(labelText: _ar ? 'الطفل المستخدم للجهاز الآن' : 'Child using this device now'),
           items: _children.map((ChildProfile child) => DropdownMenuItem<String>(value: child.id, child: Text(child.name))).toList(growable: false),
           onChanged: _setActive,

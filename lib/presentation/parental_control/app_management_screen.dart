@@ -139,16 +139,18 @@ class _AppManagementScreenState extends State<AppManagementScreen> {
     final ManagedAppCategory? chosen = await showModalBottomSheet<ManagedAppCategory>(
       context: context,
       builder: (BuildContext context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: ManagedAppCategory.values
-              .map((ManagedAppCategory category) => RadioListTile<ManagedAppCategory>(
-                    value: category,
-                    groupValue: current,
-                    title: Text(_categoryLabel(category)),
-                    onChanged: (ManagedAppCategory? value) => Navigator.pop(context, value),
-                  ))
-              .toList(growable: false),
+        child: RadioGroup<ManagedAppCategory>(
+          groupValue: current,
+          onChanged: (ManagedAppCategory? value) => Navigator.pop(context, value),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: ManagedAppCategory.values
+                .map((ManagedAppCategory category) => RadioListTile<ManagedAppCategory>(
+                      value: category,
+                      title: Text(_categoryLabel(category)),
+                    ))
+                .toList(growable: false),
+          ),
         ),
       ),
     );
