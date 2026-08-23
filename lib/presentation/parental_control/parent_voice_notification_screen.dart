@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -19,6 +20,7 @@ class _ParentVoiceNotificationScreenState extends State<ParentVoiceNotificationS
   File? _recording;
   bool _recordingNow = false;
   bool _playing = false;
+  Timer? _recordingLimitTimer;
 
   bool get _ar => LocaleController.instance.isArabic;
 
@@ -36,12 +38,19 @@ class _ParentVoiceNotificationScreenState extends State<ParentVoiceNotificationS
   Future<void> _toggleRecording() async {
     try {
       if (_recordingNow) {
+        _recordingLimitTimer?.cancel();
         await _voiceService.stopRecording();
         await _loadRecording();
         setState(() => _recordingNow = false);
       } else {
         await _voiceService.startRecording();
         setState(() => _recordingNow = true);
+        if (Platform.isIOS) {
+          _recordingLimitTimer?.cancel();
+          _recordingLimitTimer = Timer(const Duration(seconds: 30), () {
+            if (_recordingNow) _toggleRecording();
+          });
+        }
       }
     } catch (error) {
       if (!mounted) return;
@@ -70,6 +79,7 @@ class _ParentVoiceNotificationScreenState extends State<ParentVoiceNotificationS
 
   @override
   void dispose() {
+    _recordingLimitTimer?.cancel();
     _player.dispose();
     _voiceService.dispose();
     super.dispose();

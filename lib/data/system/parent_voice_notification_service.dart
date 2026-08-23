@@ -26,10 +26,7 @@ class ParentVoiceNotificationService {
       throw StateError('Microphone permission is required.');
     }
     await _recorder.start(
-      RecordConfig(
-        encoder: Platform.isIOS ? AudioEncoder.wav : AudioEncoder.aacLc,
-        maxDuration: const Duration(seconds: 30),
-      ),
+      RecordConfig(encoder: Platform.isIOS ? AudioEncoder.wav : AudioEncoder.aacLc),
       path: await _filePath,
     );
   }
