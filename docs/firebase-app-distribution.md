@@ -18,9 +18,9 @@ Create a tester group in Firebase App Distribution before the first automated up
 
 ## Website release synchronization
 
-After a successful upload, the workflow extracts Firebase's tester-only `testing_uri`, rewrites `website/src/release.generated.ts`, commits that public release metadata to `dev`, and manually triggers the GitHub Pages deployment workflow. The website and its QR code therefore follow the latest successful Firebase release automatically. The Firebase workflow ignores `website/**` changes, preventing a release-update loop.
+Before the optional Firebase upload, the workflow publishes the generated APK as a GitHub **public debug pre-release**. It then rewrites `website/src/release.generated.ts` with that release asset's direct URL, commits the generated metadata to `dev`, and manually triggers GitHub Pages. The website download button and QR code therefore follow the latest public debug build automatically. The workflow ignores `website/**` changes, preventing a release-update loop.
 
-The generated URL is for invited testers only. Never publish Firebase's `binary_download_uri`: it is a signed download URL that expires after one hour. The website instead includes a visible invitation requirement and a second QR code that opens the public setup guide.
+The direct APK is intentionally labelled as a debug-signed evaluation build, not a Play Store release. It is publicly downloadable without Firebase authentication, and Android may require users to allow installation from their browser or file manager. Firebase App Distribution remains an optional secondary internal-testing channel. Never publish Firebase's `binary_download_uri`: it is a signed URL that expires after one hour.
 
 ## First controlled run
 

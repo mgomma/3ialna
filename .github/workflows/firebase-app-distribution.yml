@@ -1,4 +1,4 @@
-name: Firebase App Distribution
+name: Public Debug APK and Firebase Distribution
 
 on:
   push:
@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       release_notes:
-        description: "Optional release notes for testers"
+        description: "Optional release notes for Firebase testers"
         required: false
         type: string
 
@@ -21,13 +21,94 @@ permissions:
   contents: write
 
 concurrency:
-  group: firebase-app-distribution-${{ github.ref }}
+  group: public-debug-release-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  distribute:
+  publish:
     runs-on: ubuntu-latest
     steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Install Flutter packages
+        run: flutter pub get
+      - name: Build public debug APK
+        run: flutter build apk --debug
+      - name: Publish public debug pre-release
+        id: public_release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          app_version="$(awk '/^version:/{print $2; exit}' pubspec.yaml)"
+          version_name="${app_version%%+*}"
+          build_number="${app_version#*+}"
+          if [ "$build_number" = "$app_version" ]; then build_number="0"; fi
+          release_tag="debug-v${version_name}-b${build_number}-run${GITHUB_RUN_ID}-a${GITHUB_RUN_ATTEMPT}"
+          asset_name="3ialna-debug.apk"
+          download_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${release_tag}/${asset_name}"
+
+          cat > "$RUNNER_TEMP/public-debug-notes.md" <<EOF
+          ## Public Android evaluation build
+
+          This APK is a **debug-signed evaluation build** for Android. It is not a Play Store release and should not be used as a production distribution channel.
+
+          - Version: ${version_name} (${build_number})
+          - Source commit: ${GITHUB_SHA}
+          - Installation: Android may require the user to allow installation from their browser or file manager.
+          EOF
+
+          gh release create "$release_tag" "build/app/outputs/flutter-apk/app-debug.apk#${asset_name}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "3ialna debug evaluation ${version_name} (${build_number})" \
+            --notes-file "$RUNNER_TEMP/public-debug-notes.md" \
+            --prerelease
+
+          echo "version_name=$version_name" >> "$GITHUB_OUTPUT"
+          echo "build_number=$build_number" >> "$GITHUB_OUTPUT"
+          echo "download_url=$download_url" >> "$GITHUB_OUTPUT"
+      - name: Synchronize public website download metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION_NAME: ${{ steps.public_release.outputs.version_name }}
+          BUILD_NUMBER: ${{ steps.public_release.outputs.build_number }}
+          DOWNLOAD_URL: ${{ steps.public_release.outputs.download_url }}
+        run: |
+          set -euo pipefail
+          published_at="$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
+          cat > website/src/release.generated.ts <<EOF
+          // Desert Signal style reminder: release facts are practical, calm, and transparent.
+          // This file is rewritten automatically by the public debug-release workflow.
+          export const currentRelease = {
+            platform: "Android",
+            version: "$VERSION_NAME",
+            build: "$BUILD_NUMBER",
+            distribution: "GitHub public debug release",
+            downloadUrl: "$DOWNLOAD_URL",
+            publishedAt: "$published_at",
+          } as const;
+          EOF
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add website/src/release.generated.ts
+          if git diff --cached --quiet; then
+            echo "Website download metadata is already current."
+            exit 0
+          fi
+          git commit -m "chore(website): sync public debug APK [skip ci]"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+          gh workflow run deploy-website.yml --ref "$GITHUB_REF_NAME"
       - name: Check Firebase configuration
         id: firebase_configuration
         env:
@@ -38,29 +119,8 @@ jobs:
             echo "configured=true" >> "$GITHUB_OUTPUT"
           else
             echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "Firebase distribution is not configured; build distribution will be skipped."
+            echo "Firebase distribution is not configured; continuing with the public debug release only."
           fi
-      - name: Check out source
-        if: steps.firebase_configuration.outputs.configured == 'true'
-        uses: actions/checkout@v4
-      - name: Set up Java
-        if: steps.firebase_configuration.outputs.configured == 'true'
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
-      - name: Set up Flutter
-        if: steps.firebase_configuration.outputs.configured == 'true'
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-      - name: Install Flutter packages
-        if: steps.firebase_configuration.outputs.configured == 'true'
-        run: flutter pub get
-      - name: Build Android debug APK
-        if: steps.firebase_configuration.outputs.configured == 'true'
-        run: flutter build apk --debug
       - name: Install Firebase CLI
         if: steps.firebase_configuration.outputs.configured == 'true'
         run: npm install --global firebase-tools
@@ -81,56 +141,11 @@ jobs:
           if [ -n "$FIREBASE_TESTER_GROUPS" ]; then
             group_args="--groups $FIREBASE_TESTER_GROUPS"
           fi
-          if ! firebase appdistribution:distribute build/app/outputs/flutter-apk/app-debug.apk \
+          firebase appdistribution:distribute build/app/outputs/flutter-apk/app-debug.apk \
             --app "$FIREBASE_APP_ID" \
             --release-notes "$RELEASE_NOTES" \
             $group_args \
-            --non-interactive > "$RUNNER_TEMP/firebase-distribution-output.txt" 2>&1; then
-            cat "$RUNNER_TEMP/firebase-distribution-output.txt"
-            exit 1
-          fi
-      - name: Synchronize website release metadata
-        if: steps.firebase_configuration.outputs.configured == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          output_file="$RUNNER_TEMP/firebase-distribution-output.txt"
-          tester_url="$(sed -n 's/.*Share this release with testers who have access: \(https:\/\/appdistribution\.firebase\.google\.com\/testerapps\/[^ ]*\).*/\1/p' "$output_file" | tail -n 1)"
-          if [ -z "$tester_url" ]; then
-            echo "Firebase upload succeeded but no tester URL was found in the CLI output."
-            exit 1
-          fi
-
-          app_version="$(awk '/^version:/{print $2; exit}' pubspec.yaml)"
-          version_name="${app_version%%+*}"
-          build_number="${app_version#*+}"
-          if [ "$build_number" = "$app_version" ]; then build_number="0"; fi
-          published_at="$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
-
-          cat > website/src/release.generated.ts <<EOF
-          // Desert Signal style reminder: release facts are practical, calm, and transparent.
-          // This file is rewritten automatically by the Firebase App Distribution workflow.
-          export const currentRelease = {
-            platform: "Android",
-            version: "$version_name",
-            build: "$build_number",
-            distribution: "Firebase App Distribution",
-            testerUrl: "$tester_url",
-            publishedAt: "$published_at",
-          } as const;
-          EOF
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add website/src/release.generated.ts
-          if git diff --cached --quiet; then
-            echo "Website release metadata is already current."
-            exit 0
-          fi
-          git commit -m "chore(website): sync Firebase test release [skip ci]"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
-          gh workflow run deploy-website.yml --ref "$GITHUB_REF_NAME"
+            --non-interactive
       - name: Remove service account credential
-        if: always() && steps.firebase_configuration.outputs.configured == 'true'
-        run: rm -f "$RUNNER_TEMP/firebase-service-account.json" "$RUNNER_TEMP/firebase-distribution-output.txt"
+        if: always()
+        run: rm -f "$RUNNER_TEMP/firebase-service-account.json"
