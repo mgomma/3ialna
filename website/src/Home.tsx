@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, ArrowUpRight, Check, ChevronDown, CircleHelp, Clock3, Download, ExternalLink, Globe2, LockKeyhole, Mail, Mic2, RotateCcw, Send, ShieldCheck, Smartphone, Sparkles } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { currentRelease } from "./release.generated";
@@ -133,28 +133,11 @@ const copy = {
 export default function Home() {
   const [language, setLanguage] = useState<Language>("ar");
   const [openFaq, setOpenFaq] = useState<number | null>(0);
-  const [contactState, setContactState] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const t = useMemo(() => copy[language], [language]);
   const isArabic = language === "ar";
   const releaseVersion = `${currentRelease.version} · ${isArabic ? "البنية" : "Build"} ${currentRelease.build}`;
   const releaseDate = new Intl.DateTimeFormat(isArabic ? "ar-SA" : "en-US", { dateStyle: "medium" }).format(new Date(currentRelease.publishedAt));
-
-  async function submitContact(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setContactState("sending");
-    try {
-      const response = await fetch("https://formsubmit.co/ajax/3ialna.app@gmail.com", {
-        method: "POST",
-        headers: { Accept: "application/json" },
-        body: new FormData(event.currentTarget),
-      });
-      if (!response.ok) throw new Error("Contact form submission failed");
-      event.currentTarget.reset();
-      setContactState("sent");
-    } catch {
-      setContactState("error");
-    }
-  }
+  const contactWasSubmitted = new URLSearchParams(window.location.search).get("sent") === "1";
 
   return (
     <div dir={isArabic ? "rtl" : "ltr"} className="site-shell">
@@ -193,7 +176,7 @@ export default function Home() {
 
         <section className="faq-section section-grid"><div><span className="section-kicker">08 / FAQ</span><h2>{t.faq}</h2><CircleHelp size={34} className="faq-mark" /></div><div className="faq-list">{t.faqItems.map(([question, answer], index) => <div className={`faq-item ${openFaq === index ? "open" : ""}`} key={question}><button onClick={() => setOpenFaq(openFaq === index ? null : index)}><span>{question}</span>{openFaq === index ? <ArrowUp size={18} /> : <ArrowDown size={18} />}</button>{openFaq === index && <p>{answer}</p>}</div>)}</div></section>
 
-        <section id="contact" className="contact-section section-grid"><div className="contact-copy"><span className="section-kicker">{t.contactKicker}</span><h2>{t.contactTitle}</h2><p>{t.contactBody}</p><div className="contact-address"><Mail size={18} /><span>3ialna.app@gmail.com</span></div></div><form className="contact-form" onSubmit={submitContact}><input type="hidden" name="_subject" value="3ialna website inquiry" /><input type="hidden" name="_template" value="table" /><input type="hidden" name="_captcha" value="true" /><input className="form-honeypot" type="text" name="_honey" tabIndex={-1} autoComplete="off" /><label>{t.name}<input required name="name" autoComplete="name" /></label><label>{t.email}<input required type="email" name="email" autoComplete="email" /></label><label>{t.subject}<input required name="subject" /></label><label>{t.message}<textarea required name="message" rows={5} /></label><button className="button dark-button contact-submit" type="submit" disabled={contactState === "sending"}><Send size={17} />{contactState === "sending" ? t.sending : t.submit}</button>{contactState === "sent" && <p className="form-state success" role="status"><Check size={16} />{t.contactSuccess}</p>}{contactState === "error" && <p className="form-state error" role="alert">{t.contactError}</p>}</form></section>
+        <section id="contact" className="contact-section section-grid"><div className="contact-copy"><span className="section-kicker">{t.contactKicker}</span><h2>{t.contactTitle}</h2><p>{t.contactBody}</p><div className="contact-address"><Mail size={18} /><span>3ialna.app@gmail.com</span></div></div><form className="contact-form" action="https://formsubmit.co/3ialna.app@gmail.com" method="POST"><input type="hidden" name="_subject" value="3ialna website inquiry" /><input type="hidden" name="_template" value="table" /><input type="hidden" name="_captcha" value="true" /><input type="hidden" name="_next" value={`${publicSiteUrl}?sent=1#contact`} /><input type="hidden" name="_url" value={publicSiteUrl} /><input className="form-honeypot" type="text" name="_honey" tabIndex={-1} autoComplete="off" /><label>{t.name}<input required name="name" autoComplete="name" /></label><label>{t.email}<input required type="email" name="email" autoComplete="email" /></label><label>{t.subject}<input required name="subject" /></label><label>{t.message}<textarea required name="message" rows={5} /></label><button className="button dark-button contact-submit" type="submit"><Send size={17} />{t.submit}</button>{contactWasSubmitted && <p className="form-state success" role="status"><Check size={16} />{t.contactSuccess}</p>}</form></section>
 
         <section className="final-cta"><div><Sparkles size={22} /><h2>{t.finalCta}</h2><p>{t.finalBody}</p></div><a className="button primary light" href="#download"><Download size={18} />{t.download}</a></section>
       </main>
