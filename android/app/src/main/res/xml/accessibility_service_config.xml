@@ -5,5 +5,4 @@
     android:canRetrieveWindowContent="true"
     android:description="@string/accessibility_service_description"
     android:packageNames=""
-    android:settingsActivity="com.example.mu_super_app.MainActivity" />
-
+    android:settingsActivity="com.ialna.app.MainActivity" />

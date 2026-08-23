@@ -39,10 +39,10 @@
 ### 1. Verify Permissions
 ```bash
 # Check if Usage Access is granted
-adb shell dumpsys package com.example.mu_super_app | grep PACKAGE_USAGE_STATS
+adb shell dumpsys package com.ialna.app | grep PACKAGE_USAGE_STATS
 
 # Check if Overlay permission is granted
-adb shell appops get com.example.mu_super_app SYSTEM_ALERT_WINDOW
+adb shell appops get com.ialna.app SYSTEM_ALERT_WINDOW
 
 # Check if AccessibilityService is enabled
 adb shell settings get secure enabled_accessibility_services
@@ -60,7 +60,7 @@ adb logcat | grep -i error
 ### 3. Verify Blocking State
 ```bash
 # Check SharedPreferences
-adb shell run-as com.example.mu_super_app
+adb shell run-as com.ialna.app
 cd shared_prefs
 cat FlutterSharedPreferences.xml | grep blocked
 ```
@@ -94,7 +94,7 @@ cat FlutterSharedPreferences.xml | grep blocked
 ### Fix 3: Restart Services
 ```bash
 # Restart the monitoring service
-adb shell am startservice com.example.mu_super_app/.usage.MonitorForegroundService
+adb shell am startservice com.ialna.app/.usage.MonitorForegroundService
 
 # Check if service is running
 adb shell dumpsys activity services | grep MonitorForegroundService
@@ -186,4 +186,3 @@ If none of these solutions work:
 2. Note Android version and device model
 3. Describe exact steps to reproduce
 4. Include screenshots of permission settings
-

@@ -1,4 +1,4 @@
-package com.example.mu_super_app
+package com.ialna.app
 
 import android.content.Context
 import android.content.Intent
@@ -9,16 +9,16 @@ import android.os.Build
 import android.provider.Settings
 import android.net.Uri
 import android.net.VpnService
-import com.example.mu_super_app.network.SafeContentVpnService
-import com.example.mu_super_app.voice.VoicePlaybackScheduler
+import com.ialna.app.network.SafeContentVpnService
+import com.ialna.app.voice.VoicePlaybackScheduler
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
-import com.example.mu_super_app.usage.MonitorForegroundService
-import com.example.mu_super_app.kiosk.KioskModeHelper
-import com.example.mu_super_app.apps.AppListHelper
+import com.ialna.app.usage.MonitorForegroundService
+import com.ialna.app.kiosk.KioskModeHelper
+import com.ialna.app.apps.AppListHelper
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.util.Base64
@@ -327,7 +327,7 @@ class MainActivity : FlutterActivity() {
             
             val serviceName = ComponentName(
                 this,
-                com.example.mu_super_app.blocking.AppBlockingAccessibilityService::class.java
+                com.ialna.app.blocking.AppBlockingAccessibilityService::class.java
             ).flattenToString()
             
             val isEnabled = enabledServices.contains(serviceName)

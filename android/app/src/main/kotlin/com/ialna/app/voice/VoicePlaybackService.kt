@@ -1,4 +1,4 @@
-package com.example.mu_super_app.voice
+package com.ialna.app.voice
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -10,7 +10,7 @@ import android.media.MediaPlayer
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
-import com.example.mu_super_app.R
+import com.ialna.app.R
 
 class VoicePlaybackService : Service() {
     private var player: MediaPlayer? = null

@@ -1,4 +1,4 @@
-package com.example.mu_super_app.network
+package com.ialna.app.network
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -147,7 +147,7 @@ class SafeContentVpnService : VpnService() {
         val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("3ialna safe content")
             .setContentText("Domain filtering is active")
-            .setSmallIcon(com.example.mu_super_app.R.mipmap.ic_launcher)
+            .setSmallIcon(com.ialna.app.R.mipmap.ic_launcher)
             .setOngoing(true)
             .build()
         startForeground(NOTIFICATION_ID, notification)

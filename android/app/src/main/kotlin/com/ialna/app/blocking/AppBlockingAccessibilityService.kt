@@ -1,4 +1,4 @@
-package com.example.mu_super_app.blocking
+package com.ialna.app.blocking
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
@@ -244,4 +244,3 @@ class AppBlockingAccessibilityService : AccessibilityService() {
         private const val PFX = "flutter."
     }
 }
-

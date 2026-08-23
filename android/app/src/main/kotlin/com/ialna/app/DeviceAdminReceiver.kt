@@ -1,4 +1,4 @@
-package com.example.mu_super_app
+package com.ialna.app
 
 import android.app.admin.DeviceAdminReceiver
 import android.content.Context
@@ -37,4 +37,3 @@ class DeviceAdminReceiver : DeviceAdminReceiver() {
         private const val TAG = "DeviceAdminReceiver"
     }
 }
-

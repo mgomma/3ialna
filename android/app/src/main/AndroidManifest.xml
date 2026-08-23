@@ -120,7 +120,7 @@
             android:enabled="true"
             android:exported="false">
             <intent-filter>
-                <action android:name="com.example.mu_super_app.voice.PLAY" />
+                <action android:name="com.ialna.app.voice.PLAY" />
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>

@@ -10,7 +10,7 @@ Last updated: 2026-05-17
 - Priority: P0
 - Impact: Store upload rejection or wrong app identity.
 - Evidence:
-  - android/app/build.gradle.kts uses com.example.mu_super_app
+  - android/app/build.gradle.kts uses com.ialna.app
   - ios/Runner.xcodeproj/project.pbxproj uses com.example.muSuperApp
 - Task:
   - Set final Android applicationId/namespace and iOS bundle identifier.

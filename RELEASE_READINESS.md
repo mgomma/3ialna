@@ -15,7 +15,7 @@ This document tracks what is done and what remains before publishing test builds
 ### Android (Play Internal Testing)
 1. Create a real upload keystore and place it locally (example path: `android/keystore/upload-keystore.jks`).
 2. Copy `android/key.properties.example` to `android/key.properties` and fill all values.
-3. Replace placeholder package id (`com.example.mu_super_app`) with your production package id if not finalized yet.
+3. Confirm the production package ID (`com.ialna.app`) matches the Android identity registered in Firebase and any future Play Console listing.
 4. Build signed artifact:
    - `flutter build appbundle --release`
 5. Upload the `.aab` to Play Console internal testing.

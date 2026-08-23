@@ -1,4 +1,4 @@
-package com.example.mu_super_app.kiosk
+package com.ialna.app.kiosk
 
 import android.app.Activity
 import android.app.admin.DevicePolicyManager
@@ -7,7 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.util.Log
-import com.example.mu_super_app.DeviceAdminReceiver
+import com.ialna.app.DeviceAdminReceiver
 
 /**
  * Helper class for managing Kiosk Mode (Lock Task Mode) functionality.
@@ -146,4 +146,3 @@ object KioskModeHelper {
         }
     }
 }
-

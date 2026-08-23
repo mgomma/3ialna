@@ -4,7 +4,7 @@ The `firebase-app-distribution.yml` workflow builds a debug APK from the `dev` b
 
 ## One-time Firebase setup
 
-Create or select the Firebase project that owns the Android app. Register the Android app with the exact current package name, `com.example.mu_super_app`; Firebase package names are case-sensitive and cannot be changed after registration. In Firebase Console, open **Project settings → General** and copy the Android **App ID**. Then open **Project settings → Service accounts**, generate a new private key for a service account authorized to distribute builds, and keep the JSON file private.
+Create or select the Firebase project that owns the Android app. Register the Android app with the exact current package name, `com.ialna.app`; Firebase package names are case-sensitive and cannot be changed after registration. In Firebase Console, open **Project settings → General** and copy the Android **App ID**. Then open **Project settings → Service accounts**, generate a new private key for a service account authorized to distribute builds, and keep the JSON file private.
 
 In the GitHub repository, add these **Actions secrets** under **Settings → Secrets and variables → Actions**:
 

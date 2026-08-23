@@ -1,4 +1,4 @@
-package com.example.mu_super_app.voice
+package com.ialna.app.voice
 
 import android.app.AlarmManager
 import android.app.PendingIntent

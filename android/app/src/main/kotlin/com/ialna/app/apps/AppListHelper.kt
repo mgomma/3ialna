@@ -1,4 +1,4 @@
-package com.example.mu_super_app.apps
+package com.ialna.app.apps
 
 import android.content.Context
 import android.content.pm.ApplicationInfo
@@ -162,4 +162,3 @@ object AppListHelper {
         }
     }
 }
-

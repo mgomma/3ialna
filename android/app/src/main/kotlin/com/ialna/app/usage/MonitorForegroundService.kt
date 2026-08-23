@@ -1,4 +1,4 @@
-package com.example.mu_super_app.usage
+package com.ialna.app.usage
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -19,8 +19,8 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import android.content.pm.ServiceInfo
 import androidx.core.content.ContextCompat
-import com.example.mu_super_app.MainActivity
-import com.example.mu_super_app.R
+import com.ialna.app.MainActivity
+import com.ialna.app.R
 import java.util.Calendar
 import android.app.usage.UsageStats
 import android.app.usage.UsageStatsManager
@@ -317,7 +317,7 @@ class MonitorForegroundService : Service() {
     private fun lockDeviceNow() {
         try {
             val dpm = getSystemService(Context.DEVICE_POLICY_SERVICE) as android.app.admin.DevicePolicyManager
-            val adminComponent = android.content.ComponentName(this, com.example.mu_super_app.DeviceAdminReceiver::class.java)
+            val adminComponent = android.content.ComponentName(this, com.ialna.app.DeviceAdminReceiver::class.java)
             if (dpm.isAdminActive(adminComponent)) {
                 dpm.lockNow()
                 Log.d(TAG, "Device physically locked via DevicePolicyManager")
@@ -944,5 +944,4 @@ class MonitorForegroundService : Service() {
         )
     }
 }
-
 

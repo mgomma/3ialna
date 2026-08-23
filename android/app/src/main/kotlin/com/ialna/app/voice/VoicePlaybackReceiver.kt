@@ -1,4 +1,4 @@
-package com.example.mu_super_app.voice
+package com.ialna.app.voice
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -23,6 +23,6 @@ class VoicePlaybackReceiver : BroadcastReceiver() {
     }
 
     companion object {
-        const val ACTION_PLAY = "com.example.mu_super_app.voice.PLAY"
+        const val ACTION_PLAY = "com.ialna.app.voice.PLAY"
     }
 }

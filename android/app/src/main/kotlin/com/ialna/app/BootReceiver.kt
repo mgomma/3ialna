@@ -1,10 +1,10 @@
-package com.example.mu_super_app
+package com.ialna.app
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.ContextCompat
-import com.example.mu_super_app.usage.MonitorForegroundService
+import com.ialna.app.usage.MonitorForegroundService
 
 /**
  * Restarts the monitoring foreground service after boots, device unlocks, or app updates
@@ -40,4 +40,3 @@ class BootReceiver : BroadcastReceiver() {
         private const val _PREF_IS_MONITORING = "is_monitoring"
     }
 }
-
