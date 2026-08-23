@@ -119,32 +119,21 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
       context: context,
       builder: (BuildContext dialogContext) => AlertDialog(
         title: Text(l10n.languageSettings),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            RadioListTile<String>(
-              value: 'ar',
-              groupValue: LocaleController.instance.locale.languageCode,
-              title: Text(l10n.arabic),
-              onChanged: (String? value) async {
-                if (value != null) {
-                  await LocaleController.instance.setLocale(Locale(value));
-                  if (dialogContext.mounted) Navigator.of(dialogContext).pop();
-                }
-              },
-            ),
-            RadioListTile<String>(
-              value: 'en',
-              groupValue: LocaleController.instance.locale.languageCode,
-              title: Text(l10n.english),
-              onChanged: (String? value) async {
-                if (value != null) {
-                  await LocaleController.instance.setLocale(Locale(value));
-                  if (dialogContext.mounted) Navigator.of(dialogContext).pop();
-                }
-              },
-            ),
-          ],
+        content: RadioGroup<String>(
+          groupValue: LocaleController.instance.locale.languageCode,
+          onChanged: (String? value) async {
+            if (value != null) {
+              await LocaleController.instance.setLocale(Locale(value));
+              if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+            }
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              RadioListTile<String>(value: 'ar', title: Text(l10n.arabic)),
+              RadioListTile<String>(value: 'en', title: Text(l10n.english)),
+            ],
+          ),
         ),
       ),
     );
