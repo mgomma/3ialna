@@ -13,6 +13,8 @@ class AgeSafetyProfilePreset {
     required this.descriptionEn,
     required this.descriptionAr,
     required this.dailyLimitMinutes,
+    required this.socialMediaLimitMinutes,
+    required this.gamesLimitMinutes,
     required this.blockMatureContent,
     required this.requireParentApproval,
     required this.voiceNotifications,
@@ -24,6 +26,8 @@ class AgeSafetyProfilePreset {
   final String descriptionEn;
   final String descriptionAr;
   final int dailyLimitMinutes;
+  final int socialMediaLimitMinutes;
+  final int gamesLimitMinutes;
   final bool blockMatureContent;
   final bool requireParentApproval;
   final bool voiceNotifications;
@@ -36,6 +40,8 @@ class AgeSafetyProfilePreset {
       descriptionEn: 'Short sessions, strict content protection, and parent approval.',
       descriptionAr: 'جلسات قصيرة وحماية مشددة وموافقة الوالدين.',
       dailyLimitMinutes: 30,
+      socialMediaLimitMinutes: 0,
+      gamesLimitMinutes: 30,
       blockMatureContent: true,
       requireParentApproval: true,
       voiceNotifications: true,
@@ -47,6 +53,8 @@ class AgeSafetyProfilePreset {
       descriptionEn: 'Guided exploration with clear daily boundaries.',
       descriptionAr: 'استكشاف موجّه مع حدود يومية واضحة.',
       dailyLimitMinutes: 45,
+      socialMediaLimitMinutes: 0,
+      gamesLimitMinutes: 45,
       blockMatureContent: true,
       requireParentApproval: true,
       voiceNotifications: true,
@@ -57,7 +65,9 @@ class AgeSafetyProfilePreset {
       nameAr: 'الناشئة من 9 إلى 13 سنة',
       descriptionEn: 'More independence with protected content and review prompts.',
       descriptionAr: 'استقلالية أكبر مع حماية المحتوى وتنبيهات المراجعة.',
-      dailyLimitMinutes: 60,
+      dailyLimitMinutes: 90,
+      socialMediaLimitMinutes: 30,
+      gamesLimitMinutes: 60,
       blockMatureContent: true,
       requireParentApproval: false,
       voiceNotifications: true,
@@ -68,7 +78,9 @@ class AgeSafetyProfilePreset {
       nameAr: 'المراهقون من 13 إلى 18 سنة',
       descriptionEn: 'Flexible boundaries with privacy-respecting safety defaults.',
       descriptionAr: 'حدود مرنة مع إعدادات أمان تحترم الخصوصية.',
-      dailyLimitMinutes: 90,
+      dailyLimitMinutes: 150,
+      socialMediaLimitMinutes: 60,
+      gamesLimitMinutes: 90,
       blockMatureContent: true,
       requireParentApproval: false,
       voiceNotifications: false,
@@ -77,6 +89,8 @@ class AgeSafetyProfilePreset {
 
   AgeSafetyProfilePreset copyWith({
     int? dailyLimitMinutes,
+    int? socialMediaLimitMinutes,
+    int? gamesLimitMinutes,
     bool? blockMatureContent,
     bool? requireParentApproval,
     bool? voiceNotifications,
@@ -88,6 +102,8 @@ class AgeSafetyProfilePreset {
       descriptionEn: descriptionEn,
       descriptionAr: descriptionAr,
       dailyLimitMinutes: dailyLimitMinutes ?? this.dailyLimitMinutes,
+      socialMediaLimitMinutes: socialMediaLimitMinutes ?? this.socialMediaLimitMinutes,
+      gamesLimitMinutes: gamesLimitMinutes ?? this.gamesLimitMinutes,
       blockMatureContent: blockMatureContent ?? this.blockMatureContent,
       requireParentApproval: requireParentApproval ?? this.requireParentApproval,
       voiceNotifications: voiceNotifications ?? this.voiceNotifications,

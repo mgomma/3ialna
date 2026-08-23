@@ -7,7 +7,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/social_media_apps.dart';
 import '../../data/local/settings_service.dart';
 import '../../data/system/accessibility_service_helper.dart';
+import '../../data/system/child_shortcut_service.dart';
 import '../../data/system/app_usage_service.dart';
+import '../../data/local/age_safety_profile_service.dart';
 import '../../data/system/drupal_sync_service.dart';
 import '../../data/system/social_auth_service.dart';
 import '../../data/system/kiosk_service.dart';
@@ -84,6 +86,16 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _init() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     _settings = SettingsService(prefs);
+
+    final AgeSafetyProfileService childProfiles = AgeSafetyProfileService(prefs);
+    await childProfiles.ensureDefaultChild();
+    ChildShortcutService.listen((String childId) async {
+      await childProfiles.setActiveChild(childId);
+      await _loadSettings();
+    });
+    final String? shortcutChildId = await ChildShortcutService.consumeInitialChildId();
+    if (shortcutChildId != null) await childProfiles.setActiveChild(shortcutChildId);
+    await ChildShortcutService.sync(childProfiles.loadChildren());
 
     // Listen for device lock events from native side
     const MethodChannel('parental_control/kiosk').setMethodCallHandler((call) async {

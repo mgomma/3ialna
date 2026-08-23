@@ -34,9 +34,11 @@ const copy = {
       ["سجّل رسالة بصوتك", "من الإعدادات افتح صوت الوالدين، سجّل رسالة قصيرة، استمع إليها، وسيبقى التسجيل على الجهاز فقط."],
     ],
     profiles: "إعدادات جاهزة حسب العمر",
-    profilesIntro: "ابدأ من نقطة مناسبة للعمر ثم عدّلها حسب عادات طفلك. إعادة الضبط تعيد إعدادات الملف المختار إلى قيمه الأصلية.",
+    profilesIntro: "ابدأ من نقطة مناسبة للعمر ثم عدّلها حسب عادات طفلك. تُحتسب كل التطبيقات المصنفة ضمن التواصل أو الألعاب من ميزانية يومية مشتركة، ويمكن للوالدين تغيير كل قيمة أو إعادة الضبط.",
     profileNames: ["دون 5 سنوات", "من 5 إلى 9", "من 9 إلى 13", "المراهقون 13–18"],
-    profileDetails: ["جلسات قصيرة وموافقة الوالدين", "استكشاف موجّه وحدود واضحة", "استقلالية أكبر مع مراجعة", "حدود مرنة تحترم الخصوصية"],
+    profileDetails: ["تواصل: 0 د · ألعاب: 30 د يوميًا", "تواصل: 0 د · ألعاب: 45 د يوميًا", "تواصل: 30 د · ألعاب: 60 د يوميًا", "تواصل: 60 د · ألعاب: 90 د يوميًا"],
+    profileNote: "هذه نقاط بداية قابلة للتعديل للترفيه فقط، وليست وصفة صحية فردية. راجع النوم، الدراسة، النشاط البدني، وجودة المحتوى مع طفلك.",
+    profileSources: "مصادر الإرشاد",
     voice: "رسالتك، بصوتك",
     voiceBody: "بدل صوت آلي عام، يمكن للوالدين تسجيل رسالة دافئة تُستخدم ضمن روتين التنبيه. النص المكتوب يظل ظاهرًا، والتسجيل لا يغادر الجهاز.",
     privacyTitle: "حماية عملية بلا مراقبة خفية",
@@ -89,9 +91,11 @@ const copy = {
     installIntro: "Follow these steps in order on the parent phone or the device you manage.",
     steps: [["Download the Android file", "Use the download button or QR code on this page. When Android prompts you, allow installation from your browser or file manager."], ["Create parent protection", "Open 3ialna, create a PIN, and enable biometrics as the preferred method with PIN fallback."], ["Grant permissions", "Enable Usage Access, Accessibility, Overlay, and Device Admin when needed for monitoring and hard lock."], ["Choose an age profile", "Select a starting configuration, edit the limits, and save. You can switch profiles or reset defaults later."], ["Record your voice", "Open Parent voice from Settings, record a short message, preview it, and keep it stored on-device." ]],
     profiles: "Ready-made age profiles",
-    profilesIntro: "Start with an age-appropriate baseline, then tune it for your family. Reset returns the selected profile to its original defaults.",
+    profilesIntro: "Start with an age-appropriate baseline, then tune it for your family. Every app categorized as social media or games draws from one daily shared budget, and parents can edit or reset every value.",
     profileNames: ["Under 5", "Ages 5–9", "Ages 9–13", "Teenagers 13–18"],
-    profileDetails: ["Short sessions and parent approval", "Guided exploration and clear limits", "More independence with review", "Flexible boundaries with privacy"],
+    profileDetails: ["Social: 0m · Games: 30m daily", "Social: 0m · Games: 45m daily", "Social: 30m · Games: 60m daily", "Social: 60m · Games: 90m daily"],
+    profileNote: "These are editable recreational starting points, not individual medical prescriptions. Review sleep, school, physical activity, and content quality with your child.",
+    profileSources: "Guidance sources",
     voice: "Your message, your voice",
     voiceBody: "Instead of a generic synthetic voice, parents can record a warm message for the notification routine. Written text stays visible, and the recording stays on the device.",
     privacyTitle: "Practical protection without hidden surveillance",
@@ -168,7 +172,7 @@ export default function Home() {
 
         <section id="setup" className="setup-section section-grid"><div className="sticky-heading"><span className="section-kicker">04 / {isArabic ? "الدليل العملي" : "The practical guide"}</span><h2>{t.install}</h2><p>{t.installIntro}</p><a className="button dark-button" href="#profiles"><ArrowDown size={17} />{isArabic ? "تابع إلى الملفات" : "Continue to profiles"}</a></div><div className="steps">{t.steps.map(([title, body], index) => <article className="step" key={title}><div className="step-index">{String(index + 1).padStart(2, "0")}</div><div><h3>{title}</h3><p>{body}</p></div><Check size={18} className="step-check" /></article>)}</div></section>
 
-        <section id="profiles" className="profiles-section"><div className="section-heading"><div><span className="section-kicker">05 / {isArabic ? "مرونة الوالدين" : "Parent-controlled flexibility"}</span><h2>{t.profiles}</h2></div><p>{t.profilesIntro}</p></div><div className="profile-feature"><div className="profile-image" style={{ backgroundImage: profileImage }}><span>{isArabic ? "ابدأ من الأساس المناسب" : "Start from the right baseline"}</span></div><div className="profile-list">{t.profileNames.map((name, index) => <div className="profile-row" key={name}><span className="profile-number">0{index + 1}</span><div><h3>{name}</h3><p>{t.profileDetails[index]}</p></div><ChevronDown size={18} /></div>)}</div></div></section>
+        <section id="profiles" className="profiles-section"><div className="section-heading"><div><span className="section-kicker">05 / {isArabic ? "مرونة الوالدين" : "Parent-controlled flexibility"}</span><h2>{t.profiles}</h2></div><p>{t.profilesIntro}</p></div><div className="profile-feature"><div className="profile-image" style={{ backgroundImage: profileImage }}><span>{isArabic ? "ابدأ من الأساس المناسب" : "Start from the right baseline"}</span></div><div className="profile-list">{t.profileNames.map((name, index) => <div className="profile-row" key={name}><span className="profile-number">0{index + 1}</span><div><h3>{name}</h3><p>{t.profileDetails[index]}</p></div><ChevronDown size={18} /></div>)}</div></div><div className="profile-evidence"><p>{t.profileNote}</p><span>{t.profileSources}: <a href="https://www.who.int/news/item/24-04-2019-to-grow-up-healthy-children-need-to-sit-less-and-play-more" target="_blank" rel="noreferrer">WHO</a> · <a href="https://www.aap.org/en/patient-care/media-and-children/center-of-excellence-on-social-media-and-youth-mental-health/qa-portal/qa-portal-library/qa-portal-library-questions/screen-time-guidelines/" target="_blank" rel="noreferrer">AAP</a> · <a href="https://cps.ca/en/documents/position/digital-media" target="_blank" rel="noreferrer">CPS</a></span></div></section>
 
         <section className="voice-section section-grid"><div className="voice-image" style={{ backgroundImage: voiceImage }}><span className="voice-tag"><Mic2 size={15} />{isArabic ? "محلي على الجهاز" : "Stored on-device"}</span></div><div className="voice-copy"><span className="section-kicker">06 / {isArabic ? "التنبيهات" : "Notifications"}</span><h2>{t.voice}</h2><p>{t.voiceBody}</p><div className="voice-points"><div><Mic2 size={20} /><span>{isArabic ? "تسجيل واستبدال وحذف" : "Record, replace, and delete"}</span></div><div><Smartphone size={20} /><span>{isArabic ? "لا رفع إلى السحابة" : "No cloud upload"}</span></div></div></div></section>
 

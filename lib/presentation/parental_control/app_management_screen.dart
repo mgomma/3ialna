@@ -3,6 +3,7 @@ import '../../domain/models/app_info.dart';
 import '../../data/system/app_list_service.dart';
 import '../../data/local/parental_control_storage_service.dart';
 import '../../data/system/app_usage_service.dart';
+import '../../domain/models/managed_app_category.dart';
 import '../widgets/app_card.dart';
 import '../widgets/time_limit_selector.dart';
 
@@ -24,6 +25,7 @@ class _AppManagementScreenState extends State<AppManagementScreen> {
   List<String> _blockedApps = [];
   Map<String, int> _timeLimits = {};
   Map<String, int> _currentUsage = {};
+  Map<String, ManagedAppCategory> _categories = {};
   bool _isLoading = true;
   String _searchQuery = '';
   bool _showOnlyBlocked = false;
@@ -45,6 +47,7 @@ class _AppManagementScreenState extends State<AppManagementScreen> {
       );
       final blocked = await _storage.getBlockedApps();
       final limits = await _storage.getTimeLimits();
+      final categories = await _storage.getAppCategories();
 
       // Get current usage for apps with limits
       final usageMap = <String, int>{};
@@ -62,6 +65,7 @@ class _AppManagementScreenState extends State<AppManagementScreen> {
         _blockedApps = blocked;
         _timeLimits = limits;
         _currentUsage = usageMap;
+        _categories = categories;
         _isLoading = false;
       });
     } catch (e) {
@@ -124,6 +128,34 @@ class _AppManagementScreenState extends State<AppManagementScreen> {
     );
   }
 
+  String _categoryLabel(ManagedAppCategory category) => switch (category) {
+        ManagedAppCategory.socialMedia => 'Social media (shared budget)',
+        ManagedAppCategory.games => 'Games (shared budget)',
+        ManagedAppCategory.unassigned => 'Not assigned',
+      };
+
+  Future<void> _setCategory(AppInfo app) async {
+    final ManagedAppCategory current = _categories[app.packageName] ?? ManagedAppCategory.unassigned;
+    final ManagedAppCategory? chosen = await showModalBottomSheet<ManagedAppCategory>(
+      context: context,
+      builder: (BuildContext context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: ManagedAppCategory.values
+              .map((ManagedAppCategory category) => RadioListTile<ManagedAppCategory>(
+                    value: category,
+                    groupValue: current,
+                    title: Text(_categoryLabel(category)),
+                    onChanged: (ManagedAppCategory? value) => Navigator.pop(context, value),
+                  ))
+              .toList(growable: false),
+        ),
+      ),
+    );
+    if (chosen == null) return;
+    await _storage.setAppCategory(app.packageName, chosen);
+    await _loadData();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -221,6 +253,7 @@ class _AppManagementScreenState extends State<AppManagementScreen> {
                           final isBlocked = _blockedApps.contains(app.packageName);
                           final timeLimit = _timeLimits[app.packageName];
                           final usage = _currentUsage[app.packageName] ?? 0;
+                          final category = _categories[app.packageName] ?? ManagedAppCategory.unassigned;
 
                           return AppCard(
                             appInfo: app,
@@ -229,6 +262,8 @@ class _AppManagementScreenState extends State<AppManagementScreen> {
                             currentUsageMinutes: timeLimit != null ? usage : null,
                             onToggleBlock: () => _toggleBlock(app),
                             onSetTimeLimit: () => _setTimeLimit(app),
+                            categoryLabel: _categoryLabel(category),
+                            onSetCategory: () => _setCategory(app),
                           );
                         },
                       ),
@@ -238,4 +273,3 @@ class _AppManagementScreenState extends State<AppManagementScreen> {
     );
   }
 }
-

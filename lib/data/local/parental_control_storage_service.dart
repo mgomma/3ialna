@@ -1,7 +1,9 @@
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/constants/social_media_apps.dart';
 import '../../domain/models/schedule.dart';
+import '../../domain/models/managed_app_category.dart';
 
 /// Service for storing and retrieving parental control settings.
 class ParentalControlStorageService {
@@ -10,6 +12,7 @@ class ParentalControlStorageService {
   static const String _keySchedule = 'parental_control_schedule';
   static const String _keyParentPin = 'parental_control_parent_pin';
   static const String _keyKioskModeEnabled = 'parental_control_kiosk_mode_enabled';
+  static const String _keyAppCategories = 'parental_control_app_categories';
   
   // Keys for timestamp-based blocking (used by native AccessibilityService)
   static const String _keyBlockedAppsWithTimestamps = 'blocked_apps_with_timestamps';
@@ -122,6 +125,48 @@ class ParentalControlStorageService {
     return limits[packageName];
   }
 
+  /// Parent-assigned categories are global to this device; the active child
+  /// determines the shared daily budget applied to each category.
+  Future<Map<String, ManagedAppCategory>> getAppCategories() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String? raw = prefs.getString(_keyAppCategories);
+    if (raw == null) return _withKnownSocialApps(<String, ManagedAppCategory>{});
+    try {
+      final Map<String, dynamic> decoded = jsonDecode(raw) as Map<String, dynamic>;
+      return _withKnownSocialApps(decoded.map((String packageName, dynamic value) => MapEntry(
+            packageName,
+            ManagedAppCategory.values.firstWhere(
+              (ManagedAppCategory category) => category.name == value,
+              orElse: () => ManagedAppCategory.unassigned,
+            ),
+          )));
+    } catch (_) {
+      return _withKnownSocialApps(<String, ManagedAppCategory>{});
+    }
+  }
+
+  Map<String, ManagedAppCategory> _withKnownSocialApps(Map<String, ManagedAppCategory> categories) {
+    final Map<String, ManagedAppCategory> values = Map<String, ManagedAppCategory>.from(categories);
+    for (final String packageName in socialMediaApps.keys) {
+      if (packageName != '__total_usage__') values.putIfAbsent(packageName, () => ManagedAppCategory.socialMedia);
+    }
+    return values;
+  }
+
+  Future<void> setAppCategory(String packageName, ManagedAppCategory category) async {
+    final Map<String, ManagedAppCategory> categories = await getAppCategories();
+    if (category == ManagedAppCategory.unassigned) {
+      categories.remove(packageName);
+    } else {
+      categories[packageName] = category;
+    }
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _keyAppCategories,
+      jsonEncode(categories.map((String key, ManagedAppCategory value) => MapEntry(key, value.name))),
+    );
+  }
+
   /// Gets current usage for a specific app (in minutes) from SharedPreferences.
   /// This is used for real-time updates in the UI.
   Future<int> getAppUsage(String packageName) async {
@@ -191,4 +236,3 @@ class ParentalControlStorageService {
     await prefs.setBool(_keyKioskModeEnabled, enabled);
   }
 }
-

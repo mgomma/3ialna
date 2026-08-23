@@ -1,0 +1,16 @@
+# Age-profile category budget research
+
+This note records the public sources consulted for parent-editable category-budget defaults. The values implemented in 3ialna are product defaults for recreational social media and games, not medical prescriptions. Families should review limits against sleep, school, physical activity, content quality, and the individual child’s needs.
+
+| Source | Relevant finding | Product implication |
+|---|---|---|
+| World Health Organization, [Guidelines on physical activity, sedentary behaviour and sleep for children under 5](https://www.who.int/news/item/24-04-2019-to-grow-up-healthy-children-need-to-sit-less-and-play-more) | Screen time is not recommended for one-year-olds; for ages 2 to 4, sedentary screen time should be no more than one hour daily and less is better. | Under-five defaults keep recreational games short and social-media access disabled by default. |
+| American Academy of Pediatrics, [Screen time guidelines for social media applications](https://www.aap.org/en/patient-care/media-and-children/center-of-excellence-on-social-media-and-youth-mental-health/qa-portal/qa-portal-library/qa-portal-library-questions/screen-time-guidelines/) (updated 2025) | There is not enough evidence for a single time limit for all children and teens; the AAP stresses quality, balance, content, co-viewing, communication, sleep, and physical activity. | Category budgets must be transparent starting points with parent overrides, not fixed clinical claims. |
+| Canadian Paediatric Society, [Digital media: Promoting healthy screen use in school-aged children and adolescents](https://cps.ca/en/documents/position/digital-media) (reaffirmed 2025) | Healthy media use involves management, meaningful use, modelling, and monitoring. Its guidance emphasizes individualised limits and prioritising sleep, physical activity, and face-to-face routines. | Use daily category-wide pools and clear parent control rather than app-by-app allowances that can be bypassed by installing similar apps. |
+| American Academy of Child and Adolescent Psychiatry, [Screen Time and Children](https://www.aacap.org/AACAP/Families_and_Youth/Facts_for_Families/FFF-Guide/Children-And-Watching-TV-054.aspx) (updated 2025) | For ages 2–5, it suggests roughly one hour of non-educational screen time on weekdays; for older children it recommends healthy habits and limiting screen-based activities while considering maturity and family circumstances. | Publish age-based defaults with explicit language that parents can adjust them and should use bedtime, school, and family routines as guardrails. |
+
+## Default-policy interpretation
+
+The planned category budgets will be conservative defaults for discretionary activity only. Educational apps, accessibility tools, calls with family, and parent-approved exceptions remain outside the automatic social-media and games pool unless a parent chooses otherwise. The app will use an app-category registry, so time is totalled across all recognised social-media apps or all recognised games rather than reset per installed app.
+
+The website will link to the sources above, disclose the parent-editable nature of the defaults, and distinguish general wellbeing guidance from individual clinical advice.

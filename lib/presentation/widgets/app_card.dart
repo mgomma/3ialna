@@ -13,6 +13,8 @@ class AppCard extends StatelessWidget {
   final int? currentUsageMinutes;
   final VoidCallback? onToggleBlock;
   final VoidCallback? onSetTimeLimit;
+  final String? categoryLabel;
+  final VoidCallback? onSetCategory;
 
   const AppCard({
     super.key,
@@ -22,6 +24,8 @@ class AppCard extends StatelessWidget {
     this.currentUsageMinutes,
     this.onToggleBlock,
     this.onSetTimeLimit,
+    this.categoryLabel,
+    this.onSetCategory,
   });
 
   @override
@@ -88,7 +92,18 @@ class AppCard extends StatelessWidget {
                       : null,
                 ),
               ],
-            ),
+            ],
+            if (onSetCategory != null) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: onSetCategory,
+                  icon: const Icon(Icons.category_outlined),
+                  label: Text('Category: ${categoryLabel ?? 'Not assigned'}'),
+                ),
+              ),
+            ],
             // Usage info and time limit
             if (timeLimitMinutes != null || currentUsageMinutes != null) ...[
               const SizedBox(height: 12),
@@ -204,4 +219,3 @@ class AppCard extends StatelessWidget {
     );
   }
 }
-

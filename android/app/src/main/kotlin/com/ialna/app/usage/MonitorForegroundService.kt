@@ -158,20 +158,12 @@ class MonitorForegroundService : Service() {
     }
 
     private fun checkUsageAndMaybeBlock() {
-        // Respect the "isMonitoring" flag stored by Flutter.
         val prefs = getSharedPreferences(FLUTTER_PREFS, Context.MODE_PRIVATE)
-        val isMonitoring =
-            prefs.getBoolean("${PFX}$_PREF_IS_MONITORING", false)
-        Log.d(TAG, "isMonitoring: $isMonitoring")
-        if (!isMonitoring) return
+        if (!prefs.getBoolean("${PFX}$_PREF_IS_MONITORING", false)) return
 
-        // Flutter stores ints as 64-bit; read defensively to avoid ClassCastException.
-        val limitMinutes: Int = try {
-            prefs.getInt("${PFX}$_PREF_TIME_LIMIT", 30)
-        } catch (e: ClassCastException) {
-            prefs.getLong("${PFX}$_PREF_TIME_LIMIT", 30L).toInt()
-        }
-        Log.d(TAG, "limitMinutes: $limitMinutes")
+        val socialLimit = readIntPreference(prefs, _PREF_ACTIVE_SOCIAL_LIMIT, 0)
+        val gamesLimit = readIntPreference(prefs, _PREF_ACTIVE_GAMES_LIMIT, 0)
+        val assignedCategories = readAssignedCategories(prefs)
 
         val now = System.currentTimeMillis()
         val startOfDay = Calendar.getInstance().apply {
@@ -196,88 +188,103 @@ class MonitorForegroundService : Service() {
             Log.d(TAG, "No usage stats found. Permission granted?")
             return
         }
-        Log.d(TAG, "Found ${statsMap.size} usage stats records")
-
-        val trackedPackages = SOCIAL_APPS
-
-        var totalMinutes = 0L
-        var offending: UsageStats? = null
+        val categoryTotals = mutableMapOf("socialMedia" to 0L, "games" to 0L)
         for ((pkg, s) in statsMap) {
             val minutes = ((s.totalTimeInForeground / 1000L) + 59L) / 60L
-            totalMinutes += minutes
-
-            if (!trackedPackages.containsKey(pkg)) continue
-
-            Log.d(TAG, "Checking $pkg: $minutes minutes (tracked)")
-            if (minutes >= limitMinutes && offending == null) {
-                offending = s
-            }
+            val category = categoryForPackage(pkg, assignedCategories) ?: continue
+            categoryTotals[category] = (categoryTotals[category] ?: 0L) + minutes
         }
 
-        Log.d(TAG, "Total device usage today: $totalMinutes minutes")
-
-        if (offending != null) {
-            val pkg = offending.packageName
-            
-            // Get current foreground app
-            val currentForegroundApp = getCurrentForegroundApp()
-            
-            // Don't show overlay if this app is in foreground
-            if (currentForegroundApp == this.packageName) {
-                Log.d(TAG, "This app is in foreground, skipping overlay")
-                return
-            }
-            
-            // Only show overlay if the offending app is currently in foreground
-            if (currentForegroundApp != pkg) {
-                Log.d(TAG, "Offending app $pkg is not in foreground (current: $currentForegroundApp), skipping overlay")
-                return
-            }
-            
-            // Don't show overlay on system apps
-            if (isSystemApp(pkg)) {
-                Log.d(TAG, "Skipping overlay for system app: $pkg")
-                return
-            }
-            
-            // If NOT in strict mode, use a cooldown to avoid spamming the soft overlay.
-            // In strict mode, we always want to trigger the hard lock if they are in the app,
-            // UNLESS it has been specifically snoozed by a parent.
-            if (isSnoozed(pkg)) {
-                Log.d(TAG, "App $pkg is currently snoozed, skipping")
-                return
-            }
-
-            val isStrictMode = prefs.getBoolean("${PFX}is_strict_mode", false)
-            if (!isStrictMode && wasRecentlyShown(pkg)) {
-                Log.d(TAG, "Overlay was recently shown for $pkg, skipping")
-                return
-            }
-            
-            val appName = trackedPackages[pkg] ?: pkg
-            val minutes = ((offending.totalTimeInForeground / 1000L) + 59L) / 60L
-            Log.i(
-                TAG,
-                "App $appName exceeded limit: $minutes / $limitMinutes minutes"
-            )
-            
-            // Mark as recently shown
-            markOverlayShown(pkg)
-            
-            if (isStrictMode) {
-                Log.i(TAG, "Strict Mode active, triggering Hard Lock for $pkg")
-                showDebugToast("Locking Device: $appName limit reached")
-                triggerHardLock(appName, minutes.toInt(), limitMinutes, pkg)
-            } else {
-                showDebugToast("Time limit: $appName")
-                saveOverlayDataAndRequestOverlay(appName, minutes.toInt(), limitMinutes, pkg)
-            }
-            return
+        val activeCategoryUsage = categoryTotals.mapValues { (category, total) ->
+            allocateUsageToActiveChild(prefs, category, total)
         }
 
-        // If no single tracked app exceeded the limit, fall back to total usage.
-        // Note: We don't show overlay for "All Apps" as it's not a specific app
-        // The overlay should only show for specific apps that exceeded their limits
+        val currentPackage = getCurrentForegroundApp() ?: return
+        if (currentPackage == packageName || isSystemApp(currentPackage) || isSnoozed(currentPackage)) return
+        val category = categoryForPackage(currentPackage, assignedCategories) ?: return
+        val limit = if (category == "socialMedia") socialLimit else gamesLimit
+        val used = activeCategoryUsage[category] ?: 0L
+        if (used < limit) return
+
+        val categoryName = if (category == "socialMedia") "Social media" else "Games"
+        val overlayKey = "category_$category"
+        val isStrictMode = prefs.getBoolean("${PFX}is_strict_mode", false)
+        if (!isStrictMode && wasRecentlyShown(overlayKey)) return
+        markOverlayShown(overlayKey)
+        Log.i(TAG, "$categoryName category exceeded: $used / $limit minutes; foreground=$currentPackage")
+        if (isStrictMode) {
+            showDebugToast("Locking Device: $categoryName limit reached")
+            triggerHardLock(categoryName, used.toInt(), limit, currentPackage)
+        } else {
+            showDebugToast("Time limit: $categoryName")
+            saveOverlayDataAndRequestOverlay(categoryName, used.toInt(), limit, currentPackage)
+        }
+    }
+
+    private fun readIntPreference(prefs: android.content.SharedPreferences, key: String, fallback: Int): Int {
+        return try {
+            prefs.getInt("${PFX}$key", fallback)
+        } catch (_: ClassCastException) {
+            prefs.getLong("${PFX}$key", fallback.toLong()).toInt()
+        }
+    }
+
+    private fun readAssignedCategories(prefs: android.content.SharedPreferences): Map<String, String> {
+        val raw = prefs.getString("${PFX}$_PREF_APP_CATEGORIES", "{}") ?: "{}"
+        return try {
+            val json = JSONObject(raw)
+            val values = mutableMapOf<String, String>()
+            val keys = json.keys()
+            while (keys.hasNext()) {
+                val packageName = keys.next()
+                val category = json.optString(packageName)
+                if (category == "socialMedia" || category == "games") values[packageName] = category
+            }
+            values
+        } catch (_: Exception) {
+            emptyMap()
+        }
+    }
+
+    private fun categoryForPackage(packageName: String, assigned: Map<String, String>): String? {
+        return assigned[packageName] ?: if (SOCIAL_APPS.containsKey(packageName)) "socialMedia" else null
+    }
+
+    /**
+     * UsageStats is device-wide, so we persist category deltas under the child
+     * selected when those deltas are observed. This makes shared-device budgets
+     * independent after parents switch the active child from the app or launcher.
+     */
+    private fun allocateUsageToActiveChild(
+        prefs: android.content.SharedPreferences,
+        category: String,
+        deviceTotalMinutes: Long
+    ): Long {
+        val calendar = Calendar.getInstance()
+        val dayKey = "${calendar.get(Calendar.YEAR)}-${calendar.get(Calendar.DAY_OF_YEAR)}"
+        val storedDay = prefs.getString("${PFX}$_PREF_CHILD_USAGE_DAY", "")
+        val usageJson = if (storedDay == dayKey) {
+            prefs.getString("${PFX}$_PREF_CHILD_CATEGORY_USAGE", "{}") ?: "{}"
+        } else "{}"
+        val totalsJson = if (storedDay == dayKey) {
+            prefs.getString("${PFX}$_PREF_CHILD_LAST_TOTALS", "{}") ?: "{}"
+        } else "{}"
+        val usage = try { JSONObject(usageJson) } catch (_: Exception) { JSONObject() }
+        val totals = try { JSONObject(totalsJson) } catch (_: Exception) { JSONObject() }
+        val previousTotal = totals.optLong(category, deviceTotalMinutes)
+        val delta = (deviceTotalMinutes - previousTotal).coerceAtLeast(0L)
+        totals.put(category, deviceTotalMinutes)
+
+        val activeChildId = prefs.getString("${PFX}$_PREF_ACTIVE_CHILD", "default") ?: "default"
+        val usageKey = "$activeChildId:$category"
+        val updatedUsage = usage.optLong(usageKey, 0L) + delta
+        usage.put(usageKey, updatedUsage)
+        prefs.edit()
+            .putString("${PFX}$_PREF_CHILD_USAGE_DAY", dayKey)
+            .putString("${PFX}$_PREF_CHILD_CATEGORY_USAGE", usage.toString())
+            .putString("${PFX}$_PREF_CHILD_LAST_TOTALS", totals.toString())
+            .apply()
+        return updatedUsage
     }
 
     /**
@@ -929,6 +936,13 @@ class MonitorForegroundService : Service() {
         private const val _PREF_PRAYER_LOCK_ACTIVE_END = "prayer_lock_active_end"
         private const val _PREF_BLOCKED_APPS = "parental_control_blocked_apps"
         private const val _PREF_TIME_LIMITS = "parental_control_time_limits"
+        private const val _PREF_ACTIVE_SOCIAL_LIMIT = "active_social_media_limit_minutes"
+        private const val _PREF_ACTIVE_GAMES_LIMIT = "active_games_limit_minutes"
+        private const val _PREF_ACTIVE_CHILD = "active_child_id"
+        private const val _PREF_APP_CATEGORIES = "parental_control_app_categories"
+        private const val _PREF_CHILD_USAGE_DAY = "child_category_usage_day"
+        private const val _PREF_CHILD_CATEGORY_USAGE = "child_category_usage"
+        private const val _PREF_CHILD_LAST_TOTALS = "child_category_last_device_totals"
         private const val _PREF_SCHEDULE = "parental_control_schedule"
         private const val _PREF_OVERLAY_SHOWN = "overlay_shown_sessions"
 
@@ -944,4 +958,3 @@ class MonitorForegroundService : Service() {
         )
     }
 }
-

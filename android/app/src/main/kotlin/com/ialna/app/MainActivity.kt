@@ -5,6 +5,9 @@ import android.content.Intent
 import android.content.ComponentName
 import android.content.ActivityNotFoundException
 import android.app.ActivityManager
+import android.content.pm.ShortcutInfo
+import android.content.pm.ShortcutManager
+import android.graphics.drawable.Icon
 import android.os.Build
 import android.provider.Settings
 import android.net.Uri
@@ -35,14 +38,36 @@ class MainActivity : FlutterActivity() {
     private val accessibilityChannel = "app_blocking/accessibility"
     private val safeContentVpnChannel = "safe_content/vpn"
     private val parentVoiceChannel = "parent_voice_notifications"
+    private val childChannel = "parental_control/children"
     private val vpnPermissionRequestCode = 1002
     private val deviceAdminRequestCode = 1001
+    private var pendingChildShortcutId: String? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
         // Handle initial intent for hard lock
         intent?.let { handleLockIntent(it) }
+        pendingChildShortcutId = intent?.getStringExtra(EXTRA_CHILD_SHORTCUT_ID)
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            childChannel
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "updateLauncherShortcuts" -> {
+                    @Suppress("UNCHECKED_CAST")
+                    val children = call.argument<List<Map<String, String>>>("children") ?: emptyList()
+                    updateChildShortcuts(children)
+                    result.success(null)
+                }
+                "consumeInitialChildShortcut" -> {
+                    result.success(pendingChildShortcutId)
+                    pendingChildShortcutId = null
+                }
+                else -> result.notImplemented()
+            }
+        }
 
         // Service channel
         MethodChannel(
@@ -300,7 +325,41 @@ class MainActivity : FlutterActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        setIntent(intent)
         handleLockIntent(intent)
+        val childId = intent.getStringExtra(EXTRA_CHILD_SHORTCUT_ID)
+        if (!childId.isNullOrBlank()) {
+            pendingChildShortcutId = childId
+            flutterEngine?.dartExecutor?.binaryMessenger?.let { messenger ->
+                MethodChannel(messenger, childChannel).invokeMethod("onChildShortcut", childId)
+            }
+        }
+    }
+
+    private fun updateChildShortcuts(children: List<Map<String, String>>) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N_MR1) return
+        val manager = getSystemService(ShortcutManager::class.java) ?: return
+        if (children.size < 2) {
+            manager.removeAllDynamicShortcuts()
+            return
+        }
+        val shortcuts = children.take(4).mapIndexedNotNull { index, child ->
+            val id = child["id"] ?: return@mapIndexedNotNull null
+            val name = child["name"]?.takeIf { it.isNotBlank() } ?: "Child ${index + 1}"
+            val shortcutIntent = Intent(this, MainActivity::class.java).apply {
+                action = Intent.ACTION_MAIN
+                addCategory(Intent.CATEGORY_LAUNCHER)
+                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                putExtra(EXTRA_CHILD_SHORTCUT_ID, id)
+            }
+            ShortcutInfo.Builder(this, "child_$id")
+                .setShortLabel(name.take(25))
+                .setLongLabel("Use $name in 3ialna")
+                .setIcon(Icon.createWithResource(this, R.mipmap.ic_launcher))
+                .setIntent(shortcutIntent)
+                .build()
+        }
+        manager.dynamicShortcuts = shortcuts
     }
 
     private fun handleLockIntent(intent: Intent) {
@@ -548,5 +607,6 @@ class MainActivity : FlutterActivity() {
         private const val TAG = "MainActivity"
         private const val FLUTTER_PREFS = "FlutterSharedPreferences"
         private const val PFX = "flutter."
+        private const val EXTRA_CHILD_SHORTCUT_ID = "com.ialna.app.EXTRA_CHILD_SHORTCUT_ID"
     }
 }
