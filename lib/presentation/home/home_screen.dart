@@ -18,6 +18,7 @@ import '../../data/system/overlay_service.dart';
 import '../../data/system/prayer_lock_scheduler.dart';
 import '../../data/system/prayer_time_service.dart';
 import '../../domain/models/daily_usage_report.dart';
+import '../../domain/models/age_safety_profile.dart';
 import '../../domain/models/country_word_profile.dart';
 import '../../domain/models/local_user_profile.dart';
 import '../../domain/models/overlay_data.dart';
@@ -59,6 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool isLoading = false;
 
   late SettingsService _settings;
+  late AgeSafetyProfileService _childProfiles;
   final AppUsageService _usageService = const AppUsageService();
   final OverlayService _overlayService = const OverlayService();
   final PrayerTimeService _prayerTimeService = const PrayerTimeService();
@@ -87,15 +89,16 @@ class _HomeScreenState extends State<HomeScreen> {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     _settings = SettingsService(prefs);
 
-    final AgeSafetyProfileService childProfiles = AgeSafetyProfileService(prefs);
-    await childProfiles.ensureDefaultChild();
+    _childProfiles = AgeSafetyProfileService(prefs);
+    await _childProfiles.ensureDefaultChild();
+    AgeSafetyProfileService.changes.addListener(_onChildProfileChanged);
     ChildShortcutService.listen((String childId) async {
-      await childProfiles.setActiveChild(childId);
+      await _childProfiles.setActiveChild(childId);
       _loadSettings();
     });
     final String? shortcutChildId = await ChildShortcutService.consumeInitialChildId();
-    if (shortcutChildId != null) await childProfiles.setActiveChild(shortcutChildId);
-    await ChildShortcutService.sync(childProfiles.loadChildren());
+    if (shortcutChildId != null) await _childProfiles.setActiveChild(shortcutChildId);
+    await ChildShortcutService.sync(_childProfiles.loadChildren());
 
     // Listen for device lock events from native side
     const MethodChannel('parental_control/kiosk').setMethodCallHandler((call) async {
@@ -144,10 +147,25 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _loadPrayerSettings() {
+    final PrayerLockSettings base = _settings.loadPrayerLockSettings();
+    final AgeSafetyProfilePreset childPreset = _childProfiles.load();
     setState(() {
-      _prayerSettings = _settings.loadPrayerLockSettings();
+      _prayerSettings = base.copyWith(
+        enabled: base.enabled && childPreset.prayerLockEnabled,
+        lockDurations: <Prayer, int>{
+          for (final Prayer prayer in Prayer.values) prayer: childPreset.prayerLockMinutes,
+        },
+        fridayDhuhrDuration: childPreset.prayerLockMinutes,
+      );
     });
     _initializePrayerLockScheduler();
+  }
+
+  void _onChildProfileChanged() {
+    if (!mounted) return;
+    _loadSettings();
+    _loadPrayerSettings();
+    ChildShortcutService.sync(_childProfiles.loadChildren());
   }
 
   void _startPrayerStatusUpdates() {
@@ -164,6 +182,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    AgeSafetyProfileService.changes.removeListener(_onChildProfileChanged);
     monitoringTimer?.cancel();
     _prayerStatusTimer?.cancel();
     _prayerLockScheduler.stop();

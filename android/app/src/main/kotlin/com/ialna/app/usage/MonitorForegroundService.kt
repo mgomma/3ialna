@@ -56,6 +56,7 @@ class MonitorForegroundService : Service() {
                 Log.d(TAG, "Runnable: checking usage...")
                 checkUsageAndMaybeBlock()
                 checkPrayerLocksAndMaybeBlock()
+                checkSleepLockAndMaybeBlock()
                 checkParentalControls()
             } catch (t: Throwable) {
                 Log.e(TAG, "Error checking usage", t)
@@ -247,7 +248,11 @@ class MonitorForegroundService : Service() {
     }
 
     private fun categoryForPackage(packageName: String, assigned: Map<String, String>): String? {
-        return assigned[packageName] ?: if (SOCIAL_APPS.containsKey(packageName)) "socialMedia" else null
+        return assigned[packageName] ?: when {
+            SOCIAL_APPS.containsKey(packageName) -> "socialMedia"
+            GAMES_APPS.containsKey(packageName) -> "games"
+            else -> null
+        }
     }
 
     /**
@@ -398,6 +403,9 @@ class MonitorForegroundService : Service() {
 
     private fun checkPrayerLocksAndMaybeBlock() {
         val prefs = getSharedPreferences(FLUTTER_PREFS, Context.MODE_PRIVATE)
+        if (!prefs.getBoolean("${PFX}$_PREF_ACTIVE_PRAYER_ENABLED", true)) {
+            return
+        }
         
         // Check if prayer locks are enabled by reading the prayer lock settings JSON
         val prayerSettingsJson = prefs.getString("${PFX}prayer_lock_settings", null)
@@ -517,6 +525,41 @@ class MonitorForegroundService : Service() {
                 }
             }
             Log.d(TAG, "Not yet in prayer lock period (${minutesUntilStart} minutes until start)")
+        }
+    }
+
+    /** Applies the active child's parent-configured overnight device lock. */
+    private fun checkSleepLockAndMaybeBlock() {
+        val prefs = getSharedPreferences(FLUTTER_PREFS, Context.MODE_PRIVATE)
+        if (!prefs.getBoolean("${PFX}$_PREF_ACTIVE_SLEEP_ENABLED", true)) return
+        val start = readIntPreference(prefs, _PREF_ACTIVE_SLEEP_START, 0)
+        val end = readIntPreference(prefs, _PREF_ACTIVE_SLEEP_END, 0)
+        if (start == end) return
+
+        val calendar = Calendar.getInstance()
+        val nowMinutes = calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE)
+        val inSleepWindow = if (start < end) nowMinutes >= start && nowMinutes < end else nowMinutes >= start || nowMinutes < end
+        if (!inSleepWindow) return
+
+        val currentPackage = getCurrentForegroundApp() ?: return
+        if (currentPackage == packageName || isSystemApp(currentPackage) || isSnoozed(currentPackage)) return
+        val activeChild = prefs.getString("${PFX}$_PREF_ACTIVE_CHILD", "child") ?: "child"
+        val overlayKey = "sleep_lock_$activeChild"
+        val isStrictMode = prefs.getBoolean("${PFX}is_strict_mode", false)
+        if (!isStrictMode && wasRecentlyShown(overlayKey)) return
+        markOverlayShown(overlayKey)
+
+        val minutesUntilWake = when {
+            start < end -> (end - nowMinutes).coerceAtLeast(1)
+            nowMinutes >= start -> 24 * 60 - nowMinutes + end
+            else -> end - nowMinutes
+        }
+        if (isStrictMode) {
+            showDebugToast("Sleep time: device locked")
+            triggerHardLock("Sleep time", 0, minutesUntilWake, currentPackage)
+        } else {
+            showDebugToast("Sleep time")
+            saveOverlayDataAndRequestOverlay("Sleep time", 0, minutesUntilWake, currentPackage)
         }
     }
 
@@ -939,6 +982,10 @@ class MonitorForegroundService : Service() {
         private const val _PREF_ACTIVE_SOCIAL_LIMIT = "active_social_media_limit_minutes"
         private const val _PREF_ACTIVE_GAMES_LIMIT = "active_games_limit_minutes"
         private const val _PREF_ACTIVE_CHILD = "active_child_id"
+        private const val _PREF_ACTIVE_PRAYER_ENABLED = "active_prayer_lock_enabled"
+        private const val _PREF_ACTIVE_SLEEP_ENABLED = "active_sleep_lock_enabled"
+        private const val _PREF_ACTIVE_SLEEP_START = "active_sleep_lock_start_minutes"
+        private const val _PREF_ACTIVE_SLEEP_END = "active_sleep_lock_end_minutes"
         private const val _PREF_APP_CATEGORIES = "parental_control_app_categories"
         private const val _PREF_CHILD_USAGE_DAY = "child_category_usage_day"
         private const val _PREF_CHILD_CATEGORY_USAGE = "child_category_usage"
@@ -950,11 +997,29 @@ class MonitorForegroundService : Service() {
         private val SOCIAL_APPS = mapOf(
             "com.facebook.katana" to "Facebook",
             "com.instagram.android" to "Instagram",
+            "com.instagram.barcelona" to "Threads",
             "com.twitter.android" to "Twitter",
             "com.snapchat.android" to "Snapchat",
             "com.zhiliaoapp.musically" to "TikTok",
             "com.ss.android.ugc.trill" to "TikTok",
-            "com.reddit.frontpage" to "Reddit"
+            "com.reddit.frontpage" to "Reddit",
+            "com.discord" to "Discord",
+            "com.pinterest" to "Pinterest",
+            "com.tumblr" to "Tumblr",
+            "com.google.android.youtube" to "YouTube"
+        )
+        private val GAMES_APPS = mapOf(
+            "com.roblox.client" to "Roblox",
+            "com.mojang.minecraftpe" to "Minecraft",
+            "com.epicgames.fortnite" to "Fortnite",
+            "com.tencent.ig" to "PUBG Mobile",
+            "com.dts.freefireth" to "Free Fire",
+            "com.mobile.legends" to "Mobile Legends",
+            "com.supercell.clashofclans" to "Clash of Clans",
+            "com.supercell.clashroyale" to "Clash Royale",
+            "com.supercell.brawlstars" to "Brawl Stars",
+            "com.king.candycrushsaga" to "Candy Crush Saga",
+            "com.kiloo.subwaysurf" to "Subway Surfers"
         )
     }
 }

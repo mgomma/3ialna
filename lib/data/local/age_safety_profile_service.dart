@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../domain/models/age_safety_profile.dart';
@@ -8,12 +9,19 @@ import '../../domain/models/child_profile.dart';
 class AgeSafetyProfileService {
   const AgeSafetyProfileService(this._prefs);
 
+  static final ValueNotifier<int> changes = ValueNotifier<int>(0);
+
   static const String _key = 'age_safety_profile_config';
   static const String _childrenKey = 'parental_control_children';
   static const String _activeChildKey = 'parental_control_active_child_id';
   static const String _runtimeActiveChildKey = 'active_child_id';
   static const String _runtimeSocialLimitKey = 'active_social_media_limit_minutes';
   static const String _runtimeGamesLimitKey = 'active_games_limit_minutes';
+  static const String _runtimePrayerLockEnabledKey = 'active_prayer_lock_enabled';
+  static const String _runtimePrayerLockMinutesKey = 'active_prayer_lock_minutes';
+  static const String _runtimeSleepLockEnabledKey = 'active_sleep_lock_enabled';
+  static const String _runtimeSleepLockStartKey = 'active_sleep_lock_start_minutes';
+  static const String _runtimeSleepLockEndKey = 'active_sleep_lock_end_minutes';
   final SharedPreferences _prefs;
 
   List<ChildProfile> loadChildren() {
@@ -75,6 +83,11 @@ class AgeSafetyProfileService {
         dailyLimitMinutes: json['dailyLimitMinutes'] as int?,
         socialMediaLimitMinutes: json['socialMediaLimitMinutes'] as int?,
         gamesLimitMinutes: json['gamesLimitMinutes'] as int?,
+        prayerLockEnabled: json['prayerLockEnabled'] as bool?,
+        prayerLockMinutes: json['prayerLockMinutes'] as int?,
+        sleepLockEnabled: json['sleepLockEnabled'] as bool?,
+        sleepLockStartMinutes: json['sleepLockStartMinutes'] as int?,
+        sleepLockEndMinutes: json['sleepLockEndMinutes'] as int?,
         blockMatureContent: json['blockMatureContent'] as bool?,
         requireParentApproval: json['requireParentApproval'] as bool?,
         voiceNotifications: json['voiceNotifications'] as bool?,
@@ -96,6 +109,11 @@ class AgeSafetyProfileService {
       'dailyLimitMinutes': preset.dailyLimitMinutes,
       'socialMediaLimitMinutes': preset.socialMediaLimitMinutes,
       'gamesLimitMinutes': preset.gamesLimitMinutes,
+      'prayerLockEnabled': preset.prayerLockEnabled,
+      'prayerLockMinutes': preset.prayerLockMinutes,
+      'sleepLockEnabled': preset.sleepLockEnabled,
+      'sleepLockStartMinutes': preset.sleepLockStartMinutes,
+      'sleepLockEndMinutes': preset.sleepLockEndMinutes,
       'blockMatureContent': preset.blockMatureContent,
       'requireParentApproval': preset.requireParentApproval,
       'voiceNotifications': preset.voiceNotifications,
@@ -159,6 +177,7 @@ class AgeSafetyProfileService {
     await _prefs.setString(_activeChildKey, activeId);
     final ChildProfile active = children.firstWhere((ChildProfile child) => child.id == activeId, orElse: () => children.first);
     await _syncRuntime(active);
+    changes.value += 1;
   }
 
   Future<void> _syncRuntime(ChildProfile? child) async {
@@ -166,5 +185,10 @@ class AgeSafetyProfileService {
     await _prefs.setString(_runtimeActiveChildKey, child.id);
     await _prefs.setInt(_runtimeSocialLimitKey, child.preset.socialMediaLimitMinutes);
     await _prefs.setInt(_runtimeGamesLimitKey, child.preset.gamesLimitMinutes);
+    await _prefs.setBool(_runtimePrayerLockEnabledKey, child.preset.prayerLockEnabled);
+    await _prefs.setInt(_runtimePrayerLockMinutesKey, child.preset.prayerLockMinutes);
+    await _prefs.setBool(_runtimeSleepLockEnabledKey, child.preset.sleepLockEnabled);
+    await _prefs.setInt(_runtimeSleepLockStartKey, child.preset.sleepLockStartMinutes);
+    await _prefs.setInt(_runtimeSleepLockEndKey, child.preset.sleepLockEndMinutes);
   }
 }

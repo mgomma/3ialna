@@ -91,6 +91,10 @@ button { font: inherit; }
 .profile-evidence p { margin: 0; }
 .profile-evidence span { color: var(--green); font-weight: 700; }
 .profile-evidence a { border-bottom: 1px solid rgba(23,74,59,.38); }
+.profile-category-registry { max-width: 860px; margin-top: 14px; padding: 18px; background: #f8f4ec; border: 1px solid var(--line); color: #53665d; }
+.profile-category-registry h3 { margin: 0 0 10px; color: var(--green); font-size: 15px; }
+.profile-category-registry p { margin: 6px 0; font-size: 12px; line-height: 1.75; }
+.profile-category-registry small { display: block; margin-top: 12px; color: #7b5a2f; line-height: 1.65; }
 .voice-section { background: #f0e9dc; max-width: none; padding-inline: max(8.5%, calc((100% - 1100px)/2)); grid-template-columns: 1fr 1fr; align-items: center; }
 .voice-image { min-height: 440px; }
 .voice-copy { padding-inline: 7%; }

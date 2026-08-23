@@ -15,6 +15,11 @@ class AgeSafetyProfilePreset {
     required this.dailyLimitMinutes,
     required this.socialMediaLimitMinutes,
     required this.gamesLimitMinutes,
+    required this.prayerLockEnabled,
+    required this.prayerLockMinutes,
+    required this.sleepLockEnabled,
+    required this.sleepLockStartMinutes,
+    required this.sleepLockEndMinutes,
     required this.blockMatureContent,
     required this.requireParentApproval,
     required this.voiceNotifications,
@@ -28,6 +33,11 @@ class AgeSafetyProfilePreset {
   final int dailyLimitMinutes;
   final int socialMediaLimitMinutes;
   final int gamesLimitMinutes;
+  final bool prayerLockEnabled;
+  final int prayerLockMinutes;
+  final bool sleepLockEnabled;
+  final int sleepLockStartMinutes;
+  final int sleepLockEndMinutes;
   final bool blockMatureContent;
   final bool requireParentApproval;
   final bool voiceNotifications;
@@ -42,6 +52,11 @@ class AgeSafetyProfilePreset {
       dailyLimitMinutes: 30,
       socialMediaLimitMinutes: 0,
       gamesLimitMinutes: 30,
+      prayerLockEnabled: true,
+      prayerLockMinutes: 10,
+      sleepLockEnabled: true,
+      sleepLockStartMinutes: 19 * 60 + 30,
+      sleepLockEndMinutes: 7 * 60,
       blockMatureContent: true,
       requireParentApproval: true,
       voiceNotifications: true,
@@ -55,6 +70,11 @@ class AgeSafetyProfilePreset {
       dailyLimitMinutes: 45,
       socialMediaLimitMinutes: 0,
       gamesLimitMinutes: 45,
+      prayerLockEnabled: true,
+      prayerLockMinutes: 15,
+      sleepLockEnabled: true,
+      sleepLockStartMinutes: 20 * 60 + 30,
+      sleepLockEndMinutes: 7 * 60,
       blockMatureContent: true,
       requireParentApproval: true,
       voiceNotifications: true,
@@ -68,6 +88,11 @@ class AgeSafetyProfilePreset {
       dailyLimitMinutes: 90,
       socialMediaLimitMinutes: 30,
       gamesLimitMinutes: 60,
+      prayerLockEnabled: true,
+      prayerLockMinutes: 15,
+      sleepLockEnabled: true,
+      sleepLockStartMinutes: 21 * 60 + 30,
+      sleepLockEndMinutes: 7 * 60,
       blockMatureContent: true,
       requireParentApproval: false,
       voiceNotifications: true,
@@ -81,6 +106,11 @@ class AgeSafetyProfilePreset {
       dailyLimitMinutes: 150,
       socialMediaLimitMinutes: 60,
       gamesLimitMinutes: 90,
+      prayerLockEnabled: true,
+      prayerLockMinutes: 15,
+      sleepLockEnabled: true,
+      sleepLockStartMinutes: 22 * 60 + 30,
+      sleepLockEndMinutes: 7 * 60,
       blockMatureContent: true,
       requireParentApproval: false,
       voiceNotifications: false,
@@ -91,6 +121,11 @@ class AgeSafetyProfilePreset {
     int? dailyLimitMinutes,
     int? socialMediaLimitMinutes,
     int? gamesLimitMinutes,
+    bool? prayerLockEnabled,
+    int? prayerLockMinutes,
+    bool? sleepLockEnabled,
+    int? sleepLockStartMinutes,
+    int? sleepLockEndMinutes,
     bool? blockMatureContent,
     bool? requireParentApproval,
     bool? voiceNotifications,
@@ -104,6 +139,11 @@ class AgeSafetyProfilePreset {
       dailyLimitMinutes: dailyLimitMinutes ?? this.dailyLimitMinutes,
       socialMediaLimitMinutes: socialMediaLimitMinutes ?? this.socialMediaLimitMinutes,
       gamesLimitMinutes: gamesLimitMinutes ?? this.gamesLimitMinutes,
+      prayerLockEnabled: prayerLockEnabled ?? this.prayerLockEnabled,
+      prayerLockMinutes: prayerLockMinutes ?? this.prayerLockMinutes,
+      sleepLockEnabled: sleepLockEnabled ?? this.sleepLockEnabled,
+      sleepLockStartMinutes: sleepLockStartMinutes ?? this.sleepLockStartMinutes,
+      sleepLockEndMinutes: sleepLockEndMinutes ?? this.sleepLockEndMinutes,
       blockMatureContent: blockMatureContent ?? this.blockMatureContent,
       requireParentApproval: requireParentApproval ?? this.requireParentApproval,
       voiceNotifications: voiceNotifications ?? this.voiceNotifications,

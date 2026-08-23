@@ -167,6 +167,16 @@ class _AgeSafetyProfilesScreenState extends State<AgeSafetyProfilesScreen> {
         _budgetTile(label: _ar ? 'وسائل التواصل الاجتماعي' : 'Social media', minutes: preset.socialMediaLimitMinutes, max: 180, onChanged: (int minutes) => _save(preset.copyWith(socialMediaLimitMinutes: minutes, dailyLimitMinutes: minutes + preset.gamesLimitMinutes))),
         _budgetTile(label: _ar ? 'الألعاب' : 'Games', minutes: preset.gamesLimitMinutes, max: 240, onChanged: (int minutes) => _save(preset.copyWith(gamesLimitMinutes: minutes, dailyLimitMinutes: minutes + preset.socialMediaLimitMinutes))),
         ListTile(title: Text(_ar ? 'المجموع' : 'Combined budget'), subtitle: Text('${preset.dailyLimitMinutes} $_minuteLabel')),
+        const Divider(height: 32),
+        Text(_ar ? 'حماية الصلاة والنوم' : 'Prayer and sleep safeguards', style: Theme.of(context).textTheme.titleLarge),
+        Text(_ar ? 'تعمل الصلاة وفق الموقع وطريقة الحساب التي يحددها الوالد. اضبط أوقات النوم بما يناسب الروتين المدرسي والعائلي.' : 'Prayer locks use the location and calculation method configured by the parent. Adjust sleep times for school and family routines.'),
+        SwitchListTile(title: Text(_ar ? 'قفل وقت الصلاة' : 'Prayer-time lock'), subtitle: Text(_ar ? '${preset.prayerLockMinutes} دقيقة بعد كل صلاة' : '${preset.prayerLockMinutes} minutes after each prayer'), value: preset.prayerLockEnabled, onChanged: (bool value) => _save(preset.copyWith(prayerLockEnabled: value))),
+        if (preset.prayerLockEnabled) _budgetTile(label: _ar ? 'مدة قفل الصلاة' : 'Prayer lock duration', minutes: preset.prayerLockMinutes, max: 60, onChanged: (int minutes) => _save(preset.copyWith(prayerLockMinutes: minutes.clamp(5, 60).toInt()))),
+        SwitchListTile(title: Text(_ar ? 'قفل وقت النوم' : 'Sleep lock'), subtitle: Text(_ar ? '${_clock(preset.sleepLockStartMinutes)} إلى ${_clock(preset.sleepLockEndMinutes)}' : '${_clock(preset.sleepLockStartMinutes)} to ${_clock(preset.sleepLockEndMinutes)}'), value: preset.sleepLockEnabled, onChanged: (bool value) => _save(preset.copyWith(sleepLockEnabled: value))),
+        if (preset.sleepLockEnabled) ...<Widget>[
+          ListTile(title: Text(_ar ? 'بداية وقت النوم' : 'Bedtime lock starts'), subtitle: Text(_clock(preset.sleepLockStartMinutes)), trailing: const Icon(Icons.bedtime_outlined), onTap: () => _pickSleepTime(isStart: true, preset: preset)),
+          ListTile(title: Text(_ar ? 'نهاية وقت النوم' : 'Bedtime lock ends'), subtitle: Text(_clock(preset.sleepLockEndMinutes)), trailing: const Icon(Icons.wb_sunny_outlined), onTap: () => _pickSleepTime(isStart: false, preset: preset)),
+        ],
         SwitchListTile(title: Text(_ar ? 'حظر المحتوى غير المناسب للعمر' : 'Block age-inappropriate content'), value: preset.blockMatureContent, onChanged: (bool value) => _save(preset.copyWith(blockMatureContent: value))),
         SwitchListTile(title: Text(_ar ? 'طلب موافقة الوالدين' : 'Require parent approval'), value: preset.requireParentApproval, onChanged: (bool value) => _save(preset.copyWith(requireParentApproval: value))),
         SwitchListTile(title: Text(_ar ? 'التنبيهات الصوتية' : 'Voice notifications'), subtitle: Text(_ar ? 'استخدم الرسالة الصوتية التي يسجلها الوالدان.' : 'Use the voice message recorded by a parent.'), value: preset.voiceNotifications, onChanged: (bool value) => _save(preset.copyWith(voiceNotifications: value))),
@@ -181,4 +191,21 @@ class _AgeSafetyProfilesScreenState extends State<AgeSafetyProfilesScreen> {
       trailing: SizedBox(width: 150, child: Slider(min: 0, max: max.toDouble(), divisions: max ~/ 15, value: minutes.toDouble(), onChanged: (double value) => onChanged(value.round()))),
     );
   }
+
+  Future<void> _pickSleepTime({required bool isStart, required AgeSafetyProfilePreset preset}) async {
+    final int current = isStart ? preset.sleepLockStartMinutes : preset.sleepLockEndMinutes;
+    final TimeOfDay? selected = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: current ~/ 60, minute: current % 60),
+    );
+    if (selected == null) return;
+    final int minutes = selected.hour * 60 + selected.minute;
+    await _save(isStart
+        ? preset.copyWith(sleepLockStartMinutes: minutes)
+        : preset.copyWith(sleepLockEndMinutes: minutes));
+  }
+
+  String _clock(int minutes) => MaterialLocalizations.of(context).formatTimeOfDay(
+        TimeOfDay(hour: minutes ~/ 60, minute: minutes % 60),
+      );
 }

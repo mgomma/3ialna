@@ -130,10 +130,10 @@ class ParentalControlStorageService {
   Future<Map<String, ManagedAppCategory>> getAppCategories() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String? raw = prefs.getString(_keyAppCategories);
-    if (raw == null) return _withKnownSocialApps(<String, ManagedAppCategory>{});
+    if (raw == null) return _withKnownCategoryApps(<String, ManagedAppCategory>{});
     try {
       final Map<String, dynamic> decoded = jsonDecode(raw) as Map<String, dynamic>;
-      return _withKnownSocialApps(decoded.map((String packageName, dynamic value) => MapEntry(
+      return _withKnownCategoryApps(decoded.map((String packageName, dynamic value) => MapEntry(
             packageName,
             ManagedAppCategory.values.firstWhere(
               (ManagedAppCategory category) => category.name == value,
@@ -141,14 +141,17 @@ class ParentalControlStorageService {
             ),
           )));
     } catch (_) {
-      return _withKnownSocialApps(<String, ManagedAppCategory>{});
+      return _withKnownCategoryApps(<String, ManagedAppCategory>{});
     }
   }
 
-  Map<String, ManagedAppCategory> _withKnownSocialApps(Map<String, ManagedAppCategory> categories) {
+  Map<String, ManagedAppCategory> _withKnownCategoryApps(Map<String, ManagedAppCategory> categories) {
     final Map<String, ManagedAppCategory> values = Map<String, ManagedAppCategory>.from(categories);
     for (final String packageName in socialMediaApps.keys) {
       if (packageName != '__total_usage__') values.putIfAbsent(packageName, () => ManagedAppCategory.socialMedia);
+    }
+    for (final String packageName in gameApps.keys) {
+      values.putIfAbsent(packageName, () => ManagedAppCategory.games);
     }
     return values;
   }
