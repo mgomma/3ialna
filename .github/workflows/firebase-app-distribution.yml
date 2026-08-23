@@ -17,7 +17,8 @@ on:
         type: string
 
 permissions:
-  contents: read
+  actions: write
+  contents: write
 
 concurrency:
   group: firebase-app-distribution-${{ github.ref }}
@@ -80,11 +81,56 @@ jobs:
           if [ -n "$FIREBASE_TESTER_GROUPS" ]; then
             group_args="--groups $FIREBASE_TESTER_GROUPS"
           fi
-          firebase appdistribution:distribute build/app/outputs/flutter-apk/app-debug.apk \
+          if ! firebase appdistribution:distribute build/app/outputs/flutter-apk/app-debug.apk \
             --app "$FIREBASE_APP_ID" \
             --release-notes "$RELEASE_NOTES" \
             $group_args \
-            --non-interactive
+            --non-interactive > "$RUNNER_TEMP/firebase-distribution-output.txt" 2>&1; then
+            cat "$RUNNER_TEMP/firebase-distribution-output.txt"
+            exit 1
+          fi
+      - name: Synchronize website release metadata
+        if: steps.firebase_configuration.outputs.configured == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          output_file="$RUNNER_TEMP/firebase-distribution-output.txt"
+          tester_url="$(sed -n 's/.*Share this release with testers who have access: \(https:\/\/appdistribution\.firebase\.google\.com\/testerapps\/[^ ]*\).*/\1/p' "$output_file" | tail -n 1)"
+          if [ -z "$tester_url" ]; then
+            echo "Firebase upload succeeded but no tester URL was found in the CLI output."
+            exit 1
+          fi
+
+          app_version="$(awk '/^version:/{print $2; exit}' pubspec.yaml)"
+          version_name="${app_version%%+*}"
+          build_number="${app_version#*+}"
+          if [ "$build_number" = "$app_version" ]; then build_number="0"; fi
+          published_at="$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
+
+          cat > website/src/release.generated.ts <<EOF
+          // Desert Signal style reminder: release facts are practical, calm, and transparent.
+          // This file is rewritten automatically by the Firebase App Distribution workflow.
+          export const currentRelease = {
+            platform: "Android",
+            version: "$version_name",
+            build: "$build_number",
+            distribution: "Firebase App Distribution",
+            testerUrl: "$tester_url",
+            publishedAt: "$published_at",
+          } as const;
+          EOF
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add website/src/release.generated.ts
+          if git diff --cached --quiet; then
+            echo "Website release metadata is already current."
+            exit 0
+          fi
+          git commit -m "chore(website): sync Firebase test release [skip ci]"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+          gh workflow run deploy-website.yml --ref "$GITHUB_REF_NAME"
       - name: Remove service account credential
         if: always() && steps.firebase_configuration.outputs.configured == 'true'
-        run: rm -f "$RUNNER_TEMP/firebase-service-account.json"
+        run: rm -f "$RUNNER_TEMP/firebase-service-account.json" "$RUNNER_TEMP/firebase-distribution-output.txt"

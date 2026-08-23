@@ -16,6 +16,12 @@ In the GitHub repository, add these **Actions secrets** under **Settings → Sec
 
 Create a tester group in Firebase App Distribution before the first automated upload if you want testers to be invited automatically. The workflow still uploads a release when this value is absent. It uses Application Default Credentials through `GOOGLE_APPLICATION_CREDENTIALS`; do not commit the JSON credential, `.firebaserc`, or `google-services.json` unless the app itself begins using Firebase SDKs.
 
+## Website release synchronization
+
+After a successful upload, the workflow extracts Firebase's tester-only `testing_uri`, rewrites `website/src/release.generated.ts`, commits that public release metadata to `dev`, and manually triggers the GitHub Pages deployment workflow. The website and its QR code therefore follow the latest successful Firebase release automatically. The Firebase workflow ignores `website/**` changes, preventing a release-update loop.
+
+The generated URL is for invited testers only. Never publish Firebase's `binary_download_uri`: it is a signed download URL that expires after one hour. The website instead includes a visible invitation requirement and a second QR code that opens the public setup guide.
+
 ## First controlled run
 
 Use **Actions → Firebase App Distribution → Run workflow** after adding the secrets. Check the logged Firebase Console URI and tester URI. Firebase sends invited testers an email and the CLI prints a tester link for the release. A subsequent eligible push to `dev` performs the same build and distribution automatically.

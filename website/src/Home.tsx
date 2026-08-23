@@ -1,11 +1,13 @@
 import { FormEvent, useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, ArrowUpRight, Check, ChevronDown, CircleHelp, Clock3, Download, ExternalLink, Globe2, LockKeyhole, Mail, Mic2, RotateCcw, Send, ShieldCheck, Smartphone, Sparkles } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
+import { currentRelease } from "./release.generated";
 
 const heroImage = "./assets/3ialna-hero-family.jpg";
 const profileImage = "linear-gradient(135deg, rgba(23,74,59,.96), rgba(30,103,82,.72)), radial-gradient(circle at 72% 28%, rgba(231,184,104,.85) 0 9%, transparent 10%), linear-gradient(140deg, #c9b18a, #547b63 58%, #174a3b)";
 const voiceImage = "linear-gradient(145deg, rgba(23,74,59,.9), rgba(23,74,59,.22)), radial-gradient(circle at 70% 30%, rgba(231,184,104,.92) 0 12%, transparent 13%), linear-gradient(35deg, #d9c7a9, #547b63 55%, #174a3b)";
 const privacyIcons = [LockKeyhole, Mic2, RotateCcw, Clock3];
-const firebaseReleaseUrl = "https://appdistribution.firebase.google.com/testerapps/1:747121514030:android:ba89b9172571366f4631bf/releases/2rr0nofjj0mt0";
+const publicSiteUrl = "https://mgomma.github.io/3ialna/";
 
 type Language = "ar" | "en";
 
@@ -46,13 +48,18 @@ const copy = {
     download: "تنزيل APK للاختبار",
     releaseKicker: "03 / إصدار Android التجريبي",
     releaseTitle: "نسخة الاختبار جاهزة للوالدين المدعوين",
-    releaseBody: "تم رفع الإصدار 0.1.0 (البنية 1) إلى Firebase App Distribution. افتح الرابط من هاتف Android وسجّل الدخول بحساب البريد الذي تلقى دعوة الاختبار.",
+    releaseBody: "أحدث إصدار اختبار متاح عبر Firebase App Distribution. افتح الرابط من هاتف Android وسجّل الدخول بحساب البريد الذي تلقى دعوة الاختبار.",
     releasePlatform: "Android",
     releaseVersion: "0.1.0 · البنية 1",
     releaseChannel: "Firebase App Distribution",
     releaseButton: "فتح إصدار الاختبار",
     releaseNotice: "رابط التثبيت متاح للمختبرين المدعوين فقط. إذا لم تصلك دعوة، اطلب إضافتك أولًا.",
     requestInvite: "اطلب دعوة اختبار",
+    testerQrTitle: "امسح لتنزيل نسخة الاختبار",
+    testerQrBody: "للمختبرين المدعوين فقط على Android.",
+    siteQrTitle: "امسح لمشاركة الدليل",
+    siteQrBody: "افتح صفحة الإعداد على أي هاتف.",
+    releaseUpdated: "آخر تحديث",
     footer: "عيالنا · أمان رقمي يحترم العائلة",
     contactKicker: "08 / تواصل",
     contactTitle: "هل تحتاج إلى مساعدة في الإعداد؟",
@@ -96,13 +103,18 @@ const copy = {
     download: "Download test APK",
     releaseKicker: "03 / Android test release",
     releaseTitle: "The test release is ready for invited parents",
-    releaseBody: "Version 0.1.0 (build 1) is available through Firebase App Distribution. Open the link on an Android phone and sign in with the email address that received the tester invitation.",
+    releaseBody: "The latest test release is available through Firebase App Distribution. Open the link on an Android phone and sign in with the email address that received the tester invitation.",
     releasePlatform: "Android",
     releaseVersion: "0.1.0 · Build 1",
     releaseChannel: "Firebase App Distribution",
     releaseButton: "Open test release",
     releaseNotice: "The install link is available to invited testers only. If you have not received an invitation, request access first.",
     requestInvite: "Request a tester invitation",
+    testerQrTitle: "Scan to install the test release",
+    testerQrBody: "For invited Android testers only.",
+    siteQrTitle: "Scan to share the guide",
+    siteQrBody: "Open the setup page on any phone.",
+    releaseUpdated: "Last updated",
     footer: "3ialna · Family digital safety",
     contactKicker: "08 / Contact",
     contactTitle: "Need help with setup?",
@@ -124,6 +136,8 @@ export default function Home() {
   const [contactState, setContactState] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const t = useMemo(() => copy[language], [language]);
   const isArabic = language === "ar";
+  const releaseVersion = `${currentRelease.version} · ${isArabic ? "البنية" : "Build"} ${currentRelease.build}`;
+  const releaseDate = new Intl.DateTimeFormat(isArabic ? "ar-SA" : "en-US", { dateStyle: "medium" }).format(new Date(currentRelease.publishedAt));
 
   async function submitContact(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -167,7 +181,7 @@ export default function Home() {
 
         <section id="how" className="intro-band section-grid"><div><span className="section-kicker">02 / {isArabic ? "لماذا عيالنا" : "Why 3ialna"}</span><h2>{t.guide}</h2></div><p>{t.guideIntro}</p><div className="privacy-callout"><LockKeyhole size={20} /><div><b>{t.privacy}</b><span>{t.privacyBody}</span></div></div></section>
 
-        <section id="download" className="release-section section-grid"><div className="release-copy"><span className="section-kicker">{t.releaseKicker}</span><h2>{t.releaseTitle}</h2><p>{t.releaseBody}</p><a className="release-request" href="#contact"><Mail size={16} />{t.requestInvite}<ArrowUpRight size={15} /></a></div><div className="release-panel"><div className="release-status"><span className="release-pulse" aria-hidden="true" />{isArabic ? "إصدار متاح" : "Release available"}</div><div className="release-facts"><div><span>{isArabic ? "المنصة" : "Platform"}</span><b>{t.releasePlatform}</b></div><div><span>{isArabic ? "الإصدار" : "Version"}</span><b>{t.releaseVersion}</b></div><div><span>{isArabic ? "قناة التثبيت" : "Install channel"}</span><b>{t.releaseChannel}</b></div></div><a className="button release-button" href={firebaseReleaseUrl} target="_blank" rel="noreferrer"><Download size={18} />{t.releaseButton}<ExternalLink size={16} /></a><p className="release-notice"><ShieldCheck size={17} />{t.releaseNotice}</p></div></section>
+        <section id="download" className="release-section section-grid"><div className="release-copy"><span className="section-kicker">{t.releaseKicker}</span><h2>{t.releaseTitle}</h2><p>{t.releaseBody}</p><a className="release-request" href="#contact"><Mail size={16} />{t.requestInvite}<ArrowUpRight size={15} /></a></div><div className="release-panel"><div className="release-status"><span className="release-pulse" aria-hidden="true" />{isArabic ? "إصدار متاح" : "Release available"}</div><div className="release-facts"><div><span>{isArabic ? "المنصة" : "Platform"}</span><b>{currentRelease.platform}</b></div><div><span>{isArabic ? "الإصدار" : "Version"}</span><b>{releaseVersion}</b></div><div><span>{isArabic ? "قناة التثبيت" : "Install channel"}</span><b>{currentRelease.distribution}</b></div></div><a className="button release-button" href={currentRelease.testerUrl} target="_blank" rel="noreferrer"><Download size={18} />{t.releaseButton}<ExternalLink size={16} /></a><p className="release-notice"><ShieldCheck size={17} />{t.releaseNotice}</p><p className="release-updated">{t.releaseUpdated}: {releaseDate}</p><div className="release-qr-grid"><div className="release-qr-card"><QRCodeSVG value={currentRelease.testerUrl} size={128} level="M" includeMargin bgColor="#f7f3eb" fgColor="#174a3b" /><div><b>{t.testerQrTitle}</b><span>{t.testerQrBody}</span></div></div><div className="release-qr-card"><QRCodeSVG value={publicSiteUrl} size={128} level="M" includeMargin bgColor="#f7f3eb" fgColor="#174a3b" /><div><b>{t.siteQrTitle}</b><span>{t.siteQrBody}</span></div></div></div></div></section>
 
         <section id="setup" className="setup-section section-grid"><div className="sticky-heading"><span className="section-kicker">04 / {isArabic ? "الدليل العملي" : "The practical guide"}</span><h2>{t.install}</h2><p>{t.installIntro}</p><a className="button dark-button" href="#profiles"><ArrowDown size={17} />{isArabic ? "تابع إلى الملفات" : "Continue to profiles"}</a></div><div className="steps">{t.steps.map(([title, body], index) => <article className="step" key={title}><div className="step-index">{String(index + 1).padStart(2, "0")}</div><div><h3>{title}</h3><p>{body}</p></div><Check size={18} className="step-check" /></article>)}</div></section>
 
@@ -179,7 +193,7 @@ export default function Home() {
 
         <section className="faq-section section-grid"><div><span className="section-kicker">08 / FAQ</span><h2>{t.faq}</h2><CircleHelp size={34} className="faq-mark" /></div><div className="faq-list">{t.faqItems.map(([question, answer], index) => <div className={`faq-item ${openFaq === index ? "open" : ""}`} key={question}><button onClick={() => setOpenFaq(openFaq === index ? null : index)}><span>{question}</span>{openFaq === index ? <ArrowUp size={18} /> : <ArrowDown size={18} />}</button>{openFaq === index && <p>{answer}</p>}</div>)}</div></section>
 
-        <section id="contact" className="contact-section section-grid"><div className="contact-copy"><span className="section-kicker">{t.contactKicker}</span><h2>{t.contactTitle}</h2><p>{t.contactBody}</p><div className="contact-address"><Mail size={18} /><span>3ialna.app@gmail.com</span></div></div><form className="contact-form" onSubmit={submitContact}><input type="hidden" name="_subject" value="3ialna website inquiry" /><input type="hidden" name="_template" value="table" /><input className="form-honeypot" type="text" name="_honey" tabIndex={-1} autoComplete="off" /><label>{t.name}<input required name="name" autoComplete="name" /></label><label>{t.email}<input required type="email" name="email" autoComplete="email" /></label><label>{t.subject}<input required name="subject" /></label><label>{t.message}<textarea required name="message" rows={5} /></label><button className="button dark-button contact-submit" type="submit" disabled={contactState === "sending"}><Send size={17} />{contactState === "sending" ? t.sending : t.submit}</button>{contactState === "sent" && <p className="form-state success" role="status"><Check size={16} />{t.contactSuccess}</p>}{contactState === "error" && <p className="form-state error" role="alert">{t.contactError}</p>}</form></section>
+        <section id="contact" className="contact-section section-grid"><div className="contact-copy"><span className="section-kicker">{t.contactKicker}</span><h2>{t.contactTitle}</h2><p>{t.contactBody}</p><div className="contact-address"><Mail size={18} /><span>3ialna.app@gmail.com</span></div></div><form className="contact-form" onSubmit={submitContact}><input type="hidden" name="_subject" value="3ialna website inquiry" /><input type="hidden" name="_template" value="table" /><input type="hidden" name="_captcha" value="true" /><input className="form-honeypot" type="text" name="_honey" tabIndex={-1} autoComplete="off" /><label>{t.name}<input required name="name" autoComplete="name" /></label><label>{t.email}<input required type="email" name="email" autoComplete="email" /></label><label>{t.subject}<input required name="subject" /></label><label>{t.message}<textarea required name="message" rows={5} /></label><button className="button dark-button contact-submit" type="submit" disabled={contactState === "sending"}><Send size={17} />{contactState === "sending" ? t.sending : t.submit}</button>{contactState === "sent" && <p className="form-state success" role="status"><Check size={16} />{t.contactSuccess}</p>}{contactState === "error" && <p className="form-state error" role="alert">{t.contactError}</p>}</form></section>
 
         <section className="final-cta"><div><Sparkles size={22} /><h2>{t.finalCta}</h2><p>{t.finalBody}</p></div><a className="button primary light" href="#download"><Download size={18} />{t.download}</a></section>
       </main>
