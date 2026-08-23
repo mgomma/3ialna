@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/local/locale_controller.dart';
 import '../../data/local/parental_control_storage_service.dart';
@@ -16,6 +17,7 @@ import 'safe_content_screen.dart';
 import 'ios_authorization_onboarding_screen.dart';
 import 'age_safety_profiles_screen.dart';
 import 'parent_voice_notification_screen.dart';
+import 'profile_pack_screen.dart';
 import '../../l10n/app_localizations.dart';
 
 /// Main dashboard screen for parental controls.
@@ -441,6 +443,23 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                         );
                       },
                     ),
+                  _ActionCard(
+                    icon: Icons.ios_share_outlined,
+                    label: 'Share Setup',
+                    color: colorScheme.primary,
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const ProfilePackScreen())),
+                  ),
+                  _ActionCard(
+                    icon: Icons.contact_support_outlined,
+                    label: 'Contact 3ialna',
+                    color: colorScheme.secondary,
+                    onTap: () async {
+                      final Uri contact = Uri.parse('https://mgomma.github.io/3ialna/#contact');
+                      if (!await launchUrl(contact, mode: LaunchMode.externalApplication) && context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open the 3ialna contact form.')));
+                      }
+                    },
+                  ),
                 ],
               ),
             ],

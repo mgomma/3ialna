@@ -21,6 +21,17 @@ import UIKit
       safeContentIosBridge.handle(call, result: result)
     }
 
+    if #available(iOS 16.0, *) {
+      let screenTimeChannel = FlutterMethodChannel(
+        name: ScreenTimeSafeguardBridge.channelName,
+        binaryMessenger: controller.binaryMessenger
+      )
+      let screenTimeBridge = ScreenTimeSafeguardBridge()
+      screenTimeChannel.setMethodCallHandler { call, result in
+        screenTimeBridge.handle(call, result: result)
+      }
+    }
+
     let parentVoiceChannel = FlutterMethodChannel(
       name: IosParentVoiceNotificationBridge.channelName,
       binaryMessenger: controller.binaryMessenger

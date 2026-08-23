@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../data/system/safe_content_ios_service.dart';
+import '../../data/system/ios_screen_time_safeguard_service.dart';
 
 class IosAuthorizationOnboardingScreen extends StatefulWidget {
   const IosAuthorizationOnboardingScreen({super.key});
@@ -11,9 +12,11 @@ class IosAuthorizationOnboardingScreen extends StatefulWidget {
 
 class _IosAuthorizationOnboardingScreenState extends State<IosAuthorizationOnboardingScreen> {
   final SafeContentIosService _service = SafeContentIosService();
+  final IosScreenTimeSafeguardService _safeguards = IosScreenTimeSafeguardService();
   bool _loading = true;
   bool _authorized = false;
   bool _networkConfigured = false;
+  bool _safeguardSelectionConfigured = false;
   String? _error;
 
   @override
@@ -30,10 +33,12 @@ class _IosAuthorizationOnboardingScreenState extends State<IosAuthorizationOnboa
     try {
       final authorized = await _service.isAuthorizationGranted();
       final running = await _service.isWebProtectionRunning();
+      final selectionConfigured = authorized && await _safeguards.isSelectionConfigured();
       if (!mounted) return;
       setState(() {
         _authorized = authorized;
         _networkConfigured = running;
+        _safeguardSelectionConfigured = selectionConfigured;
         _loading = false;
       });
     } catch (error) {
@@ -78,6 +83,20 @@ class _IosAuthorizationOnboardingScreenState extends State<IosAuthorizationOnboa
     }
   }
 
+  Future<void> _selectSafeguardApps() async {
+    setState(() => _loading = true);
+    try {
+      await _safeguards.selectAppsAndCategories();
+      await _refresh();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = 'تعذر حفظ التطبيقات والفئات التي تريد حمايتها.';
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final active = _authorized && _networkConfigured;
@@ -115,6 +134,12 @@ class _IosAuthorizationOnboardingScreenState extends State<IosAuthorizationOnboa
             ),
             _StepRow(
               number: '٣',
+              title: 'اختيار التطبيقات والفئات للحماية',
+              detail: 'تستخدم قيود النوم والصلاة شاشة Apple لحماية التطبيقات أو الفئات التي تختارها أنت.',
+              completed: _safeguardSelectionConfigured,
+            ),
+            _StepRow(
+              number: '٤',
               title: 'حماية النطاقات',
               detail: 'طبّق سياسة النطاقات المحظورة والمسموح بها على مسار الويب المدعوم.',
               completed: _networkConfigured,
@@ -128,6 +153,8 @@ class _IosAuthorizationOnboardingScreenState extends State<IosAuthorizationOnboa
               const Center(child: CircularProgressIndicator())
             else if (!_authorized)
               FilledButton(onPressed: _requestAuthorization, child: const Text('منح الإذن'))
+            else if (!_safeguardSelectionConfigured)
+              FilledButton(onPressed: _selectSafeguardApps, child: const Text('اختيار التطبيقات والفئات'))
             else if (!_networkConfigured)
               FilledButton(onPressed: _requestNetworkPermission, child: const Text('إعداد حماية الويب'))
             else

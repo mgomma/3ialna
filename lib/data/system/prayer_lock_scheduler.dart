@@ -10,6 +10,7 @@ import 'notification_service.dart';
 import 'voice_notification_service.dart';
 import 'parent_voice_notification_service.dart';
 import 'overlay_service.dart';
+import 'ios_screen_time_safeguard_service.dart';
 import 'prayer_time_service.dart';
 
   /// Scheduler that manages prayer time locks and notifications.
@@ -74,6 +75,7 @@ class PrayerLockScheduler {
     _activeLocks.clear();
     await _notificationService.cancelAllNotifications();
     await _parentVoiceService.cancelBackgroundPlayback();
+    await IosScreenTimeSafeguardService().clearPrayerShields();
     _currentSettings = null;
   }
 
@@ -88,6 +90,21 @@ class PrayerLockScheduler {
     if (prayerTimes == null) {
       return;
     }
+
+    await IosScreenTimeSafeguardService().schedulePrayerShields(
+      prayerTimes.entries
+          .where((MapEntry<Prayer, DateTime> entry) => entry.value.isAfter(now))
+          .map((MapEntry<Prayer, DateTime> entry) {
+        final DateTime end = entry.value.add(Duration(
+          minutes: settings.getLockDuration(entry.key, entry.value),
+        ));
+        return <String, String>{
+          'id': entry.key.name,
+          'start': entry.value.toIso8601String(),
+          'end': end.toIso8601String(),
+        };
+      }).toList(growable: false),
+    );
 
     // Cancel existing notifications
     await _notificationService.cancelAllNotifications();
@@ -363,4 +380,3 @@ class PrayerLockScheduler {
     };
   }
 }
-

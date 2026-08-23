@@ -1,10 +1,12 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../domain/models/age_safety_profile.dart';
 import '../../domain/models/child_profile.dart';
+import '../system/ios_screen_time_safeguard_service.dart';
 
 class AgeSafetyProfileService {
   const AgeSafetyProfileService(this._prefs);
@@ -190,5 +192,16 @@ class AgeSafetyProfileService {
     await _prefs.setBool(_runtimeSleepLockEnabledKey, child.preset.sleepLockEnabled);
     await _prefs.setInt(_runtimeSleepLockStartKey, child.preset.sleepLockStartMinutes);
     await _prefs.setInt(_runtimeSleepLockEndKey, child.preset.sleepLockEndMinutes);
+    if (Platform.isIOS) {
+      try {
+        await IosScreenTimeSafeguardService().syncSleepShield(
+          enabled: child.preset.sleepLockEnabled,
+          startMinutes: child.preset.sleepLockStartMinutes,
+          endMinutes: child.preset.sleepLockEndMinutes,
+        );
+      } catch (_) {
+        // The native bridge reports setup status in the iOS onboarding screen.
+      }
+    }
   }
 }

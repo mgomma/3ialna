@@ -170,6 +170,18 @@ class ParentalControlStorageService {
     );
   }
 
+  /// Replaces reusable category assignments during a parent-approved profile-pack import.
+  Future<void> setAppCategories(Map<String, ManagedAppCategory> categories) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final Map<String, ManagedAppCategory> assigned = Map<String, ManagedAppCategory>.fromEntries(
+      categories.entries.where((MapEntry<String, ManagedAppCategory> entry) => entry.value != ManagedAppCategory.unassigned),
+    );
+    await prefs.setString(
+      _keyAppCategories,
+      jsonEncode(assigned.map((String key, ManagedAppCategory value) => MapEntry(key, value.name))),
+    );
+  }
+
   /// Gets current usage for a specific app (in minutes) from SharedPreferences.
   /// This is used for real-time updates in the UI.
   Future<int> getAppUsage(String packageName) async {
