@@ -75,18 +75,22 @@ class _AgeSafetyProfilesScreenState extends State<AgeSafetyProfilesScreen> {
             style: Theme.of(context).textTheme.bodyLarge,
           ),
           const SizedBox(height: 16),
-          ...AgeSafetyProfile.values.map((AgeSafetyProfile profile) {
-            final AgeSafetyProfilePreset item = AgeSafetyProfilePreset.defaults[profile]!;
-            return RadioListTile<AgeSafetyProfile>(
-              value: profile,
-              groupValue: preset.profile,
-              title: Text(_ar ? item.nameAr : item.nameEn),
-              subtitle: Text(_ar ? item.descriptionAr : item.descriptionEn),
-              onChanged: (AgeSafetyProfile? value) {
-                if (value != null) _select(value);
-              },
-            );
-          }),
+          RadioGroup<AgeSafetyProfile>(
+            groupValue: preset.profile,
+            onChanged: (AgeSafetyProfile? value) {
+              if (value != null) _select(value);
+            },
+            child: Column(
+              children: AgeSafetyProfile.values.map((AgeSafetyProfile profile) {
+                final AgeSafetyProfilePreset item = AgeSafetyProfilePreset.defaults[profile]!;
+                return RadioListTile<AgeSafetyProfile>(
+                  value: profile,
+                  title: Text(_ar ? item.nameAr : item.nameEn),
+                  subtitle: Text(_ar ? item.descriptionAr : item.descriptionEn),
+                );
+              }).toList(),
+            ),
+          ),
           const Divider(height: 32),
           Text(_ar ? 'التخصيص' : 'Customize', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
