@@ -1,0 +1,78 @@
+name: Firebase App Distribution
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - "android/**"
+      - "lib/**"
+      - "pubspec.yaml"
+      - "pubspec.lock"
+      - ".github/workflows/firebase-app-distribution.yml"
+  workflow_dispatch:
+    inputs:
+      release_notes:
+        description: "Optional release notes for testers"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: firebase-app-distribution-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  distribute:
+    if: ${{ secrets.FIREBASE_APP_ID != '' && secrets.FIREBASE_SERVICE_ACCOUNT_JSON != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Install Flutter packages
+        run: flutter pub get --enforce-lockfile
+      - name: Build Android debug APK
+        run: flutter build apk --debug
+      - name: Install Firebase CLI
+        run: npm install --global firebase-tools
+      - name: Write Firebase service account credential
+        run: printf '%s' '${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}' > "$RUNNER_TEMP/firebase-service-account.json"
+      - name: Upload APK to Firebase App Distribution
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          FIREBASE_TESTER_GROUPS: ${{ secrets.FIREBASE_TESTER_GROUPS }}
+          RELEASE_NOTES: ${{ inputs.release_notes || format('Automated debug build from {0}', github.sha) }}
+        run: |
+          group_args=""
+          if [ -n "$FIREBASE_TESTER_GROUPS" ]; then
+            group_args="--groups $FIREBASE_TESTER_GROUPS"
+          fi
+          firebase appdistribution:distribute build/app/outputs/flutter-apk/app-debug.apk \
+            --app "$FIREBASE_APP_ID" \
+            --release-notes "$RELEASE_NOTES" \
+            $group_args \
+            --non-interactive
+      - name: Remove service account credential
+        if: always()
+        run: rm -f "$RUNNER_TEMP/firebase-service-account.json"
+
+  firebase-not-configured:
+    if: ${{ secrets.FIREBASE_APP_ID == '' || secrets.FIREBASE_SERVICE_ACCOUNT_JSON == '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain required configuration
+        run: |
+          echo "Firebase distribution was skipped because FIREBASE_APP_ID or FIREBASE_SERVICE_ACCOUNT_JSON is not configured."
+          echo "See docs/firebase-app-distribution.md for the one-time setup."
