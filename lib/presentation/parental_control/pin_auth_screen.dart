@@ -32,12 +32,12 @@ class _PinAuthScreenState extends State<PinAuthScreen> {
   bool _isConfirming = false;
   String? _errorMessage;
   bool _biometricAvailable = false;
+  bool _isAuthenticatingBiometrically = false;
 
   @override
   void initState() {
     super.initState();
     _checkBiometricAvailability();
-    _focusNodes[0].requestFocus();
   }
 
   @override
@@ -53,15 +53,35 @@ class _PinAuthScreenState extends State<PinAuthScreen> {
 
   Future<void> _checkBiometricAvailability() async {
     final available = await _pinAuthService.isBiometricAvailable();
+    if (!mounted) return;
     setState(() {
       _biometricAvailable = available;
     });
+
+    // Biometric authentication is the preferred method for an existing PIN.
+    // PIN entry remains available when biometrics are unavailable or declined.
+    if (available && !widget.isSetupMode) {
+      await _authenticateWithBiometrics(auto: true);
+    } else if (mounted) {
+      _focusNodes[0].requestFocus();
+    }
   }
 
-  Future<void> _authenticateWithBiometrics() async {
+  Future<void> _authenticateWithBiometrics({bool auto = false}) async {
+    if (_isAuthenticatingBiometrically) return;
+    if (mounted) {
+      setState(() {
+        _isAuthenticatingBiometrically = true;
+        if (!auto) _errorMessage = null;
+      });
+    }
     final success = await _pinAuthService.authenticateWithBiometrics();
-    if (success && mounted) {
+    if (!mounted) return;
+    setState(() => _isAuthenticatingBiometrically = false);
+    if (success) {
       widget.onAuthenticated();
+    } else {
+      _focusNodes[0].requestFocus();
     }
   }
 
@@ -248,9 +268,9 @@ class _PinAuthScreenState extends State<PinAuthScreen> {
               // Biometric authentication button
               if (_biometricAvailable && !widget.isSetupMode) ...[
                 OutlinedButton.icon(
-                  onPressed: _authenticateWithBiometrics,
+                  onPressed: _isAuthenticatingBiometrically ? null : () => _authenticateWithBiometrics(),
                   icon: const Icon(Icons.fingerprint),
-                  label: const Text('Use Biometric'),
+                  label: Text(_isAuthenticatingBiometrically ? 'Authenticating…' : 'Use Biometric'),
                 ),
                 const SizedBox(height: 16),
               ],
