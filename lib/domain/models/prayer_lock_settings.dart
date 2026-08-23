@@ -84,7 +84,7 @@ class PrayerLockSettings {
         Prayer.isha: defaultDuration,
       },
       fridayDhuhrDuration: defaultDuration,
-      calculationMethodName: 'muslim_world_league',
+      calculationMethodName: 'makkah',
       notificationMessages: {
         Prayer.fajr: 'Fajr prayer time is approaching. '
             'Your device will be locked in 2 minutes.',

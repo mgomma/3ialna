@@ -5,6 +5,7 @@ import '../../data/local/settings_service.dart';
 import '../../data/system/location_service.dart';
 import '../../domain/models/prayer.dart';
 import '../../domain/models/prayer_lock_settings.dart';
+import '../../domain/services/prayer_calculation_method_policy.dart';
 import '../widgets/disclosure_dialog.dart';
 
 /// Screen for configuring prayer time lock settings.
@@ -37,10 +38,24 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
       _settings = _settingsService.loadPrayerLockSettings();
     });
 
-    // Load location if not set
+    // Load location if not set, then use it for the automatic method default.
     if (_settings.latitude == null || _settings.longitude == null) {
       await _refreshLocation();
+    } else if (!_settingsService.isPrayerCalculationMethodManuallySelected) {
+      _applyLocationDefault(latitude: _settings.latitude!, longitude: _settings.longitude!);
     }
+  }
+
+  void _applyLocationDefault({required double latitude, required double longitude}) {
+    if (_settingsService.isPrayerCalculationMethodManuallySelected) return;
+    final String method = PrayerCalculationMethodPolicy.forLocation(
+      latitude: latitude,
+      longitude: longitude,
+    );
+    if (!mounted) return;
+    setState(() {
+      _settings = _settings.copyWith(calculationMethodName: method);
+    });
   }
 
   Future<void> _refreshLocation() async {
@@ -81,6 +96,7 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
         _settings = _settings.copyWith(latitude: coords.latitude, longitude: coords.longitude);
         _isLoading = false;
       });
+      _applyLocationDefault(latitude: coords.latitude, longitude: coords.longitude);
     } else {
       setState(() {
         _locationError =
@@ -181,15 +197,20 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
     );
   }
 
+  Future<void> _setManualCalculationMethod(String methodName) async {
+    await _settingsService.setPrayerCalculationMethodManuallySelected(true);
+    if (!mounted) return;
+    setState(() {
+      _settings = _settings.copyWith(calculationMethodName: methodName);
+    });
+  }
+
   Widget _buildCalculationMethodSection() {
     final List<({String name, String methodName})> methods = [
       (name: 'Muslim World League', methodName: 'muslim_world_league'),
       (name: 'Egyptian General Authority', methodName: 'egyptian'),
       (name: 'University of Karachi', methodName: 'karachi'),
-      (
-        name: 'Umm al-Qura, Makkah',
-        methodName: 'muslim_world_league', // Using MWL as fallback
-      ),
+      (name: 'Umm al-Qura, Makkah', methodName: 'makkah'),
       (name: 'Islamic Society of North America', methodName: 'isna'),
     ];
 
@@ -220,9 +241,7 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
                 if (value != null) {
                   for (final method in methods) {
                     if (method.name == value) {
-                      setState(() {
-                        _settings = _settings.copyWith(calculationMethodName: method.methodName);
-                      });
+                      _setManualCalculationMethod(method.methodName);
                       break;
                     }
                   }

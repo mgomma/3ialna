@@ -15,6 +15,7 @@ const String _prefsKeyOverlayUsed = 'overlay_used_minutes';
 const String _prefsKeyOverlayLimit = 'overlay_limit_minutes';
 const String _prefsKeyUsageDialogShown = 'usage_dialog_shown';
 const String _prefsKeyPrayerLockSettings = 'prayer_lock_settings';
+const String _prefsKeyPrayerCalculationMethodManual = 'prayer_calculation_method_manual';
 const String _prefsKeyPrayerLockActiveStart = 'prayer_lock_active_start';
 const String _prefsKeyPrayerLockActiveEnd = 'prayer_lock_active_end';
 const String _prefsKeyPrayerLockActiveName = 'prayer_lock_active_name';
@@ -85,6 +86,13 @@ class SettingsService {
       usedMinutes: _prefs.getInt(_prefsKeyOverlayUsed) ?? 0,
       limitMinutes: _prefs.getInt(_prefsKeyOverlayLimit) ?? 0,
     );
+  }
+
+  bool get isPrayerCalculationMethodManuallySelected =>
+      _prefs.getBool(_prefsKeyPrayerCalculationMethodManual) ?? false;
+
+  Future<void> setPrayerCalculationMethodManuallySelected(bool value) async {
+    await _prefs.setBool(_prefsKeyPrayerCalculationMethodManual, value);
   }
 
   /// Saves prayer lock settings.
