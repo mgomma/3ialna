@@ -78,5 +78,6 @@ class SocialMediaLimiterApp extends StatelessWidget {
         );
       },
     ),
+    );
   }
 }
