@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:developer' as developer;
+import 'dart:io';
 
 import '../../data/local/settings_service.dart';
 import '../../domain/models/overlay_data.dart';
@@ -7,6 +8,7 @@ import '../../domain/models/prayer.dart';
 import '../../domain/models/prayer_lock_settings.dart';
 import 'notification_service.dart';
 import 'voice_notification_service.dart';
+import 'parent_voice_notification_service.dart';
 import 'overlay_service.dart';
 import 'prayer_time_service.dart';
 
@@ -27,6 +29,7 @@ class PrayerLockScheduler {
   final OverlayService _overlayService;
   final SettingsService? _settingsService;
   final VoiceNotificationService _voiceNotificationService = VoiceNotificationService();
+  final ParentVoiceNotificationService _parentVoiceService = ParentVoiceNotificationService();
 
   Timer? _monitoringTimer;
   Timer? _checkTimer;
@@ -241,9 +244,14 @@ class PrayerLockScheduler {
     );
 
     if (settings.voiceNotificationsEnabled) {
-      final String message = settings.notificationMessages[prayer] ??
-          'Prayer time is approaching. Your device will be locked in 2 minutes.';
-      await _voiceNotificationService.speak(message);
+      final File? parentRecording = await _parentVoiceService.getRecording();
+      if (parentRecording != null) {
+        await _parentVoiceService.playRecording();
+      } else {
+        final String message = settings.notificationMessages[prayer] ??
+            'Prayer time is approaching. Your device will be locked in 2 minutes.';
+        await _voiceNotificationService.speak(message);
+      }
     }
 
     // Create a custom overlay data for prayer locks.

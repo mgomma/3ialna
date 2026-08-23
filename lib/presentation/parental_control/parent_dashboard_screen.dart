@@ -14,6 +14,8 @@ import 'pin_auth_screen.dart';
 import 'schedule_screen.dart';
 import 'safe_content_screen.dart';
 import 'ios_authorization_onboarding_screen.dart';
+import 'age_safety_profiles_screen.dart';
+import 'parent_voice_notification_screen.dart';
 import '../../l10n/app_localizations.dart';
 
 /// Main dashboard screen for parental controls.
@@ -187,6 +189,24 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                         onTap: () {
                           Navigator.of(context).pop();
                           _showLanguageDialog();
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.child_care),
+                        title: Text(LocaleController.instance.isArabic ? 'إعدادات حسب العمر' : 'Age-based profiles'),
+                        subtitle: Text(LocaleController.instance.isArabic ? 'إعداد جاهز قابل للتعديل' : 'Ready-made, editable configurations'),
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AgeSafetyProfilesScreen()));
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.record_voice_over),
+                        title: Text(LocaleController.instance.isArabic ? 'صوت الوالدين' : 'Parent voice notifications'),
+                        subtitle: Text(LocaleController.instance.isArabic ? 'تسجيل محفوظ على هذا الجهاز' : 'A recording stored on this device'),
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ParentVoiceNotificationScreen()));
                         },
                       ),
                       ListTile(

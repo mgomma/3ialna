@@ -19,6 +19,9 @@ dependencies:
   geolocator: ^14.0.2
   flutter_local_notifications: ^19.5.0
   flutter_tts: ^4.2.3
+  record: ^6.1.0
+  path_provider: ^2.1.5
+  just_audio: ^0.9.46
   timezone: ^0.10.1
   fl_chart: ^0.65.0
   local_auth: ^2.1.8
