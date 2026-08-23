@@ -73,6 +73,17 @@ class AppLocalizations {
         'passwordLabel': 'Password',
         'phoneLabel': 'Phone',
         'languageLabel': 'Language',
+      'settings': 'Settings',
+      'languageSettings': 'App language',
+      'english': 'English',
+      'arabic': 'العربية',
+      'languageChanged': 'Language updated',
+      'parentalControls': 'Parental Controls',
+      'changePin': 'Change PIN',
+      'accessibilitySettings': 'Accessibility Settings',
+      'close': 'Close',
+      'enabledAppBlocking': 'Enabled - App blocking is active',
+      'disabledAppBlocking': 'Disabled - Enable for app blocking',
         'registerSuccess': 'Registration complete and profile linked.',
         'registerFailedLocalMode':
           'Registration is unavailable now. Profile saved locally and app continues normally.',
@@ -135,6 +146,17 @@ class AppLocalizations {
         'passwordLabel': 'كلمة المرور',
         'phoneLabel': 'رقم الهاتف',
         'languageLabel': 'اللغة',
+        'settings': 'الإعدادات',
+        'languageSettings': 'لغة التطبيق',
+        'english': 'English',
+        'arabic': 'العربية',
+        'languageChanged': 'تم تحديث اللغة',
+        'parentalControls': 'الرقابة الأبوية',
+        'changePin': 'تغيير الرقم السري',
+        'accessibilitySettings': 'إعدادات إمكانية الوصول',
+        'close': 'إغلاق',
+        'enabledAppBlocking': 'مفعّلة - حظر التطبيقات نشط',
+        'disabledAppBlocking': 'معطّلة - فعّلها لحظر التطبيقات',
         'registerSuccess': 'تم التسجيل وربط الملف الشخصي بنجاح.',
         'registerFailedLocalMode':
           'التسجيل غير متاح الآن. تم حفظ الملف محليا وسيستمر التطبيق بشكل طبيعي.',
@@ -197,6 +219,17 @@ class AppLocalizations {
   String get passwordLabel => _text('passwordLabel');
   String get phoneLabel => _text('phoneLabel');
   String get languageLabel => _text('languageLabel');
+  String get settings => _text('settings');
+  String get languageSettings => _text('languageSettings');
+  String get english => _text('english');
+  String get arabic => _text('arabic');
+  String get languageChanged => _text('languageChanged');
+  String get parentalControls => _text('parentalControls');
+  String get changePin => _text('changePin');
+  String get accessibilitySettings => _text('accessibilitySettings');
+  String get close => _text('close');
+  String get enabledAppBlocking => _text('enabledAppBlocking');
+  String get disabledAppBlocking => _text('disabledAppBlocking');
   String get registerSuccess => _text('registerSuccess');
   String get registerFailedLocalMode => _text('registerFailedLocalMode');
   String get profileSavedLocalOnly => _text('profileSavedLocalOnly');

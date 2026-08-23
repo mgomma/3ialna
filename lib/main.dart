@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import 'data/local/locale_controller.dart';
 import 'data/system/error_report_service.dart';
 import 'l10n/app_localizations.dart';
 import 'presentation/home/home_screen.dart';
@@ -10,6 +12,8 @@ import 'presentation/overlay/overlay_warning_screen.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ErrorReportService.initialize();
+  final SharedPreferences prefs = await SharedPreferences.getInstance();
+  LocaleController.instance = LocaleController(prefs);
   runApp(const SocialMediaLimiterApp());
 }
 
@@ -21,6 +25,8 @@ Future<void> main() async {
 Future<void> overlayMain() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ErrorReportService.initialize();
+  final SharedPreferences prefs = await SharedPreferences.getInstance();
+  LocaleController.instance = LocaleController(prefs);
   runApp(const OverlayWarningApp());
 }
 
@@ -32,7 +38,9 @@ class SocialMediaLimiterApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color seedColor = Colors.deepPurple;
 
-    return MaterialApp(
+    return ListenableBuilder(
+      listenable: LocaleController.instance,
+      builder: (BuildContext context, Widget? child) => MaterialApp(
       onGenerateTitle: (BuildContext context) =>
           context.l10n.appTitle,
       debugShowCheckedModeBanner: false,
@@ -43,6 +51,7 @@ class SocialMediaLimiterApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
+      locale: LocaleController.instance.locale,
       supportedLocales: AppLocalizations.supportedLocales,
       theme: ThemeData(
         useMaterial3: true,
@@ -59,6 +68,15 @@ class SocialMediaLimiterApp extends StatelessWidget {
         ),
       ),
       home: const HomeScreen(),
-    );
+      builder: (BuildContext context, Widget? child) {
+        final Locale locale = LocaleController.instance.locale;
+        return Directionality(
+          textDirection: locale.languageCode == 'ar'
+              ? TextDirection.rtl
+              : TextDirection.ltr,
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
+    ),
   }
 }

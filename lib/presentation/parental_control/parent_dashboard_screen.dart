@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../data/local/locale_controller.dart';
 import '../../data/local/parental_control_storage_service.dart';
 import '../../data/local/settings_service.dart';
 import '../../data/system/accessibility_service_helper.dart';
@@ -13,6 +14,7 @@ import 'pin_auth_screen.dart';
 import 'schedule_screen.dart';
 import 'safe_content_screen.dart';
 import 'ios_authorization_onboarding_screen.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Main dashboard screen for parental controls.
 class ParentDashboardScreen extends StatefulWidget {
@@ -111,6 +113,43 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
     });
   }
 
+  Future<void> _showLanguageDialog() async {
+    final AppLocalizations l10n = context.l10n;
+    await showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) => AlertDialog(
+        title: Text(l10n.languageSettings),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            RadioListTile<String>(
+              value: 'ar',
+              groupValue: LocaleController.instance.locale.languageCode,
+              title: Text(l10n.arabic),
+              onChanged: (String? value) async {
+                if (value != null) {
+                  await LocaleController.instance.setLocale(Locale(value));
+                  if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+                }
+              },
+            ),
+            RadioListTile<String>(
+              value: 'en',
+              groupValue: LocaleController.instance.locale.languageCode,
+              title: Text(l10n.english),
+              onChanged: (String? value) async {
+                if (value != null) {
+                  await LocaleController.instance.setLocale(Locale(value));
+                  if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _toggleKioskMode() async {
     if (!_isDeviceAdminEnabled) {
       // Request device admin permission
@@ -131,6 +170,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final AppLocalizations l10n = context.l10n;
 
     if (!_isAuthenticated) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -138,7 +178,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Parental Controls'),
+        title: Text(l10n.parentalControls),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
@@ -147,13 +187,22 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
               showDialog(
                 context: context,
                 builder: (context) => AlertDialog(
-                  title: const Text('Settings'),
+                  title: Text(l10n.settings),
                   content: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       ListTile(
+                        leading: const Icon(Icons.language),
+                        title: Text(l10n.languageSettings),
+                        subtitle: Text(LocaleController.instance.isArabic ? l10n.arabic : l10n.english),
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          _showLanguageDialog();
+                        },
+                      ),
+                      ListTile(
                         leading: const Icon(Icons.lock_reset),
-                        title: const Text('Change PIN'),
+                        title: Text(l10n.changePin),
                         onTap: () {
                           Navigator.of(context).pop();
                           Navigator.of(context).push(
@@ -171,8 +220,8 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                       ),
                       ListTile(
                         leading: const Icon(Icons.accessibility_new),
-                        title: const Text('Accessibility Settings'),
-                        subtitle: Text(_isAccessibilityServiceEnabled ? 'Enabled - App blocking is active' : 'Disabled - Enable for app blocking'),
+                        title: Text(l10n.accessibilitySettings),
+                        subtitle: Text(_isAccessibilityServiceEnabled ? l10n.enabledAppBlocking : l10n.disabledAppBlocking),
                         trailing: Icon(
                           _isAccessibilityServiceEnabled ? Icons.check_circle : Icons.error_outline,
                           color: _isAccessibilityServiceEnabled ? Colors.green : Colors.orange,
@@ -187,7 +236,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                       ),
                     ],
                   ),
-                  actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close'))],
+                  actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(l10n.close))],
                 ),
               );
             },
