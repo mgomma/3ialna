@@ -9,6 +9,7 @@ import android.os.Build
 import android.provider.Settings
 import android.net.VpnService
 import com.example.mu_super_app.network.SafeContentVpnService
+import com.example.mu_super_app.voice.VoicePlaybackScheduler
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
@@ -32,6 +33,7 @@ class MainActivity : FlutterActivity() {
     private val blockingChannel = "app_blocking/block"
     private val accessibilityChannel = "app_blocking/accessibility"
     private val safeContentVpnChannel = "safe_content/vpn"
+    private val parentVoiceChannel = "parent_voice_notifications"
     private val vpnPermissionRequestCode = 1002
     private val deviceAdminRequestCode = 1001
 
@@ -231,6 +233,32 @@ class MainActivity : FlutterActivity() {
                 "isVpnRunning" -> {
                     val preferences = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
                     result.success(preferences.getBoolean(SafeContentVpnService.PREF_RUNNING, false))
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        // Native background parent-voice playback channel
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            parentVoiceChannel
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "scheduleVoicePlayback" -> {
+                    val path = call.argument<String>("path")
+                    val atMillis = call.argument<Number>("atMillis")?.toLong()
+                    if (path.isNullOrBlank() || atMillis == null) {
+                        result.error("INVALID_ARGUMENT", "A voice path and playback time are required", null)
+                    } else {
+                        result.success(VoicePlaybackScheduler.schedule(this, path, atMillis))
+                    }
+                }
+                "cancelVoicePlayback" -> {
+                    VoicePlaybackScheduler.cancel(this)
+                    result.success(true)
+                }
+                "isVoicePlaybackScheduled" -> {
+                    result.success(VoicePlaybackScheduler.isScheduled(this))
                 }
                 else -> result.notImplemented()
             }

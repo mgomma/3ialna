@@ -73,6 +73,7 @@ class PrayerLockScheduler {
     }
     _activeLocks.clear();
     await _notificationService.cancelAllNotifications();
+    await _parentVoiceService.cancelBackgroundPlayback();
     _currentSettings = null;
   }
 
@@ -144,6 +145,9 @@ class PrayerLockScheduler {
           body: message,
           scheduledDate: notificationTime,
         );
+        if (settings.voiceNotificationsEnabled) {
+          await _parentVoiceService.scheduleBackgroundPlayback(notificationTime);
+        }
       }
 
       // Schedule lock at prayer time

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
@@ -11,6 +12,7 @@ class ParentVoiceNotificationService {
   final AudioRecorder _recorder;
   final AudioPlayer _player = AudioPlayer();
   static const String fileName = 'parent_voice_notification.m4a';
+  static const MethodChannel _backgroundChannel = MethodChannel('parent_voice_notifications');
 
   Future<String> get _filePath async {
     final Directory directory = await getApplicationDocumentsDirectory();
@@ -47,7 +49,24 @@ class ParentVoiceNotificationService {
 
   Future<void> stopPlayback() => _player.stop();
 
+  Future<bool> scheduleBackgroundPlayback(DateTime scheduledAt) async {
+    final File? file = await getRecording();
+    if (file == null || scheduledAt.isBefore(DateTime.now())) return false;
+    return await _backgroundChannel.invokeMethod<bool>('scheduleVoicePlayback', <String, Object>{
+          'path': file.path,
+          'atMillis': scheduledAt.millisecondsSinceEpoch,
+        }) ??
+        false;
+  }
+
+  Future<void> cancelBackgroundPlayback() => _backgroundChannel.invokeMethod<void>('cancelVoicePlayback');
+
+  Future<bool> isBackgroundPlaybackScheduled() async {
+    return await _backgroundChannel.invokeMethod<bool>('isVoicePlaybackScheduled') ?? false;
+  }
+
   Future<void> deleteRecording() async {
+    await cancelBackgroundPlayback();
     final File file = File(await _filePath);
     if (file.existsSync()) await file.delete();
   }
