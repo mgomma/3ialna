@@ -5,6 +5,6 @@ export const currentRelease = {
   version: "0.1.0",
   build: "1",
   distribution: "GitHub public debug release",
-  downloadUrl: "https://github.com/mgomma/3ialna/releases/download/debug-v0.1.0-b1-run32667602977-a1/3ialna-debug.apk",
+  downloadUrl: "https://github.com/mgomma/3ialna/releases/download/debug-v0.1.0-b1-run32667602977-a1/app-debug.apk",
   publishedAt: "2026-08-23T21:34:07.000Z",
 } as const;

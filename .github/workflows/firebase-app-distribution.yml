@@ -8,7 +8,6 @@ on:
       - "lib/**"
       - "pubspec.yaml"
       - "pubspec.lock"
-      - ".github/workflows/firebase-app-distribution.yml"
   workflow_dispatch:
     inputs:
       release_notes:
@@ -55,7 +54,7 @@ jobs:
           build_number="${app_version#*+}"
           if [ "$build_number" = "$app_version" ]; then build_number="0"; fi
           release_tag="debug-v${version_name}-b${build_number}-run${GITHUB_RUN_ID}-a${GITHUB_RUN_ATTEMPT}"
-          asset_name="3ialna-debug.apk"
+          asset_name="app-debug.apk"
           download_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${release_tag}/${asset_name}"
 
           cat > "$RUNNER_TEMP/public-debug-notes.md" <<EOF
