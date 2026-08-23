@@ -5,6 +5,6 @@ export const currentRelease = {
   version: "0.1.0",
   build: "1",
   distribution: "Firebase App Distribution",
-  testerUrl: "https://appdistribution.firebase.google.com/testerapps/1:747121514030:android:ba89b9172571366f4631bf/releases/2rr0nofjj0mt0",
-  publishedAt: "2026-08-23T20:22:38.000Z",
+  testerUrl: "https://appdistribution.firebase.google.com/testerapps/1:747121514030:android:ba89b9172571366f4631bf/releases/2rr0nofjj0mt0?utm_source=firebase-tools",
+  publishedAt: "2026-08-23T21:11:00.000Z",
 } as const;
