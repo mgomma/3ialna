@@ -16,6 +16,7 @@ const String _prefsKeyOverlayLimit = 'overlay_limit_minutes';
 const String _prefsKeyUsageDialogShown = 'usage_dialog_shown';
 const String _prefsKeyPrayerLockSettings = 'prayer_lock_settings';
 const String _prefsKeyPrayerCalculationMethodManual = 'prayer_calculation_method_manual';
+const String _prefsKeyPrayerCalculationMethodOverride = 'prayer_calculation_method_override';
 const String _prefsKeyPrayerLockActiveStart = 'prayer_lock_active_start';
 const String _prefsKeyPrayerLockActiveEnd = 'prayer_lock_active_end';
 const String _prefsKeyPrayerLockActiveName = 'prayer_lock_active_name';
@@ -95,6 +96,14 @@ class SettingsService {
     await _prefs.setBool(_prefsKeyPrayerCalculationMethodManual, value);
   }
 
+  String? get prayerCalculationMethodOverride =>
+      _prefs.getString(_prefsKeyPrayerCalculationMethodOverride);
+
+  Future<void> setPrayerCalculationMethodOverride(String methodName) async {
+    await _prefs.setString(_prefsKeyPrayerCalculationMethodOverride, methodName);
+    await setPrayerCalculationMethodManuallySelected(true);
+  }
+
   /// Saves prayer lock settings.
   Future<void> savePrayerLockSettings(PrayerLockSettings settings) async {
     final Map<String, dynamic> json = {
@@ -146,7 +155,10 @@ class SettingsService {
         enabled: json['enabled'] as bool? ?? false,
         lockDurations: lockDurations.isEmpty ? PrayerLockSettings.defaults().lockDurations : lockDurations,
         fridayDhuhrDuration: json['fridayDhuhrDuration'] as int? ?? 30,
-        calculationMethodName: json['calculationMethod'] as String? ?? 'muslim_world_league',
+        calculationMethodName:
+            prayerCalculationMethodOverride ??
+            json['calculationMethod'] as String? ??
+            'makkah',
         notificationMessages: notificationMessages.isEmpty ? PrayerLockSettings.defaults().notificationMessages : notificationMessages,
         latitude: json['latitude'] as double?,
         longitude: json['longitude'] as double?,

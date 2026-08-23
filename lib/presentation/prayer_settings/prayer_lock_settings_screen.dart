@@ -23,6 +23,7 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
   PrayerLockSettings _settings = PrayerLockSettings.defaults();
   bool _isLoading = false;
   String? _locationError;
+  Future<void>? _pendingMethodWrite;
 
   @override
   void initState() {
@@ -108,6 +109,7 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
   }
 
   Future<void> _saveSettings() async {
+    await _pendingMethodWrite;
     await _settingsService.savePrayerLockSettings(_settings);
     if (mounted) {
       Navigator.of(context).pop(_settings);
@@ -198,7 +200,7 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
   }
 
   Future<void> _setManualCalculationMethod(String methodName) async {
-    await _settingsService.setPrayerCalculationMethodManuallySelected(true);
+    await _settingsService.setPrayerCalculationMethodOverride(methodName);
     if (!mounted) return;
     setState(() {
       _settings = _settings.copyWith(calculationMethodName: methodName);
@@ -237,11 +239,12 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
               items: methods
                   .map((({String name, String methodName}) method) => DropdownMenuItem<String>(value: method.name, child: Text(method.name)))
                   .toList(),
-              onChanged: (String? value) {
+              onChanged: (String? value) async {
                 if (value != null) {
                   for (final method in methods) {
                     if (method.name == value) {
-                      _setManualCalculationMethod(method.methodName);
+                      _pendingMethodWrite = _setManualCalculationMethod(method.methodName);
+                      await _pendingMethodWrite;
                       break;
                     }
                   }
