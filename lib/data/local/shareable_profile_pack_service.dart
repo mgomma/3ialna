@@ -126,6 +126,12 @@ class ShareableProfilePack {
       'pin',
       'recording',
       'voicerecording',
+      'taskreminder',
+      'taskreminders',
+      'reminder',
+      'reminders',
+      'reminderlabel',
+      'reminderaudio',
       'usage',
       'usagestats',
     };
