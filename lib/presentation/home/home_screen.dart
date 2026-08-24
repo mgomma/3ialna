@@ -33,6 +33,8 @@ import '../../l10n/app_localizations.dart';
 import '../parental_control/parent_dashboard_screen.dart';
 import '../parental_control/pin_auth_screen.dart';
 import '../prayer_settings/prayer_lock_settings_screen.dart';
+import '../reports/parent_usage_report_screen.dart';
+import '../support/educational_expert_contact_screen.dart';
 import '../widgets/disclosure_dialog.dart';
 
 const MethodChannel _serviceChannel = MethodChannel('social_limiter/service');
@@ -104,13 +106,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _childProfiles = AgeSafetyProfileService(prefs);
     await _childProfiles.ensureDefaultChild();
     AgeSafetyProfileService.changes.addListener(_onChildProfileChanged);
-    ChildShortcutService.listen((String childId) async {
-      await _childProfiles.setActiveChild(childId);
-      _loadSettings();
-    });
+    ChildShortcutService.listen(
+      (String childId) async {
+        await _childProfiles.setActiveChild(childId);
+        _loadSettings();
+      },
+      onQuickSettingsRequested: _showActiveChildPicker,
+    );
     final String? shortcutChildId = await ChildShortcutService.consumeInitialChildId();
     if (shortcutChildId != null) await _childProfiles.setActiveChild(shortcutChildId);
+    final bool quickSettingsRequest =
+        await ChildShortcutService.consumeQuickSettingsRequest();
     await ChildShortcutService.sync(_childProfiles.loadChildren());
+    if (quickSettingsRequest) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _showActiveChildPicker(),
+      );
+    }
 
     // Listen for device lock events from native side
     const MethodChannel('parental_control/kiosk').setMethodCallHandler((call) async {
@@ -229,6 +241,65 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (!mounted) return;
     await _refreshAccessibilityStatus();
     _loadPrayerSettings();
+  }
+
+  Future<void> _showActiveChildPicker() async {
+    if (!mounted || !_homeSettingsInitialized) return;
+    final List<ChildProfile> children = _childProfiles.loadChildren();
+    if (children.length <= 1) {
+      final String childName = children.isEmpty
+          ? (_isArabic ? 'الطفل الافتراضي' : 'the default child')
+          : children.first.name;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_isArabic
+              ? '$childName هو الطفل المحدد تلقائيًا لهذا الجهاز.'
+              : '$childName is automatically selected for this device.'),
+        ),
+      );
+      return;
+    }
+    final String? selectedId = await showDialog<String>(
+      context: context,
+      builder: (BuildContext dialogContext) => SimpleDialog(
+        title: Text(_isArabic
+            ? 'من يستخدم الجهاز الآن؟'
+            : 'Who is using the device now?'),
+        children: children
+            .map(
+              (ChildProfile child) => SimpleDialogOption(
+                onPressed: () => Navigator.of(dialogContext).pop(child.id),
+                child: Text(
+                  '${child.name} · ${child.ageYears} '
+                  '${_isArabic ? 'سنة' : 'years'}',
+                ),
+              ),
+            )
+            .toList(growable: false),
+      ),
+    );
+    if (selectedId == null || !mounted) return;
+    await _childProfiles.setActiveChild(selectedId);
+    await ChildShortcutService.sync(_childProfiles.loadChildren());
+    if (!mounted) return;
+    _loadSettings();
+    _loadPrayerSettings();
+  }
+
+  Future<void> _requestQuickSettingsTile() async {
+    final bool requested = await ChildShortcutService.requestQuickSettingsTile();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(requested
+            ? (_isArabic
+                ? 'وافق على إضافة اختصار عيالنا في الإعدادات السريعة، ثم اسحب شاشة الإشعارات لفتحه.'
+                : 'Approve the 3ialna Quick Settings tile, then pull down notifications to use it.')
+            : (_isArabic
+                ? 'من لوحة الإشعارات، اختر تعديل الإعدادات السريعة ثم أضف اختصار عيالنا.'
+                : 'Open Quick Settings edit from the notification shade, then add the 3ialna tile.')),
+      ),
+    );
   }
 
   Future<bool> _refreshAccessibilityStatus() async {
@@ -948,6 +1019,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   const SizedBox(height: 16),
                   _buildMonitorToggle(),
                   const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const EducationalExpertContactScreen(),
+                      ),
+                    ),
+                    icon: const Icon(Icons.support_agent_outlined),
+                    label: const Text('طلب تواصل مع خبير تربوى'),
+                  ),
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    onPressed: _requestQuickSettingsTile,
+                    icon: const Icon(Icons.tune_outlined),
+                    label: Text(_isArabic
+                        ? 'إضافة اختصار الطفل إلى الإعدادات السريعة'
+                        : 'Add child shortcut to Quick Settings'),
+                  ),
+                  const SizedBox(height: 16),
                   Expanded(child: isLoading ? const Center(child: CircularProgressIndicator()) : _buildUsageList(colorScheme)),
                 ],
               ),
@@ -980,6 +1069,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           icon: const Icon(Icons.cloud_upload),
           onPressed: _submitDailyReport,
           tooltip: context.l10n.submitReportButton,
+        ),
+        IconButton(
+          icon: const Icon(Icons.bar_chart_outlined),
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const ParentUsageReportScreen(),
+            ),
+          ),
+          tooltip: _isArabic ? 'تقرير الاستخدام للوالدين' : 'Parent usage report',
         ),
         IconButton(
           icon: const Icon(Icons.public),

@@ -6,6 +6,7 @@ import android.content.ComponentName
 import android.content.ActivityNotFoundException
 import android.app.ActivityManager
 import android.app.AppOpsManager
+import android.app.StatusBarManager
 import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
 import android.graphics.drawable.Icon
@@ -22,6 +23,7 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import com.ialna.app.usage.MonitorForegroundService
+import com.ialna.app.quicksettings.ActiveChildQuickSettingsTileService
 import com.ialna.app.kiosk.KioskModeHelper
 import com.ialna.app.apps.AppListHelper
 import com.ialna.app.diagnostics.CrashReportRecorder
@@ -47,6 +49,7 @@ class MainActivity : FlutterActivity() {
     private val deviceAdminRequestCode = 1001
     private val usageAccessRequestCode = 1003
     private var pendingChildShortcutId: String? = null
+    private var pendingOpenChildSelector = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,6 +62,8 @@ class MainActivity : FlutterActivity() {
         // Handle initial intent for hard lock
         intent?.let { handleLockIntent(it) }
         pendingChildShortcutId = intent?.getStringExtra(EXTRA_CHILD_SHORTCUT_ID)
+        pendingOpenChildSelector =
+            intent?.getBooleanExtra(EXTRA_OPEN_CHILD_SELECTOR, false) ?: false
 
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
@@ -75,6 +80,11 @@ class MainActivity : FlutterActivity() {
                     result.success(pendingChildShortcutId)
                     pendingChildShortcutId = null
                 }
+                "consumeQuickSettingsRequest" -> {
+                    result.success(pendingOpenChildSelector)
+                    pendingOpenChildSelector = false
+                }
+                "requestQuickSettingsTile" -> requestQuickSettingsTile(result)
                 else -> result.notImplemented()
             }
         }
@@ -385,6 +395,13 @@ class MainActivity : FlutterActivity() {
                 MethodChannel(messenger, childChannel).invokeMethod("onChildShortcut", childId)
             }
         }
+        if (intent.getBooleanExtra(EXTRA_OPEN_CHILD_SELECTOR, false)) {
+            pendingOpenChildSelector = true
+            flutterEngine?.dartExecutor?.binaryMessenger?.let { messenger ->
+                MethodChannel(messenger, childChannel)
+                    .invokeMethod("onOpenChildSelector", null)
+            }
+        }
     }
 
     @Deprecated("Use Activity Result APIs when replacing the FlutterActivity permission bridge.")
@@ -415,6 +432,7 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun updateChildShortcuts(children: List<Map<String, String>>) {
+        ActiveChildQuickSettingsTileService.refresh(this)
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N_MR1) return
         val manager = getSystemService(ShortcutManager::class.java) ?: return
         if (children.size < 2) {
@@ -438,6 +456,34 @@ class MainActivity : FlutterActivity() {
                 .build()
         }
         manager.dynamicShortcuts = shortcuts
+    }
+
+    private fun requestQuickSettingsTile(result: MethodChannel.Result) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            result.success(false)
+            return
+        }
+        val manager = getSystemService(StatusBarManager::class.java)
+        if (manager == null) {
+            result.success(false)
+            return
+        }
+        try {
+            manager.requestAddTileService(
+                ComponentName(this, ActiveChildQuickSettingsTileService::class.java),
+                "3ialna",
+                Icon.createWithResource(this, R.mipmap.ic_launcher),
+                mainExecutor,
+            ) { status ->
+                result.success(
+                    status == StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ADDED ||
+                        status == StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ALREADY_ADDED,
+                )
+            }
+        } catch (error: Exception) {
+            CrashReportRecorder.record(this, "quick_settings_tile_request", error)
+            result.success(false)
+        }
     }
 
     private fun handleLockIntent(intent: Intent) {
@@ -690,5 +736,7 @@ class MainActivity : FlutterActivity() {
         private const val FLUTTER_PREFS = "FlutterSharedPreferences"
         private const val PFX = "flutter."
         private const val EXTRA_CHILD_SHORTCUT_ID = "com.ialna.app.EXTRA_CHILD_SHORTCUT_ID"
+        const val EXTRA_OPEN_CHILD_SELECTOR =
+            "com.ialna.app.EXTRA_OPEN_CHILD_SELECTOR"
     }
 }

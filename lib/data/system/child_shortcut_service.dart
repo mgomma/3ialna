@@ -25,11 +25,37 @@ class ChildShortcutService {
     }
   }
 
-  static void listen(Future<void> Function(String childId) onSelected) {
+  static Future<bool> consumeQuickSettingsRequest() async {
+    try {
+      return await _channel.invokeMethod<bool>('consumeQuickSettingsRequest') ??
+          false;
+    } on MissingPluginException {
+      return false;
+    }
+  }
+
+  /// Requests Android's user-approved Quick Settings tile prompt when the
+  /// platform supports it. Older Android versions require adding the tile from
+  /// the Quick Settings editor.
+  static Future<bool> requestQuickSettingsTile() async {
+    try {
+      return await _channel.invokeMethod<bool>('requestQuickSettingsTile') ??
+          false;
+    } on MissingPluginException {
+      return false;
+    }
+  }
+
+  static void listen(
+    Future<void> Function(String childId) onSelected, {
+    Future<void> Function()? onQuickSettingsRequested,
+  }) {
     _channel.setMethodCallHandler((MethodCall call) async {
       if (call.method == 'onChildShortcut') {
         final String? childId = call.arguments as String?;
         if (childId != null && childId.isNotEmpty) await onSelected(childId);
+      } else if (call.method == 'onOpenChildSelector') {
+        await onQuickSettingsRequested?.call();
       }
     });
   }

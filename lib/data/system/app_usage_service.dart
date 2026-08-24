@@ -17,10 +17,29 @@ class AppUsageService {
       now.day,
     );
 
+    return loadUsageSummaryForRange(
+      start: startOfDay,
+      end: now,
+    );
+  }
+
+  /// Loads an on-device Android usage summary for the selected inclusive range.
+  /// Only tracked social apps are exposed individually; the total covers the
+  /// device usage data returned by Android.
+  Future<AppUsageSummary> loadUsageSummaryForRange({
+    required DateTime start,
+    required DateTime end,
+  }) async {
+    if (start.isAfter(end)) {
+      return const AppUsageSummary(
+        perAppMinutes: <String, int>{},
+        totalMinutes: 0,
+      );
+    }
+
     try {
       final AppUsage appUsage = AppUsage();
-      final List<AppUsageInfo> infos =
-          await appUsage.getAppUsage(startOfDay, now);
+      final List<AppUsageInfo> infos = await appUsage.getAppUsage(start, end);
 
       final Map<String, int> perApp = {};
       int totalMinutes = 0;
