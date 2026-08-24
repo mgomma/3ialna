@@ -154,9 +154,22 @@ class ErrorReportService {
   }
 
   static String _sanitizeStack(String value) {
+    const List<String> sensitiveFrameTerms = <String>[
+      'voice',
+      'record',
+      'reminder',
+      'task',
+      'audio',
+      '.m4a',
+      '.wav',
+    ];
     final List<String> safeFrames = value
         .split(RegExp(r'\r?\n'))
-        .where((String line) => line.contains('package:') || line.contains('/lib/') || line.contains('com.ialna.'))
+        .where((String line) {
+          final String normalized = line.toLowerCase();
+          final bool isApplicationFrame = normalized.contains('package:') || normalized.contains('/lib/') || normalized.contains('com.ialna.');
+          return isApplicationFrame && !sensitiveFrameTerms.any(normalized.contains);
+        })
         .map((String line) => line.trim())
         .take(12)
         .toList(growable: false);

@@ -20,6 +20,12 @@ void main() {
           'errorType': 'LaylaHassan',
           'stack': 'package:mu_super_app/presentation/parental_control/safe_content_screen.dart:42',
         },
+        <String, String>{
+          'timestamp': '2026-08-24T00:01:00.000Z',
+          'source': 'task_reminder_DrinkWater',
+          'errorType': 'StateError: Drink water before lunch',
+          'stack': 'package:mu_super_app/presentation/parental_control/task_voice_reminder_screen.dart:88 parent_voice_task_DrinkWater.m4a',
+        },
       ]),
     );
     await ErrorReportService.recordHandled(
@@ -37,6 +43,10 @@ void main() {
     expect(normalized, isNot(contains('2017-04-12')));
     expect(normalized, isNot(contains('1234')));
     expect(normalized, isNot(contains('born')));
+    expect(normalized, isNot(contains('drinkwater')));
+    expect(normalized, isNot(contains('drink water')));
+    expect(normalized, isNot(contains('lunch')));
+    expect(normalized, isNot(contains('.m4a')));
     expect(normalized, contains('unknownerror'));
     expect(normalized, contains('vpn_permission_or_start'));
   });
