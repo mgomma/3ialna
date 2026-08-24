@@ -2,10 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:mu_super_app/data/local/locale_controller.dart';
 import 'package:mu_super_app/presentation/reports/parent_usage_report_screen.dart';
 import 'package:mu_super_app/presentation/support/educational_expert_contact_screen.dart';
 
 void main() {
+  setUp(() async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    LocaleController.instance = LocaleController(prefs);
+  });
+
   testWidgets('parent report exposes date-filter controls',
       (WidgetTester tester) async {
     await tester.pumpWidget(
@@ -19,8 +26,6 @@ void main() {
 
   testWidgets('expert contact form requires an explicit child-data consent control',
       (WidgetTester tester) async {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
-
     await tester.pumpWidget(
       const MaterialApp(home: EducationalExpertContactScreen()),
     );
