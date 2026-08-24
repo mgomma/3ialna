@@ -16,7 +16,7 @@
 		C11000000000000000000002 /* ScreenTimeSafeguardBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = C11000000000000000000012 /* ScreenTimeSafeguardBridge.swift */; };
 		C11000000000000000000003 /* ScreenTimeSafeguardMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = C11000000000000000000015 /* ScreenTimeSafeguardMonitor.swift */; };
 		C11000000000000000000004 /* ScreenTimeSafeguardStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C11000000000000000000016 /* ScreenTimeSafeguardStore.swift */; };
-		C11000000000000000000005 /* ScreenTimeSafeguards.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = C11000000000000000000018 /* ScreenTimeSafeguards.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		C11000000000000000000005 /* ScreenTimeSafeguards.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = C11000000000000000000018 /* ScreenTimeSafeguards.appex */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		C11000000000000000000006 /* ScreenTimeSafeguardStore.swift in Runner Sources */ = {isa = PBXBuildFile; fileRef = C11000000000000000000016 /* ScreenTimeSafeguardStore.swift */; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
@@ -200,8 +200,8 @@
 				97C146EB1CF9000F007C117D /* Frameworks */,
 				97C146EC1CF9000F007C117D /* Resources */,
 				9705A1C41CF9048500538489 /* Embed Frameworks */,
-				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 				C11000000000000000000021 /* Embed App Extensions */,
+				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 			);
 			buildRules = (
 			);
