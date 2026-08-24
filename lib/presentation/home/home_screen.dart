@@ -2,15 +2,18 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/constants/social_media_apps.dart';
 import '../../data/local/settings_service.dart';
+import '../../data/local/locale_controller.dart';
 import '../../data/system/accessibility_service_helper.dart';
 import '../../data/system/child_shortcut_service.dart';
 import '../../data/system/app_usage_service.dart';
 import '../../data/local/age_safety_profile_service.dart';
 import '../../data/system/drupal_sync_service.dart';
+import '../../data/system/first_run_permission_service.dart';
 import '../../data/system/social_auth_service.dart';
 import '../../data/system/kiosk_service.dart';
 import '../../data/system/notification_service.dart';
@@ -41,7 +44,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   /// Usage data in whole minutes per package name.
   Map<String, int> usageDataMinutes = {};
 
@@ -62,6 +65,8 @@ class _HomeScreenState extends State<HomeScreen> {
   late SettingsService _settings;
   late AgeSafetyProfileService _childProfiles;
   final AppUsageService _usageService = const AppUsageService();
+  final FirstRunPermissionService _firstRunPermissions =
+      const FirstRunPermissionService();
   final OverlayService _overlayService = const OverlayService();
   final PrayerTimeService _prayerTimeService = const PrayerTimeService();
   final NotificationService _notificationService = NotificationService();
@@ -78,16 +83,20 @@ class _HomeScreenState extends State<HomeScreen> {
   final DrupalSyncService _drupalSyncService = DrupalSyncService();
   final SocialAuthService _socialAuthService = SocialAuthService();
   LocalUserProfile? _profile;
+  bool _essentialPermissionGuideInProgress = false;
+  bool _homeSettingsInitialized = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _init();
   }
 
   Future<void> _init() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     _settings = SettingsService(prefs);
+    _homeSettingsInitialized = true;
 
     _childProfiles = AgeSafetyProfileService(prefs);
     await _childProfiles.ensureDefaultChild();
@@ -106,6 +115,12 @@ class _HomeScreenState extends State<HomeScreen> {
         _loadSettings();
       }
     });
+    const MethodChannel('parental_control/onboarding')
+        .setMethodCallHandler((MethodCall call) async {
+      if (call.method == 'onUsageAccessSettingsResult') {
+        await _refreshAfterSystemSettingsReturn();
+      }
+    });
 
     _prayerLockScheduler = PrayerLockScheduler(
       prayerTimeService: _prayerTimeService,
@@ -116,8 +131,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     _loadSettings();
     _loadPrayerSettings();
+    await _runEssentialPermissionGuide();
     await _askPermissionBeforeSystemSettings();
-    await _askUsageAccessInfoDialog();
     await _refreshUsage();
     _loadCountryWordProfile();
     _profile = await _drupalSyncService.getProfile();
@@ -182,11 +197,30 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     AgeSafetyProfileService.changes.removeListener(_onChildProfileChanged);
     monitoringTimer?.cancel();
     _prayerStatusTimer?.cancel();
     _prayerLockScheduler.stop();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshAfterSystemSettingsReturn();
+    }
+  }
+
+  Future<void> _refreshAfterSystemSettingsReturn() async {
+    if (!mounted ||
+        !_homeSettingsInitialized ||
+        _essentialPermissionGuideInProgress) {
+      return;
+    }
+    await _refreshUsage();
+    if (!mounted) return;
+    _loadPrayerSettings();
   }
 
   /// Loads saved time limit and monitoring state from settings.
@@ -459,10 +493,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _ensureCountryProfileSelected() async {
-    if (_settings.selectedCountry != null) {
-      return;
+    if (_settings.selectedCountry == null) {
+      await _settings.setSelectedCountry(
+        CountryWordProfile.supportedCountries.first,
+      );
     }
-    await _showCountryProfileDialog(isMandatory: true);
+    _loadCountryWordProfile();
   }
 
   Future<void> _showCountryProfileDialog({bool isMandatory = false}) async {
@@ -496,13 +532,15 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         )
                         .toList(),
-                    onChanged: (String? value) {
+                    onChanged: (String? value) async {
                       if (value == null) {
                         return;
                       }
                       setStateDialog(() {
                         selectedCountry = value;
                       });
+                      await _settings.setSelectedCountry(value);
+                      _loadCountryWordProfile();
                     },
                   ),
                 ],
@@ -515,7 +553,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 FilledButton(
                   onPressed: () => Navigator.of(context).pop(selectedCountry),
-                  child: Text(context.l10n.save),
+                  child: Text(context.l10n.gotIt),
                 ),
               ],
             );
@@ -601,6 +639,105 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
     await _settings.setUsageDialogShown();
+  }
+
+  Future<void> _runEssentialPermissionGuide() async {
+    if (_essentialPermissionGuideInProgress ||
+        _settings.essentialPermissionsPrompted) {
+      return;
+    }
+    _essentialPermissionGuideInProgress = true;
+    try {
+      await _requestLocationForFirstRun();
+      if (!mounted) return;
+      await _requestUsageAccessForFirstRun();
+      await _settings.setEssentialPermissionsPrompted();
+    } finally {
+      _essentialPermissionGuideInProgress = false;
+    }
+  }
+
+  Future<void> _requestLocationForFirstRun() async {
+    if (await _firstRunPermissions.hasLocationPermission() || !mounted) return;
+    final bool? continueRequest = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) => AlertDialog(
+        title: Text(LocaleController.instance.isArabic
+            ? 'إذن الموقع لمواقيت الصلاة'
+            : 'Location for prayer times'),
+        content: Text(LocaleController.instance.isArabic
+            ? 'يُستخدم موقع الجهاز لحساب مواقيت الصلاة بدقة. يمكنك تغيير الموقع أو طريقة الحساب لاحقًا من إعدادات الصلاة.'
+            : 'Device location helps calculate prayer times accurately. You can change the location or calculation method later in Prayer settings.'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(context.l10n.notNow),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(context.l10n.continueLabel),
+          ),
+        ],
+      ),
+    );
+    if (continueRequest != true) return;
+
+    final PermissionStatus status =
+        await _firstRunPermissions.requestLocationPermission();
+    if (status.isPermanentlyDenied && mounted) {
+      final bool? openSettings = await showDialog<bool>(
+        context: context,
+        builder: (BuildContext context) => AlertDialog(
+          title: Text(LocaleController.instance.isArabic
+              ? 'فعّل الموقع من الإعدادات'
+              : 'Enable location in Settings'),
+          content: Text(LocaleController.instance.isArabic
+              ? 'بعد التفعيل استخدم زر الرجوع للعودة إلى عيالنا تلقائيًا.'
+              : 'After enabling it, use Back to return to 3ialna automatically.'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(context.l10n.notNow),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(context.l10n.continueLabel),
+            ),
+          ],
+        ),
+      );
+      if (openSettings == true) {
+        await _firstRunPermissions.openLocationSettings();
+      }
+    }
+  }
+
+  Future<void> _requestUsageAccessForFirstRun() async {
+    if (await _firstRunPermissions.hasUsageAccess() || !mounted) return;
+    final bool? openSettings = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) => AlertDialog(
+        title: Text(context.l10n.usageAccessTitle),
+        content: Text(LocaleController.instance.isArabic
+            ? 'يحتاج عيالنا إلى إذن بيانات الاستخدام لتطبيق الحدود الزمنية. ستفتح إعدادات Android؛ استخدم زر الرجوع للعودة إلى التطبيق.'
+            : '3ialna needs Usage access to apply time limits. Android Settings will open; use Back to return to the app.'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(context.l10n.notNow),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(context.l10n.continueLabel),
+          ),
+        ],
+      ),
+    );
+    if (openSettings == true) {
+      await _firstRunPermissions.openUsageAccessSettings();
+    }
   }
 
   /// Manually refreshes usage data once.

@@ -82,7 +82,7 @@ class PrayerLockSettings {
   factory PrayerLockSettings.defaults() {
     const int defaultDuration = 30;
     return PrayerLockSettings(
-      enabled: false,
+      enabled: true,
       lockDurations: {
         Prayer.fajr: defaultDuration,
         Prayer.dhuhr: defaultDuration,
@@ -107,4 +107,3 @@ class PrayerLockSettings {
     );
   }
 }
-

@@ -23,6 +23,7 @@ const String _prefsKeyPrayerLockActiveName = 'prayer_lock_active_name';
 const String _prefsKeyIsStrictMode = 'is_strict_mode';
 const String _prefsKeyIsDeviceLocked = 'is_device_locked';
 const String _prefsKeySelectedCountry = 'selected_country_profile';
+const String _prefsKeyEssentialPermissionsPrompted = 'essential_permissions_prompted_v1';
 
 /// Thin wrapper around [SharedPreferences] to keep persistence logic in one
 /// place and out of widgets.
@@ -42,6 +43,9 @@ class SettingsService {
   bool get isDeviceLocked => _prefs.getBool(_prefsKeyIsDeviceLocked) ?? false;
 
   String? get selectedCountry => _prefs.getString(_prefsKeySelectedCountry);
+
+  bool get essentialPermissionsPrompted =>
+      _prefs.getBool(_prefsKeyEssentialPermissionsPrompted) ?? false;
 
   CountryWordProfile? get countryWordProfile {
     final String? country = selectedCountry;
@@ -73,6 +77,10 @@ class SettingsService {
 
   Future<void> setSelectedCountry(String country) async {
     await _prefs.setString(_prefsKeySelectedCountry, country);
+  }
+
+  Future<void> setEssentialPermissionsPrompted() async {
+    await _prefs.setBool(_prefsKeyEssentialPermissionsPrompted, true);
   }
 
   Future<void> saveOverlayData(OverlayData data) async {
@@ -153,7 +161,9 @@ class SettingsService {
       }
 
       return PrayerLockSettings(
-        enabled: json['enabled'] as bool? ?? false,
+        // A missing field is an older/incomplete record, not a parent choice.
+        // Preserve an explicit false while defaulting incomplete records on.
+        enabled: json['enabled'] as bool? ?? PrayerLockSettings.defaults().enabled,
         lockDurations: lockDurations.isEmpty ? PrayerLockSettings.defaults().lockDurations : lockDurations,
         fridayDhuhrDuration: json['fridayDhuhrDuration'] as int? ?? 30,
         calculationMethodName:

@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.ComponentName
 import android.content.ActivityNotFoundException
 import android.app.ActivityManager
+import android.app.AppOpsManager
 import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
 import android.graphics.drawable.Icon
@@ -41,8 +42,10 @@ class MainActivity : FlutterActivity() {
     private val safeContentVpnChannel = "safe_content/vpn"
     private val parentVoiceChannel = "parent_voice_notifications"
     private val childChannel = "parental_control/children"
+    private val onboardingChannel = "parental_control/onboarding"
     private val vpnPermissionRequestCode = 1002
     private val deviceAdminRequestCode = 1001
+    private val usageAccessRequestCode = 1003
     private var pendingChildShortcutId: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -89,6 +92,29 @@ class MainActivity : FlutterActivity() {
                 "stopMonitoringService" -> {
                     stopMonitoringService()
                     result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        // First-run usage-access onboarding channel.
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            onboardingChannel
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "hasUsageAccess" -> result.success(hasUsageAccess())
+                "openUsageAccessSettings" -> {
+                    try {
+                        startActivityForResult(
+                            Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS),
+                            usageAccessRequestCode
+                        )
+                        result.success(true)
+                    } catch (error: Exception) {
+                        CrashReportRecorder.record(this, "usage_access_settings", error)
+                        result.error("USAGE_ACCESS_SETTINGS_FAILED", "Could not open usage access settings.", null)
+                    }
                 }
                 else -> result.notImplemented()
             }
@@ -362,6 +388,22 @@ class MainActivity : FlutterActivity() {
                 MethodChannel(messenger, safeContentVpnChannel).invokeMethod("onVpnPermissionResult", granted)
             }
         }
+        if (requestCode == usageAccessRequestCode) {
+            flutterEngine?.dartExecutor?.binaryMessenger?.let { messenger ->
+                MethodChannel(messenger, onboardingChannel)
+                    .invokeMethod("onUsageAccessSettingsResult", hasUsageAccess())
+            }
+        }
+    }
+
+    private fun hasUsageAccess(): Boolean {
+        val appOps = getSystemService(Context.APP_OPS_SERVICE) as? AppOpsManager
+            ?: return false
+        return appOps.checkOpNoThrow(
+            AppOpsManager.OPSTR_GET_USAGE_STATS,
+            android.os.Process.myUid(),
+            packageName
+        ) == AppOpsManager.MODE_ALLOWED
     }
 
     private fun updateChildShortcuts(children: List<Map<String, String>>) {
