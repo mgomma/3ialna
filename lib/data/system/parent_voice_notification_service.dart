@@ -106,6 +106,20 @@ class ParentVoiceNotificationService {
         true;
   }
 
+  /// Returns whether Android currently exempts 3ialna from battery
+  /// optimization. This is informational only; the app never requests a
+  /// direct whitelist exemption.
+  Future<bool> isIgnoringBatteryOptimizations() async {
+    return await _backgroundChannel.invokeMethod<bool>(
+          'isIgnoringBatteryOptimizations',
+        ) ??
+        false;
+  }
+
+  /// Opens Android's general Battery Optimization settings for parent review.
+  Future<void> openBatteryOptimizationSettings() =>
+      _backgroundChannel.invokeMethod<void>('openBatteryOptimizationSettings');
+
   Future<void> requestExactAlarmPermission() => _backgroundChannel.invokeMethod<void>('requestExactAlarmPermission');
 
   Future<bool> requestVoiceNotificationPermission() async {

@@ -177,6 +177,28 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
     await voiceService.dispose();
   }
 
+  Future<void> _reviewBatteryOptimization() async {
+    final ParentVoiceNotificationService voiceService =
+        ParentVoiceNotificationService(
+      recordingKey: ParentVoiceNotificationService.prayerReminderRecordingKey,
+    );
+    final bool alreadyExempt =
+        await voiceService.isIgnoringBatteryOptimizations();
+    if (!alreadyExempt) {
+      await voiceService.openBatteryOptimizationSettings();
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_text(
+            '3ialna is already exempt from battery optimization on this device.',
+            'عيالنا مُستثنى بالفعل من تحسين البطارية على هذا الجهاز.',
+          )),
+        ),
+      );
+    }
+    await voiceService.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -443,6 +465,21 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
                 subtitle: Text(_text('Required once so reminders can arrive when 3ialna is closed or the screen is locked.', 'مطلوب مرة واحدة لوصول التذكيرات عند إغلاق عيالنا أو قفل الشاشة.')),
                 trailing: const Icon(Icons.open_in_new),
                 onTap: _requestBackgroundPrayerVoiceAccess,
+              ),
+            if (_settings.voiceNotificationsEnabled && Platform.isAndroid)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.battery_saver_outlined),
+                title: Text(_text(
+                  'Review battery optimization (optional)',
+                  'مراجعة تحسين البطارية (اختياري)',
+                )),
+                subtitle: Text(_text(
+                  'Exact alarms already work through Android Doze. Open the system list only if this phone delays reminders; 3ialna never requests automatic whitelisting.',
+                  'تعمل المنبهات الدقيقة خلال وضع السكون في Android. افتح قائمة النظام فقط إذا كان الهاتف يؤخر التذكيرات؛ لا يطلب عيالنا إضافة تلقائية إلى القائمة البيضاء.',
+                )),
+                trailing: const Icon(Icons.open_in_new),
+                onTap: _reviewBatteryOptimization,
               ),
             const SizedBox(height: 8),
             Text(_text('The next seven days are scheduled locally and refreshed when 3ialna opens. Android uses an exact reminder alarm; iPhone uses a notification sound shorter than 29 seconds.', 'تُجدول الأيام السبعة القادمة محليًا وتُحدّث عند فتح عيالنا. يستخدم Android منبّهًا دقيقًا، ويستخدم iPhone صوت إشعار أقصر من 29 ثانية.'), style: const TextStyle(color: Colors.grey)),

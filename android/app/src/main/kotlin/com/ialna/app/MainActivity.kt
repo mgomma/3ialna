@@ -12,6 +12,7 @@ import android.content.pm.ShortcutManager
 import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.provider.Settings
 import android.net.Uri
 import android.net.VpnService
@@ -364,6 +365,25 @@ class MainActivity : FlutterActivity() {
                 }
                 "canScheduleExactAlarms" -> {
                     result.success(VoicePlaybackScheduler.canScheduleExactAlarms(this))
+                }
+                "isIgnoringBatteryOptimizations" -> {
+                    val powerManager = getSystemService(PowerManager::class.java)
+                    result.success(
+                        Build.VERSION.SDK_INT < Build.VERSION_CODES.M ||
+                            powerManager.isIgnoringBatteryOptimizations(packageName)
+                    )
+                }
+                "openBatteryOptimizationSettings" -> {
+                    try {
+                        startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                        result.success(true)
+                    } catch (error: Exception) {
+                        result.error(
+                            "BATTERY_SETTINGS_UNAVAILABLE",
+                            "Could not open Battery Optimization settings.",
+                            null,
+                        )
+                    }
                 }
                 "requestExactAlarmPermission" -> {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
