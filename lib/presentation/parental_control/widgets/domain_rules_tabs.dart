@@ -244,7 +244,7 @@ class _DomainList extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: 8),
       children: domains
-          .map(
+          .map<Widget>(
             (domain) => ListTile(
               leading: const Icon(Icons.public),
               title: Text(domain, textDirection: TextDirection.ltr),
