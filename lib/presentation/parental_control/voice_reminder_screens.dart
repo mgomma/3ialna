@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import '../../data/local/locale_controller.dart';
+import '../../data/system/error_report_service.dart';
 import '../../data/system/parent_voice_notification_service.dart';
 
 class VoiceReminderRecordingScreen extends StatefulWidget {
@@ -171,17 +172,45 @@ class _VoiceReminderPlaybackScreenState extends State<VoiceReminderPlaybackScree
   }
 
   Future<void> _loadAndPlay() async {
-    final bool available = await _voiceService.getRecording() != null;
-    if (!mounted) return;
-    setState(() => _available = available);
-    if (available) await _play();
+    try {
+      final bool available = await _voiceService.getRecording() != null;
+      if (!mounted) return;
+      setState(() => _available = available);
+      if (!available) {
+        await ErrorReportService.recordEvent(
+          source: 'voice_playback',
+          event: 'voice_playback_unavailable',
+        );
+        return;
+      }
+      await _play();
+    } catch (error, stackTrace) {
+      await ErrorReportService.recordHandled(
+        source: 'voice_playback',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
   }
 
   Future<void> _play() async {
     if (!_available) return;
-    if (mounted) setState(() => _playing = true);
-    await _voiceService.playRecording();
-    if (mounted) setState(() => _playing = false);
+    try {
+      if (mounted) setState(() => _playing = true);
+      await ErrorReportService.recordEvent(
+        source: 'voice_playback',
+        event: 'voice_playback_started',
+      );
+      await _voiceService.playRecording();
+    } catch (error, stackTrace) {
+      await ErrorReportService.recordHandled(
+        source: 'voice_playback',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    } finally {
+      if (mounted) setState(() => _playing = false);
+    }
   }
 
   @override

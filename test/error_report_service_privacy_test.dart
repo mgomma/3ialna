@@ -33,12 +33,20 @@ void main() {
       error: StateError('Layla Hassan born 2017-04-12 PIN 1234'),
       stackTrace: StackTrace.fromString('package:mu_super_app/data/system/safe_content_vpn_service.dart:21'),
     );
+    await ErrorReportService.recordEvent(
+      source: 'notification_action',
+      event: 'notification_action_received',
+    );
 
     final String report = await ErrorReportService.buildShareText();
     final Map<String, dynamic> decoded = jsonDecode(report) as Map<String, dynamic>;
     final String normalized = report.toLowerCase();
 
     expect(decoded['format'], '3ialna-diagnostic-report');
+    expect(decoded['summary'], <String, int>{
+      'relevantEventCount': 4,
+      'suppressedLifecycleEntries': 0,
+    });
     expect(normalized, isNot(contains('layla')));
     expect(normalized, isNot(contains('2017-04-12')));
     expect(normalized, isNot(contains('1234')));
@@ -49,5 +57,30 @@ void main() {
     expect(normalized, isNot(contains('.m4a')));
     expect(normalized, contains('unknownerror'));
     expect(normalized, contains('vpn_permission_or_start'));
+    expect(normalized, contains('notification_action_received'));
+  });
+
+  test('suppresses legacy lifecycle-only startup rows while preserving an allowlisted outcome', () async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('error_reports_v1', <String>[
+      jsonEncode(<String, String>{
+        'timestamp': '2026-08-24T10:00:00.000Z',
+        'source': 'lifecycle',
+        'errorType': 'UnknownError',
+        'stack': '',
+      }),
+    ]);
+    await ErrorReportService.recordEvent(
+      source: 'notification_permission',
+      event: 'notification_permission_denied',
+    );
+
+    final Map<String, dynamic> report =
+        jsonDecode(await ErrorReportService.buildShareText()) as Map<String, dynamic>;
+    final List<dynamic> reports = report['reports'] as List<dynamic>;
+
+    expect((report['summary'] as Map<String, dynamic>)['suppressedLifecycleEntries'], 1);
+    expect(reports, hasLength(1));
+    expect((reports.single as Map<String, dynamic>)['event'], 'notification_permission_denied');
   });
 }

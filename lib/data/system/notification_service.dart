@@ -5,6 +5,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:timezone/timezone.dart' as tz;
 
+import 'error_report_service.dart';
+
 /// A notification action that opens 3ialna and plays a locally stored parent
 /// recording. Its generic notification copy avoids exposing a task label on a
 /// child device's lock screen.
@@ -97,9 +99,19 @@ class NotificationService {
   void _handleNotificationResponse(NotificationResponse response) {
     final VoiceReminderAction? action =
         VoiceReminderAction.tryParse(response.payload);
-    if (action == null) return;
+    if (action == null) {
+      ErrorReportService.recordEvent(
+        source: 'notification_action',
+        event: 'notification_action_invalid',
+      );
+      return;
+    }
     _pendingVoiceAction = action;
     _voiceActions.add(action);
+    ErrorReportService.recordEvent(
+      source: 'notification_action',
+      event: 'notification_action_received',
+    );
   }
 
   Future<bool> hasNotificationPermission() async {
@@ -108,8 +120,23 @@ class NotificationService {
   }
 
   Future<bool> requestNotificationPermission() async {
-    final PermissionStatus status = await Permission.notification.request();
-    return status.isGranted;
+    try {
+      final PermissionStatus status = await Permission.notification.request();
+      if (!status.isGranted) {
+        await ErrorReportService.recordEvent(
+          source: 'notification_permission',
+          event: 'notification_permission_denied',
+        );
+      }
+      return status.isGranted;
+    } catch (error, stackTrace) {
+      await ErrorReportService.recordHandled(
+        source: 'notification_permission',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
   }
 
   Future<bool> _ensurePermission() async {
@@ -127,6 +154,10 @@ class NotificationService {
   }) async {
     try {
       if (!await _ensurePermission()) {
+        await ErrorReportService.recordEvent(
+          source: 'notification_schedule',
+          event: 'notification_schedule_denied',
+        );
         developer.log('Notification permission denied', name: '3ialna.notification');
         return null;
       }
@@ -143,6 +174,11 @@ class NotificationService {
       );
       return id;
     } catch (error, stackTrace) {
+      await ErrorReportService.recordHandled(
+        source: 'notification_schedule',
+        error: error,
+        stackTrace: stackTrace,
+      );
       developer.log(
         'Failed to schedule notification',
         name: '3ialna.notification',
@@ -163,7 +199,13 @@ class NotificationService {
   }) async {
     if (notificationSlot < 0 || (repeatHours != 1 && repeatHours != 2)) return false;
     try {
-      if (!await _ensurePermission()) return false;
+      if (!await _ensurePermission()) {
+        await ErrorReportService.recordEvent(
+          source: 'notification_schedule',
+          event: 'notification_schedule_denied',
+        );
+        return false;
+      }
       await initialize();
       await cancelVoiceReminder(notificationSlot);
 
@@ -192,6 +234,11 @@ class NotificationService {
       }
       return true;
     } catch (error, stackTrace) {
+      await ErrorReportService.recordHandled(
+        source: 'notification_schedule',
+        error: error,
+        stackTrace: stackTrace,
+      );
       developer.log(
         'Failed to schedule repeating voice reminder',
         name: '3ialna.notification',

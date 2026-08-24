@@ -22,7 +22,19 @@ Future<void> main() async {
   await notifications.initialize();
   runApp(const SocialMediaLimiterApp());
   void openVoiceReminder(VoiceReminderAction action) {
-    appNavigatorKey.currentState?.push(
+    final NavigatorState? navigator = appNavigatorKey.currentState;
+    if (navigator == null) {
+      ErrorReportService.recordEvent(
+        source: 'notification_action',
+        event: 'notification_action_navigation_unavailable',
+      );
+      return;
+    }
+    ErrorReportService.recordEvent(
+      source: 'notification_action',
+      event: 'notification_action_opened',
+    );
+    navigator.push(
       MaterialPageRoute<void>(
         builder: (_) => VoiceReminderPlaybackScreen(
           recordingKey: action.recordingKey,
