@@ -24,6 +24,7 @@ import '../../data/system/prayer_time_service.dart';
 import '../../domain/models/daily_usage_report.dart';
 import '../../domain/models/age_safety_profile.dart';
 import '../../domain/models/country_word_profile.dart';
+import '../../domain/models/child_profile.dart';
 import '../../domain/models/local_user_profile.dart';
 import '../../domain/models/overlay_data.dart';
 import '../../domain/models/prayer.dart';
