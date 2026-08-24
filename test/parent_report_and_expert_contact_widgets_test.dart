@@ -34,4 +34,30 @@ void main() {
     expect(find.byType(CheckboxListTile), findsOneWidget);
     expect(find.byType(FilledButton), findsOneWidget);
   });
+
+  testWidgets(
+      'expert contact accepts Arabic-Indic mobile digits before showing the consent gate',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: EducationalExpertContactScreen()),
+    );
+    await tester.pumpAndSettle();
+
+    final Finder phoneField = find.byType(TextFormField).at(0);
+    final Finder detailsField = find.byType(TextFormField).at(1);
+    await tester.enterText(phoneField, '٠٥٠ ١٢٣ ٤٥٦٧');
+    await tester.enterText(detailsField, 'أحتاج إلى مساعدة في إعدادات الحماية.');
+
+    await tester.tap(find.byType(FilledButton));
+    await tester.pump();
+
+    expect(
+      find.text('يرجى تأكيد موافقتك قبل تضمين أسماء الأطفال وأعمارهم في البريد.'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('أدخل رقم جوال صحيحًا للدولة المحددة (+966).'),
+      findsNothing,
+    );
+  });
 }
