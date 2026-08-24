@@ -137,7 +137,7 @@ class _DomainRulesTabsState extends State<DomainRulesTabs>
   }
 
   Future<void> _showAddDialog({required bool blocked}) async {
-    final controller = TextEditingController();
+    String input = '';
     final value = await showDialog<String>(
       context: context,
       builder: (context) => Directionality(
@@ -145,7 +145,6 @@ class _DomainRulesTabsState extends State<DomainRulesTabs>
         child: AlertDialog(
           title: Text(widget.isArabic ? 'إضافة نطاق' : 'Add domain'),
           content: TextField(
-            controller: controller,
             autofocus: true,
             keyboardType: TextInputType.url,
             decoration: InputDecoration(
@@ -156,7 +155,8 @@ class _DomainRulesTabsState extends State<DomainRulesTabs>
                   : 'The rule applies to the domain and its subdomains.',
               border: const OutlineInputBorder(),
             ),
-            onSubmitted: (_) => Navigator.of(context).pop(controller.text),
+            onChanged: (String value) => input = value,
+            onSubmitted: (_) => Navigator.of(context).pop(input),
           ),
           actions: [
             TextButton(
@@ -164,7 +164,7 @@ class _DomainRulesTabsState extends State<DomainRulesTabs>
               child: Text(widget.isArabic ? 'إلغاء' : 'Cancel'),
             ),
             FilledButton(
-              onPressed: () => Navigator.of(context).pop(controller.text),
+              onPressed: () => Navigator.of(context).pop(input),
               child: Text(blocked
                   ? (widget.isArabic ? 'حظر هذا النطاق' : 'Block domain')
                   : (widget.isArabic ? 'السماح بهذا النطاق' : 'Allow domain')),
@@ -173,7 +173,6 @@ class _DomainRulesTabsState extends State<DomainRulesTabs>
         ),
       ),
     );
-    controller.dispose();
     if (!mounted || value == null) return;
 
     final domain = SafeContentPolicy.normalizeDomain(value);
