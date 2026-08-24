@@ -110,10 +110,28 @@ class ShareableProfilePack {
   }
 
   static bool _containsIdentityField(Object? value) {
-    const Set<String> prohibited = <String>{'children', 'child', 'childId', 'childName', 'birthDate', 'dateOfBirth', 'gender', 'activeChildId'};
+    const Set<String> prohibited = <String>{
+      'children',
+      'child',
+      'childid',
+      'childname',
+      'childprofile',
+      'birthdate',
+      'dateofbirth',
+      'dob',
+      'gender',
+      'sex',
+      'activechildid',
+      'parentpin',
+      'pin',
+      'recording',
+      'voicerecording',
+      'usage',
+      'usagestats',
+    };
     if (value is Map) {
       for (final MapEntry<dynamic, dynamic> item in value.entries) {
-        if (item.key is String && prohibited.contains(item.key)) return true;
+        if (item.key is String && prohibited.contains(item.key.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').toLowerCase())) return true;
         if (_containsIdentityField(item.value)) return true;
       }
     } else if (value is List) {
