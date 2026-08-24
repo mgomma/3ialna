@@ -206,6 +206,34 @@ const copy = {
   },
 } as const;
 
+function TourPreview({ step, isArabic }: { step: number; isArabic: boolean }) {
+  const labels = isArabic
+    ? {
+      children: "الأطفال", active: "الطفل النشط", profile: "ملف مناسب للعمر",
+      protection: "الحماية", enabled: "المراقبة مفعّلة", limits: "حدود الفئات", schedule: "النوم والصلاة",
+      voice: "تذكير بصوت الوالد", local: "تسجيل محلي", play: "تشغيل داخل عيالنا",
+      reports: "تقرير الاستخدام", week: "آخر 7 أيام", localData: "بيانات على الجهاز",
+      actions: "إجراءات سريعة", tile: "إضافة اختصار", switchChild: "تبديل الطفل النشط",
+    }
+    : {
+      children: "Kids", active: "Active child", profile: "Age-ready profile",
+      protection: "Protection", enabled: "Monitoring enabled", limits: "Category limits", schedule: "Sleep & prayer",
+      voice: "Parent voice reminder", local: "Local recording", play: "Play in 3ialna",
+      reports: "Usage report", week: "Last 7 days", localData: "On-device data",
+      actions: "Quick actions", tile: "Add shortcut", switchChild: "Switch active child",
+    };
+
+  const previewContent = [
+    <><div className="preview-title"><span className="preview-avatar" />{labels.children}</div><div className="preview-focus"><small>{labels.active}</small><b>{labels.profile}</b></div><div className="preview-row"><span className="preview-dot teal" />{labels.profile}</div></>,
+    <><div className="preview-title"><span className="preview-shield">✓</span>{labels.protection}</div><div className="preview-focus success"><span>{labels.enabled}</span><i /></div><div className="preview-row"><span className="preview-dot indigo" />{labels.limits}<i /></div><div className="preview-row"><span className="preview-dot amber" />{labels.schedule}</div></>,
+    <><div className="preview-title"><span className="preview-sound">)))</span>{labels.voice}</div><div className="preview-wave"><span /><span /><span /><span /><span /></div><div className="preview-focus voice"><small>{labels.local}</small><b>01:12</b></div><span className="preview-play">▶ {labels.play}</span></>,
+    <><div className="preview-title"><span className="preview-chart">▥</span>{labels.reports}</div><small className="preview-caption">{labels.week}</small><div className="preview-bars"><i /><i /><i /><i /><i /></div><div className="preview-focus privacy"><span>✓</span>{labels.localData}</div></>,
+    <><div className="preview-title"><span className="preview-spark">✦</span>{labels.actions}</div><span className="preview-action">{labels.tile}<span>＋</span></span><span className="preview-action">{labels.switchChild}<span>›</span></span></>,
+  ][step];
+
+  return <div className={`phone-preview step-${step + 1}`} aria-label={isArabic ? `معاينة شاشة الخطوة ${step + 1}` : `Step ${step + 1} screen preview`}><div className="phone-speaker" /><div className="phone-screen">{previewContent}</div></div>;
+}
+
 export default function Home() {
   const [language, setLanguage] = useState<Language>("ar");
   const [openFaq, setOpenFaq] = useState<number | null>(0);
@@ -284,7 +312,7 @@ export default function Home() {
           <div className="hero-caption"><span>01</span><b>{isArabic ? "روتين رقمي هادئ" : "A calmer digital rhythm"}</b></div>
         </section>
 
-        <section id="how" className="walkthrough-section"><div className="walkthrough-heading"><div><span className="section-kicker">02 / {isArabic ? "الجولة التعريفية" : "Feature tour"}</span><h2>{t.guide}</h2></div><p>{t.guideIntro}</p></div><ol className="walkthrough-list">{t.walkthrough.map(([title, body], index) => <li className="walkthrough-step" key={title}><span className="walkthrough-number">{String(index + 1).padStart(2, "0")}</span><h3>{title}</h3><p>{body}</p></li>)}</ol></section>
+        <section id="how" className="walkthrough-section"><div className="walkthrough-heading"><div><span className="section-kicker">02 / {isArabic ? "الجولة التعريفية" : "Feature tour"}</span><h2>{t.guide}</h2></div><p>{t.guideIntro}</p></div><ol className="walkthrough-list">{t.walkthrough.map(([title, body], index) => <li className="walkthrough-step" key={title}><span className="walkthrough-number">{String(index + 1).padStart(2, "0")}</span><TourPreview step={index} isArabic={isArabic} /><h3>{title}</h3><p>{body}</p></li>)}</ol></section>
 
         <section id="download" className="release-section section-grid"><div className="release-copy"><span className="section-kicker">{t.releaseKicker}</span><h2>{t.releaseTitle}</h2><p>{t.releaseBody}</p><a className="release-request" href="#contact"><Mail size={16} />{t.requestInvite}<ArrowUpRight size={15} /></a></div><div className="release-panel"><div className="release-status"><span className="release-pulse" aria-hidden="true" />{isArabic ? "إصدار متاح" : "Release available"}</div><div className="release-facts"><div><span>{isArabic ? "المنصة" : "Platform"}</span><b>{currentRelease.platform}</b></div><div><span>{isArabic ? "الإصدار" : "Version"}</span><b>{releaseVersion}</b></div><div><span>{isArabic ? "قناة التثبيت" : "Install channel"}</span><b>{t.releaseChannel}</b></div></div><a className="button release-button" href={preferredDownloadUrl} target="_blank" rel="noreferrer"><Download size={18} />{t.releaseButton}<ExternalLink size={16} /></a><p className="release-detection" role="status"><Smartphone size={16} />{detectionMessage}</p><div className="apk-choice-list"><b>{t.apkChoiceTitle}</b>{apkChoices.map((choice) => <a key={choice.key} href={choice.url} target="_blank" rel="noreferrer"><Download size={14} />{choice.label}<ExternalLink size={13} /></a>)}</div><p className="release-notice"><ShieldCheck size={17} />{t.releaseNotice}</p><p className="release-updated">{t.releaseUpdated}: {releaseDate}</p><div className="release-qr-grid"><div className="release-qr-card"><QRCodeSVG value={preferredDownloadUrl} size={128} level="M" includeMargin bgColor="#f7f3eb" fgColor="#174a3b" /><div><b>{t.testerQrTitle}</b><span>{t.testerQrBody}</span></div></div><div className="release-qr-card"><QRCodeSVG value={publicSiteUrl} size={128} level="M" includeMargin bgColor="#f7f3eb" fgColor="#174a3b" /><div><b>{t.siteQrTitle}</b><span>{t.siteQrBody}</span></div></div></div></div></section>
 

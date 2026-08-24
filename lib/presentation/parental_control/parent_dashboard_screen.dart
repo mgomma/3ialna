@@ -294,14 +294,14 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                         children: [
                           Icon(Icons.security, color: colorScheme.primary),
                           const SizedBox(width: 8),
-                          Text('Protection & Hard Lock', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                      Text(_isArabic ? 'الحماية والقفل المشدد' : 'Protection & Hard Lock', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
                         ],
                       ),
                       const SizedBox(height: 16),
-                      Text('Device Admin status: ${_isDeviceAdminEnabled ? "Enabled" : "Disabled"}', style: theme.textTheme.titleSmall),
+                      Text(_isArabic ? 'حالة مشرف الجهاز: ${_isDeviceAdminEnabled ? "مفعّل" : "غير مفعّل"}' : 'Device Admin status: ${_isDeviceAdminEnabled ? "Enabled" : "Disabled"}', style: theme.textTheme.titleSmall),
                       const SizedBox(height: 8),
                       Text(
-                        'Enabled device admin prevents the app from being uninstalled and allows Hard Locking.',
+                        _isArabic ? 'يساعد تفعيل مشرف الجهاز على الحماية من إزالة التطبيق ويمكّن القفل المشدد.' : 'Enabled device admin prevents the app from being uninstalled and allows Hard Locking.',
                         style: theme.textTheme.bodyMedium,
                       ),
                       const SizedBox(height: 16),
@@ -313,10 +313,9 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                             color: colorScheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Text(
-                            'iOS limitation: Kiosk mode, accessibility-based blocking, and anti-uninstall protection are Android-only. '
-                            'On iOS, use Screen Time / Family Controls for stronger enforcement.',
-                          ),
+                          child: Text(_isArabic
+                              ? 'قيد في iOS: وضع الكشك وحظر التطبيقات عبر إمكانية الوصول والحماية من إزالة التطبيق متاحة على Android فقط. استخدم Screen Time / Family Controls على iOS.'
+                              : 'iOS limitation: Kiosk mode, accessibility-based blocking, and anti-uninstall protection are Android-only. On iOS, use Screen Time / Family Controls for stronger enforcement.'),
                         ),
                       ] else if (!_isDeviceAdminEnabled)
                         FilledButton.icon(
@@ -325,20 +324,20 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                             await _loadSettings();
                           },
                           icon: const Icon(Icons.admin_panel_settings),
-                          label: const Text('Enable Anti-Uninstall Protection'),
+                          label: Text(_isArabic ? 'تفعيل الحماية من إزالة التطبيق' : 'Enable Anti-Uninstall Protection'),
                         )
                       else ...[
                         const Divider(),
                         SwitchListTile(
-                          title: const Text('Strict Mode (Hard Lock)'),
-                          subtitle: const Text('Uses Kiosk Mode to make the lock screen impossible to bypass without a PIN.'),
+                          title: Text(_isArabic ? 'الوضع المشدد (قفل محكم)' : 'Strict Mode (Hard Lock)'),
+                          subtitle: Text(_isArabic ? 'يستخدم وضع الكشك لتقليل تجاوز شاشة القفل من دون رقم الوالد السري.' : 'Uses Kiosk Mode to make the lock screen difficult to bypass without a PIN.'),
                           value: _isStrictMode,
                           onChanged: _toggleStrictMode,
                           secondary: Icon(Icons.gpp_maybe, color: _isStrictMode ? Colors.red : Colors.grey),
                         ),
                         SwitchListTile(
-                          title: const Text('Kiosk Mode (Manual Lock)'),
-                          subtitle: const Text('Manually lock the entire device into this app right now.'),
+                          title: Text(_isArabic ? 'وضع الكشك (قفل يدوي)' : 'Kiosk Mode (Manual Lock)'),
+                          subtitle: Text(_isArabic ? 'اقفل الجهاز يدويًا داخل هذا التطبيق الآن.' : 'Manually lock the entire device into this app right now.'),
                           value: _isKioskModeActive,
                           onChanged: (_) => _toggleKioskMode(),
                           secondary: const Icon(Icons.screen_lock_portrait),
@@ -360,7 +359,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                         children: [
                           Icon(Icons.accessibility_new, color: _isAccessibilityServiceEnabled ? Colors.green : Colors.orange),
                           const SizedBox(width: 8),
-                          Text('App Blocking Service', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                          Text(_isArabic ? 'خدمة حظر التطبيقات' : 'App Blocking Service', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
                         ],
                       ),
                       const SizedBox(height: 16),
@@ -375,8 +374,8 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                           Expanded(
                             child: Text(
                               _isAccessibilityServiceEnabled
-                                  ? 'Accessibility Service is enabled. App blocking is active.'
-                                  : 'Accessibility Service is disabled. Enable it to block apps when time limits are exceeded.',
+                                  ? (_isArabic ? 'خدمة إمكانية الوصول مفعّلة. حظر التطبيقات نشط.' : 'Accessibility Service is enabled. App blocking is active.')
+                                  : (_isArabic ? 'خدمة إمكانية الوصول غير مفعّلة. فعّلها لحظر التطبيقات عند تجاوز الحدود الزمنية.' : 'Accessibility Service is disabled. Enable it to block apps when time limits are exceeded.'),
                               style: theme.textTheme.bodyMedium,
                             ),
                           ),
@@ -395,8 +394,8 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                         icon: const Icon(Icons.settings),
                         label: Text(
                           _isIos
-                              ? 'Android-only feature'
-                              : (_isAccessibilityServiceEnabled ? 'Open Accessibility Settings' : 'Enable Accessibility Service'),
+                              ? (_isArabic ? 'ميزة متاحة على Android فقط' : 'Android-only feature')
+                              : (_isAccessibilityServiceEnabled ? (_isArabic ? 'فتح إعدادات إمكانية الوصول' : 'Open Accessibility Settings') : (_isArabic ? 'تفعيل خدمة إمكانية الوصول' : 'Enable Accessibility Service')),
                         ),
                         style: FilledButton.styleFrom(backgroundColor: _isAccessibilityServiceEnabled ? Colors.green : colorScheme.primary),
                       ),
@@ -409,17 +408,17 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
               Row(
                 children: [
                   Expanded(
-                    child: _StatCard(icon: Icons.block, label: 'Blocked Apps', value: '$_blockedAppsCount', color: colorScheme.error),
+                    child: _StatCard(icon: Icons.block, label: _isArabic ? 'التطبيقات المحظورة' : 'Blocked Apps', value: '$_blockedAppsCount', color: colorScheme.error),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: _StatCard(icon: Icons.timer, label: 'Time Limits', value: '$_appsWithTimeLimits', color: colorScheme.primary),
+                    child: _StatCard(icon: Icons.timer, label: _isArabic ? 'الحدود الزمنية' : 'Time Limits', value: '$_appsWithTimeLimits', color: colorScheme.primary),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
               // Quick Actions
-              Text('Quick Actions', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+              Text(_isArabic ? 'إجراءات سريعة' : 'Quick Actions', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               GridView.count(
                 crossAxisCount: 2,
@@ -431,7 +430,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                 children: [
                   _ActionCard(
                     icon: Icons.apps,
-                    label: 'Manage Apps',
+                    label: _isArabic ? 'إدارة التطبيقات' : 'Manage Apps',
                     color: colorScheme.primary,
                     onTap: () {
                       Navigator.of(context).push(MaterialPageRoute(builder: (context) => const AppManagementScreen()));
@@ -439,7 +438,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                   ),
                   _ActionCard(
                     icon: Icons.schedule,
-                    label: 'Schedule',
+                    label: _isArabic ? 'الجدول' : 'Schedule',
                     color: colorScheme.secondary,
                     onTap: () {
                       Navigator.of(context).push(MaterialPageRoute(builder: (context) => const ScheduleScreen()));
@@ -447,7 +446,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                   ),
                   _ActionCard(
                     icon: Icons.shield_outlined,
-                    label: 'Safe Content',
+                    label: _isArabic ? 'المحتوى الآمن' : 'Safe Content',
                     color: colorScheme.tertiary,
                     onTap: () {
                       Navigator.of(context).push(MaterialPageRoute(builder: (context) => const SafeContentScreen()));
@@ -466,7 +465,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                     ),
                   _ActionCard(
                     icon: Icons.ios_share_outlined,
-                    label: 'Share Setup',
+                    label: _isArabic ? 'مشاركة الإعداد' : 'Share Setup',
                     color: colorScheme.primary,
                     onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const ProfilePackScreen())),
                   ),
