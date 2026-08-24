@@ -44,7 +44,6 @@ for argument in "$@"; do
 done
 
 branch="${BRANCH:-dev}"
-repository="${GITHUB_REPOSITORY:-$(gh repo view --json nameWithOwner --jq .nameWithOwner)}"
 dry_run="${DRY_RUN:-false}"
 
 require_command() {
@@ -60,6 +59,8 @@ done
 if [[ "$dry_run" != "true" ]]; then
   require_command flutter
 fi
+
+repository="${GITHUB_REPOSITORY:-$(gh repo view --json nameWithOwner --jq .nameWithOwner)}"
 
 if [[ "$(git branch --show-current)" != "$branch" ]]; then
   echo "Checkout the $branch branch before publishing." >&2
