@@ -255,6 +255,16 @@ class _DomainList extends StatelessWidget {
               ),
             ),
           )
+          .followedBy([
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: OutlinedButton.icon(
+                onPressed: onAdd,
+                icon: const Icon(Icons.add),
+                label: Text(addLabel),
+              ),
+            ),
+          ])
           .toList(),
     );
   }
