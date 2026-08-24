@@ -196,7 +196,7 @@ class _TaskVoiceReminderEditorState extends State<_TaskVoiceReminderEditor> {
           ),
           const SizedBox(height: 18),
           DropdownButtonFormField<int>(
-            value: _repeatHours,
+            initialValue: _repeatHours,
             decoration: InputDecoration(labelText: _ar ? 'التكرار' : 'Repeat'),
             items: <DropdownMenuItem<int>>[
               DropdownMenuItem(value: 1, child: Text(_ar ? 'كل ساعة' : 'Every hour')),

@@ -2,8 +2,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:just_audio/just_audio.dart';
-
 import '../../data/local/locale_controller.dart';
 import '../../data/system/parent_voice_notification_service.dart';
 
