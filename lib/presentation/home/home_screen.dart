@@ -620,27 +620,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  /// Shows an informational dialog about usage data access.
-  ///
-  /// The user needs to enable "Usage access" in system settings so the app
-  /// can read how long social media apps have been used.
-  Future<void> _askUsageAccessInfoDialog() async {
-    if (_settings.usageDialogShown) {
-      return;
-    }
-    await showDialog<void>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(context.l10n.usageAccessTitle),
-          content: Text(context.l10n.usageAccessBody),
-          actions: <Widget>[TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(context.l10n.gotIt))],
-        );
-      },
-    );
-    await _settings.setUsageDialogShown();
-  }
-
   Future<void> _runEssentialPermissionGuide() async {
     if (_essentialPermissionGuideInProgress ||
         _settings.essentialPermissionsPrompted) {
