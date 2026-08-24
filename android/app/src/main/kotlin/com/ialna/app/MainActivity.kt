@@ -86,8 +86,17 @@ class MainActivity : FlutterActivity() {
         ).setMethodCallHandler { call, result ->
             when (call.method) {
                 "startMonitoringService" -> {
-                    startMonitoringService()
-                    result.success(null)
+                    try {
+                        startMonitoringService()
+                        result.success(true)
+                    } catch (error: Exception) {
+                        CrashReportRecorder.record(this, "monitoring_service_start", error)
+                        result.error(
+                            "MONITORING_SERVICE_START_FAILED",
+                            "Could not start monitoring service.",
+                            null
+                        )
+                    }
                 }
                 "stopMonitoringService" -> {
                     stopMonitoringService()
@@ -355,8 +364,7 @@ class MainActivity : FlutterActivity() {
                 }
                 "openAccessibilitySettings" -> {
                     try {
-                        openAccessibilitySettings()
-                        result.success(true)
+                        result.success(openAccessibilitySettings())
                     } catch (e: Exception) {
                         result.error("ERROR", "Failed to open settings: ${e.message}", null)
                     }
@@ -471,13 +479,14 @@ class MainActivity : FlutterActivity() {
     /**
      * Opens Accessibility settings to enable the service.
      */
-    private fun openAccessibilitySettings() {
+    private fun openAccessibilitySettings(): Boolean {
         try {
             val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
             startActivity(intent)
             Log.d(TAG, "Opened Accessibility settings successfully")
+            return true
         } catch (e: ActivityNotFoundException) {
             Log.e(TAG, "Accessibility settings activity not found", e)
             // Fallback: open general settings
@@ -487,6 +496,7 @@ class MainActivity : FlutterActivity() {
                 }
                 startActivity(intent)
                 Log.d(TAG, "Opened general Settings as fallback")
+                return true
             } catch (e2: Exception) {
                 Log.e(TAG, "Failed to open Settings", e2)
                 // Show toast to user
@@ -495,6 +505,7 @@ class MainActivity : FlutterActivity() {
                     "Please enable Accessibility Service manually in Settings",
                     Toast.LENGTH_LONG
                 ).show()
+                return false
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to open Accessibility settings", e)
@@ -504,6 +515,7 @@ class MainActivity : FlutterActivity() {
                 "Please enable Accessibility Service manually in Settings",
                 Toast.LENGTH_LONG
             ).show()
+            return false
         }
     }
 

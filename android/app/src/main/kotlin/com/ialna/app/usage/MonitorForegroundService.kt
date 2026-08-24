@@ -21,6 +21,7 @@ import android.content.pm.ServiceInfo
 import androidx.core.content.ContextCompat
 import com.ialna.app.MainActivity
 import com.ialna.app.R
+import com.ialna.app.diagnostics.CrashReportRecorder
 import java.util.Calendar
 import android.app.usage.UsageStats
 import android.app.usage.UsageStatsManager
@@ -68,11 +69,17 @@ class MonitorForegroundService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        usageStatsManager =
-            getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
-        startForegroundServiceWithNotification()
-        handler.post(runnable)
-        showDebugToast("3ialna: Monitoring Service Active")
+        try {
+            usageStatsManager =
+                getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+            startForegroundServiceWithNotification()
+            handler.post(runnable)
+            showDebugToast("3ialna: Monitoring Service Active")
+        } catch (error: Exception) {
+            CrashReportRecorder.record(this, "monitoring_service_foreground", error)
+            Log.e(TAG, "Could not start monitoring foreground service", error)
+            stopSelf()
+        }
     }
 
     override fun onStartCommand(
@@ -101,8 +108,13 @@ class MonitorForegroundService : Service() {
         Log.d(TAG, "onTaskRemoved called")
         if (isMonitoringEnabled()) {
             Log.d(TAG, "Restarting monitoring service after task removal")
-            val restartIntent = Intent(applicationContext, MonitorForegroundService::class.java)
-            ContextCompat.startForegroundService(applicationContext, restartIntent)
+            try {
+                val restartIntent = Intent(applicationContext, MonitorForegroundService::class.java)
+                ContextCompat.startForegroundService(applicationContext, restartIntent)
+            } catch (error: Exception) {
+                CrashReportRecorder.record(this, "monitoring_service_restart", error)
+                Log.w(TAG, "Could not restart monitoring service", error)
+            }
         }
     }
 

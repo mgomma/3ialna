@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -137,17 +138,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _loadCountryWordProfile();
     _profile = await _drupalSyncService.getProfile();
 
+    await _refreshAccessibilityStatus();
     if (isMonitoring) {
-      await _startBackgroundMonitoring();
-      _startMonitoring();
+      final bool started = !Platform.isAndroid ||
+          (_isAccessibilityEnabled && await _startBackgroundMonitoring());
+      if (started) {
+        _startMonitoring();
+      } else {
+        if (mounted) setState(() => isMonitoring = false);
+        await _saveSettings();
+      }
     }
 
     _startPrayerStatusUpdates();
     _initializePrayerLockScheduler();
     await _ensureCountryProfileSelected();
-
-    // Check accessibility service status
-    _isAccessibilityEnabled = await _accessibilityHelper.isAccessibilityServiceEnabled();
 
     // Check prayer locks immediately on startup
     await _checkPrayerLocks();
@@ -220,7 +225,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
     await _refreshUsage();
     if (!mounted) return;
+    await _refreshAccessibilityStatus();
     _loadPrayerSettings();
+  }
+
+  Future<bool> _refreshAccessibilityStatus() async {
+    final bool enabled =
+        await _accessibilityHelper.isAccessibilityServiceEnabled();
+    if (mounted) setState(() => _isAccessibilityEnabled = enabled);
+    return enabled;
   }
 
   /// Loads saved time limit and monitoring state from settings.
@@ -798,20 +811,77 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   /// Toggles monitoring state and persists the change.
   Future<void> _toggleMonitoring() async {
-    setState(() {
-      isMonitoring = !isMonitoring;
-    });
-
     if (isMonitoring) {
-      await _startBackgroundMonitoring();
-      _startMonitoring();
-      await _checkAppUsage();
-    } else {
+      setState(() => isMonitoring = false);
       await _stopBackgroundMonitoring();
       _stopMonitoring();
+      await _saveSettings();
+      return;
     }
 
+    if (Platform.isAndroid &&
+        (!await _refreshAccessibilityStatus() || !mounted)) {
+      await _showAccessibilityRequiredForMonitoring();
+      return;
+    }
+
+    setState(() => isMonitoring = true);
     await _saveSettings();
+
+    final bool started =
+        !Platform.isAndroid || await _startBackgroundMonitoring();
+    if (!started || !mounted) {
+      if (mounted) {
+        setState(() => isMonitoring = false);
+        await _saveSettings();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_isArabic
+                ? 'تعذر بدء المراقبة الآن. راجع أذونات الإشعارات وبيانات الاستخدام ثم حاول مرة أخرى.'
+                : 'Monitoring could not start. Check notification and Usage Access permissions, then try again.'),
+          ),
+        );
+      }
+      return;
+    }
+
+    _startMonitoring();
+    await _checkAppUsage();
+  }
+
+  Future<void> _showAccessibilityRequiredForMonitoring() async {
+    if (!mounted) return;
+    final bool? openSettings = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) => AlertDialog(
+        title: Text(_isArabic
+            ? 'فعّل خدمة إمكانية الوصول أولًا'
+            : 'Enable Accessibility first'),
+        content: Text(_isArabic
+            ? 'لن تبدأ عيالنا المراقبة كأن حظر التطبيقات يعمل بينما خدمة إمكانية الوصول متوقفة. افتح إعدادات Android، ثم فعّل عيالنا ضمن التطبيقات المثبتة. إذا كان الجهاز يمنع التفعيل، استخدم هاتفًا أو ملف مستخدم يسمح بخدمات إمكانية الوصول.'
+            : '3ialna will not start monitoring as if app blocking works while Accessibility is off. Open Android Settings, then enable 3ialna under installed apps. If the device blocks this setting, use a phone or user profile that permits Accessibility services.'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(_isArabic ? 'ليس الآن' : 'Not now'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(_isArabic ? 'فتح الإعدادات' : 'Open settings'),
+          ),
+        ],
+      ),
+    );
+    if (openSettings != true) return;
+    final bool opened = await _accessibilityHelper.openAccessibilitySettings();
+    if (!mounted || opened) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_isArabic
+            ? 'تعذر فتح إعدادات إمكانية الوصول. افتح إعدادات Android يدويًا ثم ابحث عن «إمكانية الوصول».'
+            : 'Could not open Accessibility Settings. Open Android Settings manually and search for Accessibility.'),
+      ),
+    );
   }
 
   /// Adjusts the time limit in 5-minute increments.
@@ -828,11 +898,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   /// Starts the native Android foreground service for real background checks.
-  Future<void> _startBackgroundMonitoring() async {
+  Future<bool> _startBackgroundMonitoring() async {
     try {
-      await _serviceChannel.invokeMethod('startMonitoringService');
-    } catch (_) {
-      // On non-Android platforms this will fail; we can safely ignore.
+      return await _serviceChannel.invokeMethod<bool>(
+            'startMonitoringService',
+          ) ??
+          false;
+    } catch (error) {
+      debugPrint('Could not start native monitoring service: $error');
+      return false;
     }
   }
 

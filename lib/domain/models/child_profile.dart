@@ -9,6 +9,7 @@ class ChildProfile {
     required this.birthDate,
     required this.gender,
     required this.preset,
+    this.profileFollowsBirthDate = false,
   });
 
   final String id;
@@ -16,6 +17,7 @@ class ChildProfile {
   final DateTime birthDate;
   final ChildGender gender;
   final AgeSafetyProfilePreset preset;
+  final bool profileFollowsBirthDate;
 
   int get ageYears {
     final DateTime today = DateTime.now();
@@ -31,6 +33,7 @@ class ChildProfile {
     DateTime? birthDate,
     ChildGender? gender,
     AgeSafetyProfilePreset? preset,
+    bool? profileFollowsBirthDate,
   }) {
     return ChildProfile(
       id: id,
@@ -38,6 +41,8 @@ class ChildProfile {
       birthDate: birthDate ?? this.birthDate,
       gender: gender ?? this.gender,
       preset: preset ?? this.preset,
+      profileFollowsBirthDate:
+          profileFollowsBirthDate ?? this.profileFollowsBirthDate,
     );
   }
 
@@ -58,6 +63,7 @@ class ChildProfile {
         'blockMatureContent': preset.blockMatureContent,
         'requireParentApproval': preset.requireParentApproval,
         'voiceNotifications': preset.voiceNotifications,
+        'profileFollowsBirthDate': profileFollowsBirthDate,
       };
 
   factory ChildProfile.fromJson(Map<String, dynamic> json) {
@@ -90,6 +96,8 @@ class ChildProfile {
         requireParentApproval: json['requireParentApproval'] as bool?,
         voiceNotifications: json['voiceNotifications'] as bool?,
       ),
+      profileFollowsBirthDate:
+          json['profileFollowsBirthDate'] as bool? ?? false,
     );
   }
 }

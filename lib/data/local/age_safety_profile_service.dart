@@ -52,15 +52,18 @@ class AgeSafetyProfileService {
 
   Future<void> ensureDefaultChild() async {
     if (loadChildren().isNotEmpty) {
-      await _syncRuntime(activeChild());
+      final bool refreshed = await refreshAutomaticAgeProfiles();
+      if (!refreshed) await _syncRuntime(activeChild());
       return;
     }
+    final bool hasLegacyPreset = _prefs.containsKey(_key);
     final ChildProfile child = ChildProfile(
       id: 'child-${DateTime.now().microsecondsSinceEpoch}',
       name: 'Child 1',
       birthDate: DateTime.now(),
       gender: ChildGender.unspecified,
       preset: _loadLegacyPreset(),
+      profileFollowsBirthDate: !hasLegacyPreset,
     );
     await _saveChildren(<ChildProfile>[child], activeId: child.id);
   }
@@ -103,7 +106,12 @@ class AgeSafetyProfileService {
     await ensureDefaultChild();
     final ChildProfile active = activeChild()!;
     final List<ChildProfile> children = loadChildren()
-        .map((ChildProfile child) => child.id == active.id ? child.copyWith(preset: preset) : child)
+        .map((ChildProfile child) => child.id == active.id
+            ? child.copyWith(
+                preset: preset,
+                profileFollowsBirthDate: false,
+              )
+            : child)
         .toList(growable: false);
     await _saveChildren(children, activeId: active.id);
     await _prefs.setString(_key, jsonEncode(<String, Object>{
@@ -138,15 +146,21 @@ class AgeSafetyProfileService {
     required String name,
     required DateTime birthDate,
     required ChildGender gender,
-    AgeSafetyProfile profile = AgeSafetyProfile.underFive,
+    AgeSafetyProfile? profile,
+    bool? profileFollowsBirthDate,
   }) async {
     await ensureDefaultChild();
+    final bool followsBirthDate = profileFollowsBirthDate ?? profile == null;
+    final AgeSafetyProfile resolvedProfile = followsBirthDate
+        ? AgeSafetyProfileRecommendation.forBirthDate(birthDate)
+        : profile!;
     final ChildProfile child = ChildProfile(
       id: 'child-${DateTime.now().microsecondsSinceEpoch}',
       name: name.trim().isEmpty ? 'Child ${loadChildren().length + 1}' : name.trim(),
       birthDate: birthDate,
       gender: gender,
-      preset: AgeSafetyProfilePreset.defaults[profile]!,
+      preset: AgeSafetyProfilePreset.defaults[resolvedProfile]!,
+      profileFollowsBirthDate: followsBirthDate,
     );
     final List<ChildProfile> children = <ChildProfile>[...loadChildren(), child];
     await _saveChildren(children, activeId: activeChild()?.id ?? child.id);
@@ -154,10 +168,41 @@ class AgeSafetyProfileService {
   }
 
   Future<void> updateChild(ChildProfile child) async {
+    final ChildProfile updatedChild = child.profileFollowsBirthDate
+        ? child.copyWith(
+            preset: AgeSafetyProfilePreset.defaults[
+              AgeSafetyProfileRecommendation.forBirthDate(child.birthDate)
+            ]!,
+          )
+        : child;
     final List<ChildProfile> children = loadChildren()
-        .map((ChildProfile item) => item.id == child.id ? child : item)
+        .map((ChildProfile item) => item.id == updatedChild.id ? updatedChild : item)
         .toList(growable: false);
-    await _saveChildren(children, activeId: activeChild()?.id ?? child.id);
+    await _saveChildren(children, activeId: activeChild()?.id ?? updatedChild.id);
+  }
+
+  /// Updates only profiles previously marked as birth-date recommendations.
+  /// Parent-selected or edited profiles deliberately remain unchanged.
+  Future<bool> refreshAutomaticAgeProfiles({DateTime? now}) async {
+    final List<ChildProfile> children = loadChildren();
+    if (children.isEmpty) return false;
+    var changed = false;
+    final List<ChildProfile> updated = children.map((ChildProfile child) {
+      if (!child.profileFollowsBirthDate) return child;
+      final AgeSafetyProfile recommended =
+          AgeSafetyProfileRecommendation.forBirthDate(child.birthDate, onDate: now);
+      if (child.preset.profile == recommended) return child;
+      changed = true;
+      return child.copyWith(
+        preset: AgeSafetyProfilePreset.defaults[recommended]!,
+      );
+    }).toList(growable: false);
+    if (!changed) return false;
+    await _saveChildren(
+      updated,
+      activeId: activeChild()?.id ?? updated.first.id,
+    );
+    return true;
   }
 
   Future<void> setActiveChild(String childId) async {

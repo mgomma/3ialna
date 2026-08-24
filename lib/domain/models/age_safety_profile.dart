@@ -5,6 +5,22 @@ enum AgeSafetyProfile {
   teenagers,
 }
 
+class AgeSafetyProfileRecommendation {
+  const AgeSafetyProfileRecommendation._();
+
+  static AgeSafetyProfile forBirthDate(DateTime birthDate, {DateTime? onDate}) {
+    final DateTime today = onDate ?? DateTime.now();
+    int age = today.year - birthDate.year;
+    if (DateTime(today.year, birthDate.month, birthDate.day).isAfter(today)) {
+      age -= 1;
+    }
+    if (age < 5) return AgeSafetyProfile.underFive;
+    if (age < 9) return AgeSafetyProfile.agesFiveToNine;
+    if (age < 13) return AgeSafetyProfile.agesNineToThirteen;
+    return AgeSafetyProfile.teenagers;
+  }
+}
+
 class AgeSafetyProfilePreset {
   const AgeSafetyProfilePreset({
     required this.profile,

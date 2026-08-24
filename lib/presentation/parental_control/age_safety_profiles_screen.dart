@@ -74,6 +74,7 @@ class _AgeSafetyProfilesScreenState extends State<AgeSafetyProfilesScreen> {
     final TextEditingController name = TextEditingController(text: child?.name ?? '');
     DateTime birthDate = child?.birthDate ?? DateTime.now();
     ChildGender gender = child?.gender ?? ChildGender.unspecified;
+    bool profileFollowsBirthDate = child?.profileFollowsBirthDate ?? true;
     final ChildProfile? result = await showDialog<ChildProfile>(
       context: context,
       builder: (BuildContext dialogContext) => StatefulBuilder(
@@ -92,6 +93,23 @@ class _AgeSafetyProfilesScreenState extends State<AgeSafetyProfilesScreen> {
                   if (selected != null) setDialogState(() => birthDate = selected);
                 },
               ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(_ar
+                    ? 'اختيار الملف حسب تاريخ الميلاد'
+                    : 'Choose profile from birth date'),
+                subtitle: Text(profileFollowsBirthDate
+                    ? (_ar
+                        ? 'الملف المقترح: ${AgeSafetyProfilePreset.defaults[AgeSafetyProfileRecommendation.forBirthDate(birthDate)]!.nameAr}'
+                        : 'Recommended: ${AgeSafetyProfilePreset.defaults[AgeSafetyProfileRecommendation.forBirthDate(birthDate)]!.nameEn}')
+                    : (_ar
+                        ? 'يبقى اختيار الوالد وتعديلاته محفوظين.'
+                        : 'The parent-selected profile and edits remain protected.')),
+                value: profileFollowsBirthDate,
+                onChanged: (bool value) => setDialogState(
+                  () => profileFollowsBirthDate = value,
+                ),
+              ),
               DropdownButtonFormField<ChildGender>(
                 key: ValueKey<ChildGender>(gender),
                 initialValue: gender,
@@ -107,14 +125,14 @@ class _AgeSafetyProfilesScreenState extends State<AgeSafetyProfilesScreen> {
           ),
           actions: <Widget>[
             TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(_ar ? 'إلغاء' : 'Cancel')),
-            FilledButton(onPressed: () => Navigator.pop(dialogContext, ChildProfile(id: child?.id ?? '', name: name.text, birthDate: birthDate, gender: gender, preset: child?.preset ?? AgeSafetyProfilePreset.defaults[AgeSafetyProfile.underFive]!)), child: Text(_ar ? 'حفظ' : 'Save')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, ChildProfile(id: child?.id ?? '', name: name.text, birthDate: birthDate, gender: gender, preset: child?.preset ?? AgeSafetyProfilePreset.defaults[AgeSafetyProfile.underFive]!, profileFollowsBirthDate: profileFollowsBirthDate)), child: Text(_ar ? 'حفظ' : 'Save')),
           ],
         ),
       ),
     );
     if (result == null) return;
     if (child == null) {
-      await _service!.addChild(name: result.name, birthDate: result.birthDate, gender: result.gender);
+      await _service!.addChild(name: result.name, birthDate: result.birthDate, gender: result.gender, profileFollowsBirthDate: result.profileFollowsBirthDate);
     } else {
       await _service!.updateChild(result);
     }
@@ -169,6 +187,17 @@ class _AgeSafetyProfilesScreenState extends State<AgeSafetyProfilesScreen> {
         Align(alignment: AlignmentDirectional.centerStart, child: TextButton.icon(icon: const Icon(Icons.manage_accounts_outlined), label: Text(_ar ? 'إدارة الأطفال' : 'Manage children'), onPressed: _manageChildren)),
         const Divider(height: 32),
         Text(_ar ? 'ملف ${_active!.name}' : '${_active!.name}\'s profile', style: Theme.of(context).textTheme.titleLarge),
+        Text(
+          _active!.profileFollowsBirthDate
+              ? (_ar
+                  ? 'يُحدّث الملف المقترح تلقائيًا عند تغيّر الفئة العمرية.'
+                  : 'The recommended profile updates automatically when the age band changes.')
+              : (_ar
+                  ? 'هذا الملف اختاره أو عدّله الوالد؛ لن يتغير تلقائيًا.'
+                  : 'This profile was selected or edited by a parent and will not change automatically.'),
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 8),
         RadioGroup<AgeSafetyProfile>(
           groupValue: preset.profile,
           onChanged: (AgeSafetyProfile? profile) async { if (profile != null) { await _service!.select(profile); await _load(); } },
