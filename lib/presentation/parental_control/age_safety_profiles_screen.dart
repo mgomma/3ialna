@@ -6,6 +6,7 @@ import '../../data/local/locale_controller.dart';
 import '../../data/system/child_shortcut_service.dart';
 import '../../domain/models/age_safety_profile.dart';
 import '../../domain/models/child_profile.dart';
+import 'widgets/children_management_list.dart';
 
 class AgeSafetyProfilesScreen extends StatefulWidget {
   const AgeSafetyProfilesScreen({super.key, this.openChildManagerOnStart = false});
@@ -126,18 +127,23 @@ class _AgeSafetyProfilesScreenState extends State<AgeSafetyProfilesScreen> {
       builder: (BuildContext sheetContext) => SafeArea(
         child: ListView(shrinkWrap: true, padding: const EdgeInsets.all(16), children: <Widget>[
           Row(children: <Widget>[Expanded(child: Text(_ar ? 'الأطفال على هذا الجهاز' : 'Children on this device', style: Theme.of(context).textTheme.titleLarge)), IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(sheetContext))]),
-          ..._children.map((ChildProfile child) => ListTile(
-            selected: child.id == _active?.id,
-            leading: CircleAvatar(child: Text(child.name.isEmpty ? '?' : child.name.substring(0, 1).toUpperCase())),
-            title: Text(child.name),
-            subtitle: Text('${child.ageYears} ${_ar ? 'سنة' : 'years'} · ${_gender(child.gender)}'),
-            onTap: () async { await _setActive(child.id); if (sheetContext.mounted) Navigator.pop(sheetContext); },
-            trailing: Wrap(children: <Widget>[
-              IconButton(icon: const Icon(Icons.edit_outlined), onPressed: () async => _editChild(child: child)),
-              if (_children.length > 1) IconButton(icon: const Icon(Icons.delete_outline), onPressed: () async { await _service!.removeChild(child.id); if (sheetContext.mounted) Navigator.pop(sheetContext); await _load(); }),
-            ]),
-          )),
-          TextButton.icon(icon: const Icon(Icons.person_add_alt_1), label: Text(_ar ? 'إضافة طفل' : 'Add child'), onPressed: () async => _editChild()),
+          ChildrenManagementList(
+            children: _children,
+            activeChildId: _active?.id,
+            isArabic: _ar,
+            detailsFor: (ChildProfile child) => '${child.ageYears} ${_ar ? 'سنة' : 'years'} · ${_gender(child.gender)}',
+            onSelect: (ChildProfile child) async {
+              await _setActive(child.id);
+              if (sheetContext.mounted) Navigator.pop(sheetContext);
+            },
+            onEdit: (ChildProfile child) async => _editChild(child: child),
+            onAdd: () async => _editChild(),
+            onDelete: (ChildProfile child) async {
+              await _service!.removeChild(child.id);
+              if (sheetContext.mounted) Navigator.pop(sheetContext);
+              await _load();
+            },
+          ),
         ]),
       ),
     );
