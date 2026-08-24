@@ -388,7 +388,7 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
               onTap: () {
                 Navigator.of(context).push(
                   MaterialPageRoute<void>(
-                    builder: (_) => const VoiceReminderRecordingScreen(
+                    builder: (_) => VoiceReminderRecordingScreen(
                       recordingKey: ParentVoiceNotificationService.prayerReminderRecordingKey,
                       title: _text('Prayer reminder voice', 'صوت تذكير الصلاة'),
                       description: _text('Record a parent voice note for the child to hear after opening a prayer reminder.', 'سجّل ملاحظة بصوت الوالدين ليستمع إليها الطفل بعد فتح تذكير الصلاة.'),
