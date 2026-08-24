@@ -9,6 +9,31 @@ class PrayerVoiceReminderSchedule {
 
   static const int scheduleDays = 7;
 
+  /// Rebuilds the upcoming native alarm plan after the device has restarted.
+  static List<DateTime> refreshAfterReboot({
+    required PrayerTimeService prayerTimeService,
+    required PrayerLockSettings settings,
+    required DateTime now,
+  }) =>
+      upcomingTimes(
+        prayerTimeService: prayerTimeService,
+        settings: settings,
+        now: now,
+      );
+
+  /// Rebuilds the plan from the current local clock after the user returns to
+  /// 3ialna following a device time-zone change.
+  static List<DateTime> refreshAfterTimeZoneChange({
+    required PrayerTimeService prayerTimeService,
+    required PrayerLockSettings settings,
+    required DateTime localNow,
+  }) =>
+      upcomingTimes(
+        prayerTimeService: prayerTimeService,
+        settings: settings,
+        now: localNow,
+      );
+
   static List<DateTime> upcomingTimes({
     required PrayerTimeService prayerTimeService,
     required PrayerLockSettings settings,
