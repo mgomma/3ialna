@@ -25,5 +25,15 @@ enum Prayer {
       Prayer.isha => 'Isha',
     };
   }
-}
 
+  /// Returns the Arabic prayer name for Arabic-first screens and notifications.
+  String get arabicDisplayName {
+    return switch (this) {
+      Prayer.fajr => 'الفجر',
+      Prayer.dhuhr => 'الظهر',
+      Prayer.asr => 'العصر',
+      Prayer.maghrib => 'المغرب',
+      Prayer.isha => 'العشاء',
+    };
+  }
+}

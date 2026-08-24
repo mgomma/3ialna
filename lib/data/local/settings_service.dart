@@ -164,7 +164,14 @@ class SettingsService {
         for (final MapEntry<String, dynamic> entry in messages.entries) {
           final Prayer? prayer = _prayerFromString(entry.key);
           if (prayer != null) {
-            notificationMessages[prayer] = entry.value as String;
+            final String message = entry.value as String;
+            notificationMessages[prayer] =
+                PrayerLockSettings.isLegacyDefaultNotificationMessage(
+              prayer,
+              message,
+            )
+                    ? PrayerLockSettings.defaultNotificationMessage(prayer)
+                    : message;
           }
         }
       }
@@ -174,7 +181,8 @@ class SettingsService {
         // Preserve an explicit false while defaulting incomplete records on.
         enabled: json['enabled'] as bool? ?? PrayerLockSettings.defaults().enabled,
         lockDurations: lockDurations.isEmpty ? PrayerLockSettings.defaults().lockDurations : lockDurations,
-        fridayDhuhrDuration: json['fridayDhuhrDuration'] as int? ?? 30,
+        fridayDhuhrDuration: json['fridayDhuhrDuration'] as int? ??
+            PrayerLockSettings.defaultLockDurationMinutes,
         calculationMethodName:
             prayerCalculationMethodOverride ??
             json['calculationMethod'] as String? ??

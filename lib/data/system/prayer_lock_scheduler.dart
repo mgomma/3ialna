@@ -151,14 +151,12 @@ class PrayerLockScheduler {
           prayerTime.subtract(const Duration(minutes: 2));
 
       if (notificationTime.isAfter(now)) {
-        final String message =
-            settings.notificationMessages[prayer] ??
-                'Prayer time is approaching. '
-                    'Your device will be locked in 2 minutes.';
+        final String message = settings.notificationMessages[prayer] ??
+            PrayerLockSettings.defaultNotificationMessage(prayer);
 
         await _notificationService.scheduleNotification(
           id: _getNotificationId(prayer),
-          title: '${prayer.displayName} Prayer Time',
+          title: 'وقت صلاة ${prayer.arabicDisplayName}',
           body: message,
           scheduledDate: notificationTime,
           voiceAction: settings.voiceNotificationsEnabled

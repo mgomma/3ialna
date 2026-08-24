@@ -1493,12 +1493,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(
-                    'Next Prayer: ${nextPrayer.prayer.displayName}',
+                    _isArabic
+                        ? 'الصلاة القادمة: ${nextPrayer.prayer.arabicDisplayName}'
+                        : 'Next Prayer: ${nextPrayer.prayer.displayName}',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
                   Text(timeString, style: Theme.of(context).textTheme.bodyMedium),
-                  Text('At ${_formatTime(nextPrayer.time)}', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey)),
+                  Text(
+                    _isArabic
+                        ? 'الساعة ${_formatTime(nextPrayer.time)}'
+                        : 'At ${_formatTime(nextPrayer.time)}',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: Colors.grey),
+                  ),
                 ],
               ),
             ),
@@ -1510,15 +1520,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   String _formatDuration(Duration duration) {
     if (duration.isNegative) {
-      return 'Prayer time passed';
+      return _isArabic ? 'انقضى وقت الصلاة' : 'Prayer time passed';
     }
 
     if (duration.inDays > 0) {
-      return '${duration.inDays}d ${duration.inHours % 24}h';
+      return _isArabic
+          ? '${duration.inDays} يوم ${duration.inHours % 24} ساعة'
+          : '${duration.inDays}d ${duration.inHours % 24}h';
     } else if (duration.inHours > 0) {
-      return '${duration.inHours}h ${duration.inMinutes % 60}m';
+      return _isArabic
+          ? '${duration.inHours} ساعة ${duration.inMinutes % 60} دقيقة'
+          : '${duration.inHours}h ${duration.inMinutes % 60}m';
     } else {
-      return '${duration.inMinutes}m';
+      return _isArabic ? '${duration.inMinutes} دقيقة' : '${duration.inMinutes}m';
     }
   }
 
@@ -1527,7 +1541,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final DateTime localTime = time.toLocal();
     final int hour = localTime.hour;
     final int minute = localTime.minute;
-    final String period = hour >= 12 ? 'PM' : 'AM';
+    final String period = _isArabic
+        ? (hour >= 12 ? 'م' : 'ص')
+        : (hour >= 12 ? 'PM' : 'AM');
     final int displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
 
     // Get timezone abbreviation if available

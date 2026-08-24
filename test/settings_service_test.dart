@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mu_super_app/data/local/settings_service.dart';
+import 'package:mu_super_app/domain/models/prayer.dart';
 import 'package:mu_super_app/domain/models/prayer_lock_settings.dart';
 
 void main() {
@@ -77,5 +78,31 @@ void main() {
     expect(settings.featureWalkthroughSeen, isFalse);
     await settings.setFeatureWalkthroughSeen();
     expect(settings.featureWalkthroughSeen, isTrue);
+  });
+
+  test('uses the 15-minute default for incomplete saved prayer settings', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'prayer_lock_settings': '{"enabled":true}',
+    });
+    final SettingsService settings =
+        SettingsService(await SharedPreferences.getInstance());
+
+    final PrayerLockSettings loaded = settings.loadPrayerLockSettings();
+    expect(loaded.lockDurations[Prayer.fajr], 15);
+    expect(loaded.fridayDhuhrDuration, 15);
+  });
+
+  test('migrates only legacy English default prayer notifications to Arabic',
+      () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'prayer_lock_settings': '{"notificationMessages":{"fajr":"Fajr prayer time is approaching. Your device will be locked in 2 minutes.","asr":"رسالة الوالد المخصصة"}}',
+    });
+    final SettingsService settings =
+        SettingsService(await SharedPreferences.getInstance());
+
+    final PrayerLockSettings loaded = settings.loadPrayerLockSettings();
+    expect(loaded.notificationMessages[Prayer.fajr],
+        'اقترب وقت صلاة الفجر. سيُقفل الجهاز بعد دقيقتين.');
+    expect(loaded.notificationMessages[Prayer.asr], 'رسالة الوالد المخصصة');
   });
 }

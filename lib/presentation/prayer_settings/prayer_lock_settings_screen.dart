@@ -302,8 +302,8 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
                       child: TextField(
                         keyboardType: TextInputType.number,
                         decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true),
-                        controller: TextEditingController(text: (_settings.lockDurations[prayer] ?? 30).toString())
-                          ..selection = TextSelection.fromPosition(TextPosition(offset: (_settings.lockDurations[prayer] ?? 30).toString().length)),
+                        controller: TextEditingController(text: (_settings.lockDurations[prayer] ?? PrayerLockSettings.defaultLockDurationMinutes).toString())
+                          ..selection = TextSelection.fromPosition(TextPosition(offset: (_settings.lockDurations[prayer] ?? PrayerLockSettings.defaultLockDurationMinutes).toString().length)),
                         onChanged: (String value) {
                           final int? duration = int.tryParse(value);
                           if (duration != null && duration > 0) {

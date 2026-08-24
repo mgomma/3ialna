@@ -4,8 +4,10 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/local/age_safety_profile_service.dart';
 import '../../data/local/locale_controller.dart';
+import '../../data/local/settings_service.dart';
 import '../../data/system/educational_expert_mailto.dart';
 import '../../domain/models/child_profile.dart';
+import '../../domain/validation/country_mobile_phone_validator.dart';
 
 class EducationalExpertContactScreen extends StatefulWidget {
   const EducationalExpertContactScreen({super.key});
@@ -24,6 +26,7 @@ class _EducationalExpertContactScreenState
         'أرغب في التواصل مع خبير تربوي لمساعدتي في إعدادات عيالنا. أحتاج المساعدة في: ',
   );
   List<ChildProfile> _children = <ChildProfile>[];
+  String _country = 'Saudi Arabia';
   bool _includeChildren = false;
   bool _loading = true;
 
@@ -36,18 +39,24 @@ class _EducationalExpertContactScreenState
   }
 
   Future<void> _loadChildren() async {
-    final AgeSafetyProfileService service =
-        AgeSafetyProfileService(await SharedPreferences.getInstance());
+    final SharedPreferences preferences = await SharedPreferences.getInstance();
+    final AgeSafetyProfileService service = AgeSafetyProfileService(preferences);
+    final SettingsService settings = SettingsService(preferences);
     await service.ensureDefaultChild();
     if (!mounted) return;
     setState(() {
       _children = service.loadChildren();
+      _country = CountryMobilePhoneValidator.canonicalCountry(
+        settings.selectedCountry,
+      );
       _loading = false;
     });
   }
 
   String _childDetails() {
-    if (_children.isEmpty) return _ar ? 'لا توجد ملفات أطفال.' : 'No child profiles.';
+    if (_children.isEmpty) {
+      return _ar ? 'لا توجد ملفات أطفال.' : 'No child profiles.';
+    }
     return _children
         .map((ChildProfile child) => _ar
             ? '- ${child.name}: ${child.ageYears} سنة'
@@ -55,8 +64,33 @@ class _EducationalExpertContactScreenState
         .join('\n');
   }
 
+  CountryMobilePhoneValidation _validateMobileNumber(String value) =>
+      CountryMobilePhoneValidator.validate(country: _country, input: value);
+
+  String? _mobileValidationError(String? value) {
+    final CountryMobilePhoneValidation validation =
+        _validateMobileNumber(value ?? '');
+    if (validation.isValid) return null;
+    final String callingCode =
+        CountryMobilePhoneValidator.callingCodeFor(_country);
+    if (validation.error == 'missing') {
+      return _ar ? 'أدخل رقم الجوال.' : 'Enter a mobile number.';
+    }
+    if (validation.error == 'countryCode') {
+      return _ar
+          ? 'استخدم رمز الدولة $callingCode أو رقم جوال محليًا للدولة المحددة.'
+          : 'Use country code $callingCode or a local mobile number for the selected country.';
+    }
+    return _ar
+        ? 'أدخل رقم جوال صحيحًا للدولة المحددة ($callingCode).'
+        : 'Enter a valid mobile number for the selected country ($callingCode).';
+  }
+
   Future<void> _openEmailDraft() async {
     if (!_formKey.currentState!.validate()) return;
+    final CountryMobilePhoneValidation phoneValidation =
+        _validateMobileNumber(_phone.text);
+    if (!phoneValidation.isValid) return;
     if (!_includeChildren) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -69,8 +103,8 @@ class _EducationalExpertContactScreenState
     }
 
     final String body = _ar
-        ? 'طلب تواصل مع خبير تربوي\n\nرقم الجوال: ${_phone.text.trim()}\n\nتفاصيل المساعدة المطلوبة:\n${_details.text.trim()}\n\nأسماء الأطفال وأعمارهم (بموافقة الوالد):\n${_childDetails()}'
-        : 'Educational expert contact request\n\nMobile: ${_phone.text.trim()}\n\nRequested help:\n${_details.text.trim()}\n\nChildren’s names and ages (with parent consent):\n${_childDetails()}';
+        ? 'طلب تواصل مع خبير تربوي\n\nرقم الجوال: ${phoneValidation.e164}\n\nتفاصيل المساعدة المطلوبة:\n${_details.text.trim()}\n\nأسماء الأطفال وأعمارهم (بموافقة الوالد):\n${_childDetails()}'
+        : 'Educational expert contact request\n\nMobile: ${phoneValidation.e164}\n\nRequested help:\n${_details.text.trim()}\n\nChildren’s names and ages (with parent consent):\n${_childDetails()}';
     final Uri email = buildEducationalExpertMailto(
       subject: 'طلب تواصل مع خبير تربوى',
       body: body,
@@ -96,9 +130,19 @@ class _EducationalExpertContactScreenState
 
   @override
   Widget build(BuildContext context) {
+    final String countryName = CountryMobilePhoneValidator.countryNameFor(
+      _country,
+      isArabic: _ar,
+    );
+    final String callingCode = CountryMobilePhoneValidator.callingCodeFor(
+      _country,
+    );
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(_ar ? 'طلب تواصل مع خبير تربوى' : 'Request an educational expert'),
+        title: Text(
+          _ar ? 'طلب تواصل مع خبير تربوى' : 'Request an educational expert',
+        ),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -118,12 +162,14 @@ class _EducationalExpertContactScreenState
                     controller: _phone,
                     keyboardType: TextInputType.phone,
                     decoration: InputDecoration(
-                      labelText: _ar ? 'رقم الجوال للتواصل' : 'Mobile number for contact',
+                      labelText:
+                          _ar ? 'رقم الجوال للتواصل' : 'Mobile number for contact',
+                      helperText: _ar
+                          ? 'الدولة المحددة: $countryName ($callingCode).'
+                          : 'Selected country: $countryName ($callingCode).',
                       border: const OutlineInputBorder(),
                     ),
-                    validator: (String? value) => value == null || value.trim().length < 5
-                        ? (_ar ? 'أدخل رقم جوال صحيحًا.' : 'Enter a valid mobile number.')
-                        : null,
+                    validator: _mobileValidationError,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
@@ -131,12 +177,17 @@ class _EducationalExpertContactScreenState
                     minLines: 4,
                     maxLines: 8,
                     decoration: InputDecoration(
-                      labelText: _ar ? 'كيف يمكن للخبير مساعدتك؟' : 'How can the expert help?',
+                      labelText: _ar
+                          ? 'كيف يمكن للخبير مساعدتك؟'
+                          : 'How can the expert help?',
                       border: const OutlineInputBorder(),
                     ),
-                    validator: (String? value) => value == null || value.trim().isEmpty
-                        ? (_ar ? 'أدخل تفاصيل الطلب.' : 'Enter request details.')
-                        : null,
+                    validator: (String? value) =>
+                        value == null || value.trim().isEmpty
+                            ? (_ar
+                                ? 'أدخل تفاصيل الطلب.'
+                                : 'Enter request details.')
+                            : null,
                   ),
                   const SizedBox(height: 16),
                   Card(
@@ -145,8 +196,12 @@ class _EducationalExpertContactScreenState
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          Text(_ar ? 'سيظهر في مسودة البريد:' : 'The email draft will include:',
-                              style: Theme.of(context).textTheme.titleSmall),
+                          Text(
+                            _ar
+                                ? 'سيظهر في مسودة البريد:'
+                                : 'The email draft will include:',
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
                           const SizedBox(height: 8),
                           Text(_childDetails()),
                         ],
@@ -158,18 +213,22 @@ class _EducationalExpertContactScreenState
                     value: _includeChildren,
                     onChanged: (bool? value) =>
                         setState(() => _includeChildren = value ?? false),
-                    title: Text(_ar
-                        ? 'أوافق على تضمين أسماء الأطفال وأعمارهم في هذه الرسالة إلى الخبير.'
-                        : 'I agree to include children’s names and ages in this email to the expert.'),
+                    title: Text(
+                      _ar
+                          ? 'أوافق على تضمين أسماء الأطفال وأعمارهم في هذه الرسالة إلى الخبير.'
+                          : 'I agree to include children’s names and ages in this email to the expert.',
+                    ),
                     controlAffinity: ListTileControlAffinity.leading,
                   ),
                   const SizedBox(height: 10),
                   FilledButton.icon(
                     onPressed: _openEmailDraft,
                     icon: const Icon(Icons.email_outlined),
-                    label: Text(_ar
-                        ? 'فتح مسودة البريد للمراجعة والإرسال'
-                        : 'Open email draft to review and send'),
+                    label: Text(
+                      _ar
+                          ? 'فتح مسودة البريد للمراجعة والإرسال'
+                          : 'Open email draft to review and send',
+                    ),
                   ),
                 ],
               ),

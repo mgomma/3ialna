@@ -43,7 +43,7 @@ class PrayerLockSettings {
     if (prayer == Prayer.dhuhr && _isFriday(date)) {
       return fridayDhuhrDuration;
     }
-    return lockDurations[prayer] ?? 30;
+    return lockDurations[prayer] ?? defaultLockDurationMinutes;
   }
 
   /// Checks if the given date is a Friday.
@@ -80,7 +80,7 @@ class PrayerLockSettings {
 
   /// Creates default settings.
   factory PrayerLockSettings.defaults() {
-    const int defaultDuration = 30;
+    const int defaultDuration = defaultLockDurationMinutes;
     return PrayerLockSettings(
       enabled: true,
       lockDurations: {
@@ -93,17 +93,21 @@ class PrayerLockSettings {
       fridayDhuhrDuration: defaultDuration,
       calculationMethodName: 'makkah',
       notificationMessages: {
-        Prayer.fajr: 'Fajr prayer time is approaching. '
-            'Your device will be locked in 2 minutes.',
-        Prayer.dhuhr: 'Dhuhr prayer time is approaching. '
-            'Your device will be locked in 2 minutes.',
-        Prayer.asr: 'Asr prayer time is approaching. '
-            'Your device will be locked in 2 minutes.',
-        Prayer.maghrib: 'Maghrib prayer time is approaching. '
-            'Your device will be locked in 2 minutes.',
-        Prayer.isha: 'Isha prayer time is approaching. '
-            'Your device will be locked in 2 minutes.',
+        Prayer.fajr: defaultNotificationMessage(Prayer.fajr),
+        Prayer.dhuhr: defaultNotificationMessage(Prayer.dhuhr),
+        Prayer.asr: defaultNotificationMessage(Prayer.asr),
+        Prayer.maghrib: defaultNotificationMessage(Prayer.maghrib),
+        Prayer.isha: defaultNotificationMessage(Prayer.isha),
       },
     );
   }
+
+  static const int defaultLockDurationMinutes = 15;
+
+  static String defaultNotificationMessage(Prayer prayer) =>
+      'اقترب وقت صلاة ${prayer.arabicDisplayName}. سيُقفل الجهاز بعد دقيقتين.';
+
+  static bool isLegacyDefaultNotificationMessage(Prayer prayer, String value) =>
+      value == '${prayer.displayName} prayer time is approaching. '
+          'Your device will be locked in 2 minutes.';
 }
