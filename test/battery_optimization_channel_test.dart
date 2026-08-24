@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mu_super_app/data/system/parent_voice_notification_service.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   const MethodChannel channel = MethodChannel('parent_voice_notifications');
 
   tearDown(() {
