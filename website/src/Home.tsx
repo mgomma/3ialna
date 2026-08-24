@@ -71,6 +71,10 @@ const copy = {
     releaseChannel: "إصدار تجريبي عام",
     releaseButton: "تنزيل APK التجريبي",
     releaseNotice: "هذه نسخة تقييم موقعة بتوقيع debug وليست إصدار متجر. قد يطلب Android السماح بالتثبيت من المتصفح أو مدير الملفات.",
+    apkChoiceTitle: "اختر ملفًا أصغر يناسب هاتفك",
+    apkChoiceArm64: "معظم هواتف Android الحديثة · arm64",
+    apkChoiceArmv7: "هواتف Android أقدم · armv7",
+    apkChoiceX64: "محاكي Android · x86_64",
     requestInvite: "تحتاج إلى مساعدة؟ تواصل معنا",
     testerQrTitle: "امسح لتنزيل APK مباشرة",
     testerQrBody: "يفتح التنزيل على هاتف Android دون تسجيل دخول.",
@@ -143,6 +147,10 @@ const copy = {
     releaseChannel: "Public debug release",
     releaseButton: "Download debug APK",
     releaseNotice: "This is a debug-signed evaluation build, not a store release. Android may ask you to allow installation from your browser or file manager.",
+    apkChoiceTitle: "Choose a smaller APK for your device",
+    apkChoiceArm64: "Most modern Android phones · arm64",
+    apkChoiceArmv7: "Older Android phones · armv7",
+    apkChoiceX64: "Android emulator · x86_64",
     requestInvite: "Need help? Contact us",
     testerQrTitle: "Scan to download the APK directly",
     testerQrBody: "Opens the Android download without sign-in.",
@@ -172,6 +180,11 @@ export default function Home() {
   const releaseVersion = `${currentRelease.version} · ${isArabic ? "البنية" : "Build"} ${currentRelease.build}`;
   const releaseDate = new Intl.DateTimeFormat(isArabic ? "ar-SA" : "en-US", { dateStyle: "medium" }).format(new Date(currentRelease.publishedAt));
   const contactWasSubmitted = new URLSearchParams(window.location.search).get("sent") === "1";
+  const apkChoices = [
+    { key: "arm64", label: t.apkChoiceArm64, url: currentRelease.downloadUrls.arm64 },
+    { key: "armv7", label: t.apkChoiceArmv7, url: currentRelease.downloadUrls.armv7 },
+    { key: "x64", label: t.apkChoiceX64, url: currentRelease.downloadUrls.x64 },
+  ] as const;
 
   return (
     <div dir={isArabic ? "rtl" : "ltr"} className="site-shell">
@@ -198,7 +211,7 @@ export default function Home() {
 
         <section id="how" className="intro-band section-grid"><div><span className="section-kicker">02 / {isArabic ? "لماذا عيالنا" : "Why 3ialna"}</span><h2>{t.guide}</h2></div><p>{t.guideIntro}</p><div className="privacy-callout"><LockKeyhole size={20} /><div><b>{t.privacy}</b><span>{t.privacyBody}</span></div></div></section>
 
-        <section id="download" className="release-section section-grid"><div className="release-copy"><span className="section-kicker">{t.releaseKicker}</span><h2>{t.releaseTitle}</h2><p>{t.releaseBody}</p><a className="release-request" href="#contact"><Mail size={16} />{t.requestInvite}<ArrowUpRight size={15} /></a></div><div className="release-panel"><div className="release-status"><span className="release-pulse" aria-hidden="true" />{isArabic ? "إصدار متاح" : "Release available"}</div><div className="release-facts"><div><span>{isArabic ? "المنصة" : "Platform"}</span><b>{currentRelease.platform}</b></div><div><span>{isArabic ? "الإصدار" : "Version"}</span><b>{releaseVersion}</b></div><div><span>{isArabic ? "قناة التثبيت" : "Install channel"}</span><b>{t.releaseChannel}</b></div></div><a className="button release-button" href={currentRelease.downloadUrl} target="_blank" rel="noreferrer"><Download size={18} />{t.releaseButton}<ExternalLink size={16} /></a><p className="release-notice"><ShieldCheck size={17} />{t.releaseNotice}</p><p className="release-updated">{t.releaseUpdated}: {releaseDate}</p><div className="release-qr-grid"><div className="release-qr-card"><QRCodeSVG value={currentRelease.downloadUrl} size={128} level="M" includeMargin bgColor="#f7f3eb" fgColor="#174a3b" /><div><b>{t.testerQrTitle}</b><span>{t.testerQrBody}</span></div></div><div className="release-qr-card"><QRCodeSVG value={publicSiteUrl} size={128} level="M" includeMargin bgColor="#f7f3eb" fgColor="#174a3b" /><div><b>{t.siteQrTitle}</b><span>{t.siteQrBody}</span></div></div></div></div></section>
+        <section id="download" className="release-section section-grid"><div className="release-copy"><span className="section-kicker">{t.releaseKicker}</span><h2>{t.releaseTitle}</h2><p>{t.releaseBody}</p><a className="release-request" href="#contact"><Mail size={16} />{t.requestInvite}<ArrowUpRight size={15} /></a></div><div className="release-panel"><div className="release-status"><span className="release-pulse" aria-hidden="true" />{isArabic ? "إصدار متاح" : "Release available"}</div><div className="release-facts"><div><span>{isArabic ? "المنصة" : "Platform"}</span><b>{currentRelease.platform}</b></div><div><span>{isArabic ? "الإصدار" : "Version"}</span><b>{releaseVersion}</b></div><div><span>{isArabic ? "قناة التثبيت" : "Install channel"}</span><b>{t.releaseChannel}</b></div></div><a className="button release-button" href={currentRelease.downloadUrl} target="_blank" rel="noreferrer"><Download size={18} />{t.releaseButton}<ExternalLink size={16} /></a><div className="apk-choice-list"><b>{t.apkChoiceTitle}</b>{apkChoices.map((choice) => <a key={choice.key} href={choice.url} target="_blank" rel="noreferrer"><Download size={14} />{choice.label}<ExternalLink size={13} /></a>)}</div><p className="release-notice"><ShieldCheck size={17} />{t.releaseNotice}</p><p className="release-updated">{t.releaseUpdated}: {releaseDate}</p><div className="release-qr-grid"><div className="release-qr-card"><QRCodeSVG value={currentRelease.downloadUrl} size={128} level="M" includeMargin bgColor="#f7f3eb" fgColor="#174a3b" /><div><b>{t.testerQrTitle}</b><span>{t.testerQrBody}</span></div></div><div className="release-qr-card"><QRCodeSVG value={publicSiteUrl} size={128} level="M" includeMargin bgColor="#f7f3eb" fgColor="#174a3b" /><div><b>{t.siteQrTitle}</b><span>{t.siteQrBody}</span></div></div></div></div></section>
 
         <section id="setup" className="setup-section section-grid"><div className="sticky-heading"><span className="section-kicker">04 / {isArabic ? "الدليل العملي" : "The practical guide"}</span><h2>{t.install}</h2><p>{t.installIntro}</p><a className="button dark-button" href="#profiles"><ArrowDown size={17} />{isArabic ? "تابع إلى الملفات" : "Continue to profiles"}</a></div><div className="steps">{t.steps.map(([title, body], index) => <article className="step" key={title}><div className="step-index">{String(index + 1).padStart(2, "0")}</div><div><h3>{title}</h3><p>{body}</p></div><Check size={18} className="step-check" /></article>)}</div><div className="installation-details"><article><h3>{t.androidInstallTitle}</h3><ol>{t.androidInstallSteps.map((step) => <li key={step}>{step}</li>)}</ol></article><article><h3>{t.iosInstallTitle}</h3><ol>{t.iosInstallSteps.map((step) => <li key={step}>{step}</li>)}</ol></article><aside><h3>{t.packTitle}</h3><p>{t.packBody}</p></aside></div></section>
 

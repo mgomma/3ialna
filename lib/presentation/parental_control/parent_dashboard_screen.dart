@@ -45,6 +45,32 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
 
   bool get _isIos => Platform.isIOS;
 
+  bool get _isArabic => Localizations.localeOf(context).languageCode == 'ar';
+
+  Future<void> _openSupportEmail() async {
+    final Uri email = Uri(
+      scheme: 'mailto',
+      path: '3ialna.app@gmail.com',
+      queryParameters: <String, String>{
+        'subject': '3ialna Help & Support',
+      },
+    );
+    if (!await launchUrl(email, mode: LaunchMode.externalApplication) && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_isArabic ? 'تعذر فتح تطبيق البريد. اكتب إلى 3ialna.app@gmail.com' : 'Could not open email. Write to 3ialna.app@gmail.com')),
+      );
+    }
+  }
+
+  Future<void> _openAboutWebsite() async {
+    final Uri website = Uri.parse('https://mgomma.github.io/3ialna/');
+    if (!await launchUrl(website, mode: LaunchMode.externalApplication) && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_isArabic ? 'تعذر فتح موقع عيالنا.' : 'Could not open the 3ialna website.')),
+      );
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -451,7 +477,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                   ),
                   _ActionCard(
                     icon: Icons.contact_support_outlined,
-                    label: 'Contact 3ialna',
+                    label: _isArabic ? 'نموذج التواصل' : 'Contact form',
                     color: colorScheme.secondary,
                     onTap: () async {
                       final Uri contact = Uri.parse('https://mgomma.github.io/3ialna/#contact');
@@ -459,6 +485,18 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open the 3ialna contact form.')));
                       }
                     },
+                  ),
+                  _ActionCard(
+                    icon: Icons.mark_email_unread_outlined,
+                    label: _isArabic ? 'المساعدة والدعم' : 'Help & Support',
+                    color: colorScheme.tertiary,
+                    onTap: _openSupportEmail,
+                  ),
+                  _ActionCard(
+                    icon: Icons.info_outline,
+                    label: _isArabic ? 'عن عيالنا' : 'About 3ialna',
+                    color: colorScheme.primary,
+                    onTap: _openAboutWebsite,
                   ),
                 ],
               ),
