@@ -87,6 +87,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _essentialPermissionGuideInProgress = false;
   bool _homeSettingsInitialized = false;
 
+  bool get _isArabic => LocaleController.instance.isArabic;
+
   @override
   void initState() {
     super.initState();
