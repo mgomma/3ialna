@@ -59,6 +59,8 @@ button { font: inherit; }
 .release-facts b { font-size: 12px; line-height: 1.5; }
 .release-button { position: relative; z-index: 1; background: #e8bf78; color: var(--green-2); }
 .release-button:hover { background: #f1cf91; }
+.release-detection { position: relative; z-index: 1; display: flex; align-items: flex-start; gap: 8px; max-width: 540px; margin: 14px 0 0; color: rgba(255,255,255,.74); font-size: 11px; line-height: 1.7; }
+.release-detection svg { flex: 0 0 auto; margin-top: 2px; color: #e8bf78; }
 .apk-choice-list { position: relative; z-index: 1; display: grid; gap: 8px; margin-top: 20px; max-width: 440px; color: rgba(255,255,255,.74); font-size: 11px; }
 .apk-choice-list > b { color: #e8bf78; font-size: 11px; }
 .apk-choice-list a { display: inline-flex; align-items: center; gap: 7px; width: fit-content; color: rgba(255,255,255,.9); border-bottom: 1px solid rgba(232,191,120,.35); padding-bottom: 3px; }

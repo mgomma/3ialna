@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, ArrowUpRight, Check, ChevronDown, CircleHelp, Clock3, Download, ExternalLink, Globe2, LockKeyhole, Mail, Mic2, RotateCcw, Send, ShieldCheck, Smartphone, Sparkles } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { currentRelease } from "./release.generated";
@@ -10,6 +10,20 @@ const privacyIcons = [LockKeyhole, Mic2, RotateCcw, Clock3];
 const publicSiteUrl = "https://mgomma.github.io/3ialna/";
 
 type Language = "ar" | "en";
+type AndroidAbi = "arm64" | "armv7";
+type DetectionState = "checking" | AndroidAbi | "unknown";
+
+type UserAgentData = {
+  platform?: string;
+  getHighEntropyValues?: (hints: string[]) => Promise<{
+    architecture?: string;
+    bitness?: string;
+  }>;
+};
+
+type NavigatorWithUserAgentData = Navigator & {
+  userAgentData?: UserAgentData;
+};
 
 const copy = {
   ar: {
@@ -74,6 +88,10 @@ const copy = {
     apkChoiceTitle: "إذا لم يتم التثبيت، جرّب البديل المناسب لهاتفك",
     apkChoiceArm64: "بديل للهواتف الحديثة التي لا تقبل النسخة الأصغر · arm64",
     apkChoiceArmv7: "النسخة الأصغر للتجربة أولاً · armv7",
+    autoChoiceChecking: "يتم فحص توافق المعالج محليًا…",
+    autoChoiceArm64: "اكتشف المتصفح ARM64؛ تم اختيار arm64 تلقائيًا.",
+    autoChoiceArmv7: "اكتشف المتصفح معالجًا غير ARM64؛ تم اختيار armv7 الأصغر تلقائيًا.",
+    autoChoiceUnknown: "لم يشارك المتصفح معمارية المعالج؛ أبقينا armv7 الأصغر. اختر arm64 يدويًا إذا لم يتم التثبيت.",
     requestInvite: "تحتاج إلى مساعدة؟ تواصل معنا",
     testerQrTitle: "امسح لتنزيل النسخة الأصغر",
     testerQrBody: "يفتح تنزيل armv7 على هاتف Android دون تسجيل دخول.",
@@ -149,6 +167,10 @@ const copy = {
     apkChoiceTitle: "If installation fails, try the compatible alternative",
     apkChoiceArm64: "Fallback for modern phones that cannot install the smaller build · arm64",
     apkChoiceArmv7: "Smaller build to try first · armv7",
+    autoChoiceChecking: "Checking processor compatibility on this device…",
+    autoChoiceArm64: "The browser reported ARM64; arm64 was selected automatically.",
+    autoChoiceArmv7: "The browser reported a non-ARM64 processor; the smaller armv7 build was selected automatically.",
+    autoChoiceUnknown: "The browser did not share CPU architecture; the smaller armv7 build remains selected. Choose arm64 manually if installation fails.",
     requestInvite: "Need help? Contact us",
     testerQrTitle: "Scan to download the smaller APK",
     testerQrBody: "Opens the armv7 Android download without sign-in.",
@@ -173,12 +195,53 @@ const copy = {
 export default function Home() {
   const [language, setLanguage] = useState<Language>("ar");
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [detectedAbi, setDetectedAbi] = useState<AndroidAbi>("armv7");
+  const [detectionState, setDetectionState] = useState<DetectionState>("checking");
   const t = useMemo(() => copy[language], [language]);
   const isArabic = language === "ar";
+
+  useEffect(() => {
+    let isCurrent = true;
+    const userAgentData = (navigator as NavigatorWithUserAgentData).userAgentData;
+
+    if (userAgentData?.platform?.toLowerCase() !== "android" || !userAgentData.getHighEntropyValues) {
+      setDetectionState("unknown");
+      return () => {
+        isCurrent = false;
+      };
+    }
+
+    void userAgentData
+      .getHighEntropyValues(["architecture", "bitness"])
+      .then(({ architecture = "", bitness = "" }) => {
+        if (!isCurrent) return;
+        const architectureValue = architecture.toLowerCase();
+        const isArm64 = /arm|aarch64/.test(architectureValue) &&
+          (architectureValue.includes("64") || bitness === "64");
+        const abi: AndroidAbi = isArm64 ? "arm64" : "armv7";
+        setDetectedAbi(abi);
+        setDetectionState(abi);
+      })
+      .catch(() => {
+        if (isCurrent) setDetectionState("unknown");
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
+
   const releaseVersion = `${currentRelease.version} · ${isArabic ? "البنية" : "Build"} ${currentRelease.build}`;
   const releaseDate = new Intl.DateTimeFormat(isArabic ? "ar-SA" : "en-US", { dateStyle: "medium" }).format(new Date(currentRelease.publishedAt));
   const contactWasSubmitted = new URLSearchParams(window.location.search).get("sent") === "1";
-  const preferredDownloadUrl = currentRelease.downloadUrls.armv7;
+  const preferredDownloadUrl = currentRelease.downloadUrls[detectedAbi];
+  const detectionMessage = detectionState === "checking"
+    ? t.autoChoiceChecking
+    : detectionState === "arm64"
+      ? t.autoChoiceArm64
+      : detectionState === "armv7"
+        ? t.autoChoiceArmv7
+        : t.autoChoiceUnknown;
   const apkChoices = [
     { key: "armv7", label: t.apkChoiceArmv7, url: currentRelease.downloadUrls.armv7 },
     { key: "arm64", label: t.apkChoiceArm64, url: currentRelease.downloadUrls.arm64 },
@@ -209,7 +272,7 @@ export default function Home() {
 
         <section id="how" className="intro-band section-grid"><div><span className="section-kicker">02 / {isArabic ? "لماذا عيالنا" : "Why 3ialna"}</span><h2>{t.guide}</h2></div><p>{t.guideIntro}</p><div className="privacy-callout"><LockKeyhole size={20} /><div><b>{t.privacy}</b><span>{t.privacyBody}</span></div></div></section>
 
-        <section id="download" className="release-section section-grid"><div className="release-copy"><span className="section-kicker">{t.releaseKicker}</span><h2>{t.releaseTitle}</h2><p>{t.releaseBody}</p><a className="release-request" href="#contact"><Mail size={16} />{t.requestInvite}<ArrowUpRight size={15} /></a></div><div className="release-panel"><div className="release-status"><span className="release-pulse" aria-hidden="true" />{isArabic ? "إصدار متاح" : "Release available"}</div><div className="release-facts"><div><span>{isArabic ? "المنصة" : "Platform"}</span><b>{currentRelease.platform}</b></div><div><span>{isArabic ? "الإصدار" : "Version"}</span><b>{releaseVersion}</b></div><div><span>{isArabic ? "قناة التثبيت" : "Install channel"}</span><b>{t.releaseChannel}</b></div></div><a className="button release-button" href={preferredDownloadUrl} target="_blank" rel="noreferrer"><Download size={18} />{t.releaseButton}<ExternalLink size={16} /></a><div className="apk-choice-list"><b>{t.apkChoiceTitle}</b>{apkChoices.map((choice) => <a key={choice.key} href={choice.url} target="_blank" rel="noreferrer"><Download size={14} />{choice.label}<ExternalLink size={13} /></a>)}</div><p className="release-notice"><ShieldCheck size={17} />{t.releaseNotice}</p><p className="release-updated">{t.releaseUpdated}: {releaseDate}</p><div className="release-qr-grid"><div className="release-qr-card"><QRCodeSVG value={preferredDownloadUrl} size={128} level="M" includeMargin bgColor="#f7f3eb" fgColor="#174a3b" /><div><b>{t.testerQrTitle}</b><span>{t.testerQrBody}</span></div></div><div className="release-qr-card"><QRCodeSVG value={publicSiteUrl} size={128} level="M" includeMargin bgColor="#f7f3eb" fgColor="#174a3b" /><div><b>{t.siteQrTitle}</b><span>{t.siteQrBody}</span></div></div></div></div></section>
+        <section id="download" className="release-section section-grid"><div className="release-copy"><span className="section-kicker">{t.releaseKicker}</span><h2>{t.releaseTitle}</h2><p>{t.releaseBody}</p><a className="release-request" href="#contact"><Mail size={16} />{t.requestInvite}<ArrowUpRight size={15} /></a></div><div className="release-panel"><div className="release-status"><span className="release-pulse" aria-hidden="true" />{isArabic ? "إصدار متاح" : "Release available"}</div><div className="release-facts"><div><span>{isArabic ? "المنصة" : "Platform"}</span><b>{currentRelease.platform}</b></div><div><span>{isArabic ? "الإصدار" : "Version"}</span><b>{releaseVersion}</b></div><div><span>{isArabic ? "قناة التثبيت" : "Install channel"}</span><b>{t.releaseChannel}</b></div></div><a className="button release-button" href={preferredDownloadUrl} target="_blank" rel="noreferrer"><Download size={18} />{t.releaseButton}<ExternalLink size={16} /></a><p className="release-detection" role="status"><Smartphone size={16} />{detectionMessage}</p><div className="apk-choice-list"><b>{t.apkChoiceTitle}</b>{apkChoices.map((choice) => <a key={choice.key} href={choice.url} target="_blank" rel="noreferrer"><Download size={14} />{choice.label}<ExternalLink size={13} /></a>)}</div><p className="release-notice"><ShieldCheck size={17} />{t.releaseNotice}</p><p className="release-updated">{t.releaseUpdated}: {releaseDate}</p><div className="release-qr-grid"><div className="release-qr-card"><QRCodeSVG value={preferredDownloadUrl} size={128} level="M" includeMargin bgColor="#f7f3eb" fgColor="#174a3b" /><div><b>{t.testerQrTitle}</b><span>{t.testerQrBody}</span></div></div><div className="release-qr-card"><QRCodeSVG value={publicSiteUrl} size={128} level="M" includeMargin bgColor="#f7f3eb" fgColor="#174a3b" /><div><b>{t.siteQrTitle}</b><span>{t.siteQrBody}</span></div></div></div></div></section>
 
         <section id="setup" className="setup-section section-grid"><div className="sticky-heading"><span className="section-kicker">04 / {isArabic ? "الدليل العملي" : "The practical guide"}</span><h2>{t.install}</h2><p>{t.installIntro}</p><a className="button dark-button" href="#profiles"><ArrowDown size={17} />{isArabic ? "تابع إلى الملفات" : "Continue to profiles"}</a></div><div className="steps">{t.steps.map(([title, body], index) => <article className="step" key={title}><div className="step-index">{String(index + 1).padStart(2, "0")}</div><div><h3>{title}</h3><p>{body}</p></div><Check size={18} className="step-check" /></article>)}</div><div className="installation-details"><article><h3>{t.androidInstallTitle}</h3><ol>{t.androidInstallSteps.map((step) => <li key={step}>{step}</li>)}</ol></article><article><h3>{t.iosInstallTitle}</h3><ol>{t.iosInstallSteps.map((step) => <li key={step}>{step}</li>)}</ol></article><aside><h3>{t.packTitle}</h3><p>{t.packBody}</p></aside></div></section>
 
