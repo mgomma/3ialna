@@ -224,15 +224,6 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                         },
                       ),
                       ListTile(
-                        leading: const Icon(Icons.child_care),
-                        title: Text(LocaleController.instance.isArabic ? 'إعدادات حسب العمر' : 'Age-based profiles'),
-                        subtitle: Text(LocaleController.instance.isArabic ? 'إعداد جاهز قابل للتعديل' : 'Ready-made, editable configurations'),
-                        onTap: () {
-                          Navigator.of(context).pop();
-                          Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AgeSafetyProfilesScreen()));
-                        },
-                      ),
-                      ListTile(
                         leading: const Icon(Icons.record_voice_over),
                         title: Text(LocaleController.instance.isArabic ? 'صوت الوالدين' : 'Parent voice notifications'),
                         subtitle: Text(LocaleController.instance.isArabic ? 'تسجيل محفوظ على هذا الجهاز' : 'A recording stored on this device'),
@@ -480,16 +471,16 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                     onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const ProfilePackScreen())),
                   ),
                   _ActionCard(
-                    icon: Icons.edit_note_outlined,
-                    label: _isArabic ? 'تعديل بيانات الطفل الأول' : 'Edit first child details',
+                    icon: Icons.manage_accounts_outlined,
+                    label: _isArabic ? 'إدارة الأطفال' : 'Kids management',
                     color: colorScheme.secondary,
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const AgeSafetyProfilesScreen(initialAction: ChildProfilesInitialAction.editFirst))),
-                  ),
-                  _ActionCard(
-                    icon: Icons.person_add_alt_1,
-                    label: _isArabic ? 'تعريف طفل جديد' : 'Define new child',
-                    color: colorScheme.tertiary,
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const AgeSafetyProfilesScreen(initialAction: ChildProfilesInitialAction.addChild))),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const AgeSafetyProfilesScreen(
+                          openChildManagerOnStart: true,
+                        ),
+                      ),
+                    ),
                   ),
                   _ActionCard(
                     icon: Icons.record_voice_over_outlined,

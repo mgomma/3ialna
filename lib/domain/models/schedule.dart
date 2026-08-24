@@ -71,7 +71,9 @@ class Schedule {
 
   factory Schedule.fromMap(Map<String, dynamic> map) {
     return Schedule(
-      enabled: map['enabled'] as bool? ?? false,
+      // A missing field is an incomplete/older record, not a parent opt-out.
+      // Explicit false remains preserved.
+      enabled: map['enabled'] as bool? ?? true,
       startTime: map['startTime'] as String? ?? '09:00',
       endTime: map['endTime'] as String? ?? '21:00',
       activeDays: (map['activeDays'] as List<dynamic>?)
@@ -116,4 +118,3 @@ class Schedule {
     );
   }
 }
-

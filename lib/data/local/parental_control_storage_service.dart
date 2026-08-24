@@ -196,7 +196,7 @@ class ParentalControlStorageService {
     final jsonString = prefs.getString(_keySchedule);
     if (jsonString == null) {
       return const Schedule(
-        enabled: false,
+        enabled: true,
         startTime: '09:00',
         endTime: '21:00',
         activeDays: [1, 2, 3, 4, 5, 6, 0],
@@ -207,7 +207,7 @@ class ParentalControlStorageService {
       return Schedule.fromMap(map);
     } catch (e) {
       return const Schedule(
-        enabled: false,
+        enabled: true,
         startTime: '09:00',
         endTime: '21:00',
         activeDays: [1, 2, 3, 4, 5, 6, 0],
