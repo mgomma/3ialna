@@ -27,15 +27,22 @@ type NavigatorWithUserAgentData = Navigator & {
 
 const copy = {
   ar: {
-    nav: ["كيف يعمل", "تنزيل", "الإعداد", "الملفات العمرية", "المقارنة", "الخصوصية", "تواصل"],
+    nav: ["جولة الخصائص", "تنزيل", "الإعداد", "الملفات العمرية", "المقارنة", "الخصوصية", "تواصل"],
     badge: "دليل الإعداد الرسمي · عيالنا",
     title: "احمِ وقت العائلة، لا خصوصيتها.",
     intro: "عيالنا يساعد الوالدين على بناء روتين رقمي هادئ يناسب عمر الطفل، مع رسائل صوتية بصوت الوالدين وإعدادات يمكن الرجوع عنها في أي وقت.",
     cta: "تنزيل النسخة التجريبية",
     secondary: "استكشف الخصائص",
     note: "متاح للاختبار على أجهزة Android. يتطلب منح أذونات الجهاز يدويًا.",
-    guide: "من الفكرة إلى الإعداد",
-    guideIntro: "إعداد واضح، خطوة واحدة في كل مرة، ومن دون فحص للرسائل أو صفحات المحتوى.",
+    guide: "جولة عيالنا في خمس محطات",
+    guideIntro: "نفس ترتيب الجولة داخل التطبيق: ابدأ بالعائلة، ثم الحماية، فالتذكيرات، فالتقارير والخصوصية، وأنهِ بإعدادات الوالد المرنة.",
+    walkthrough: [
+      ["عائلتك أولاً", "أضف الأطفال، راجع تاريخ الميلاد، واختر الإعداد المناسب للعمر. يظهر الطفل النشط بوضوح عند مشاركة الجهاز."],
+      ["الحماية والحدود", "فعّل المراقبة بعد منح الوصول المطلوب، ثم اضبط حدود الفئات والمواقع المسموحة والمحظورة وأوقات النوم والصلاة."],
+      ["تذكيرات بصوت الوالد", "سجّل تذكيرات للمهام أو الصلاة. يفتح الإشعار عيالنا لتشغيل التسجيل المحلي، ولا يعمل الصوت تلقائياً في الخلفية."],
+      ["تقارير وخصوصية", "راجع الاستخدام حسب التاريخ. تبقى التسجيلات والبيانات الحساسة على الجهاز، وأي مشاركة بالبريد تحتاج مراجعتك وموافقتك."],
+      ["أنت المتحكم", "كل إعداد قابل للتعديل. أضف اختصار لوحة الإعدادات السريعة من إدارة الأطفال لتبديل الطفل النشط بسرعة أكبر."],
+    ],
     privacy: "الخصوصية أولًا",
     privacyBody: "التحكم مبني على الوقت، التطبيقات، النطاقات، وروتين الصلاة. لا نحتاج إلى قراءة محادثات الطفل أو تحليل ما يكتبه.",
     install: "التثبيت والإعداد",
@@ -112,15 +119,22 @@ const copy = {
     contactError: "تعذر إرسال الرسالة الآن. حاول مرة أخرى لاحقًا.",
   },
   en: {
-    nav: ["How it works", "Download", "Setup", "Age profiles", "Comparison", "Privacy", "Contact"],
+    nav: ["Feature tour", "Download", "Setup", "Age profiles", "Comparison", "Privacy", "Contact"],
     badge: "Official setup guide · 3ialna",
     title: "Protect family time, not private conversations.",
     intro: "3ialna helps parents build a calmer digital routine by age, with parent-recorded voice messages and settings they can edit or reset at any time.",
     cta: "Download the test release",
     secondary: "Explore the features",
     note: "Available for Android testing. Device permissions must be granted manually.",
-    guide: "From intention to setup",
-    guideIntro: "Clear steps, one decision at a time, without reading messages or inspecting page content.",
+    guide: "The 3ialna tour in five steps",
+    guideIntro: "The same sequence used in the app: family first, then protection, reminders, reports and privacy, and finally parent-controlled settings.",
+    walkthrough: [
+      ["Your family, first", "Add children, review birth dates, and choose an age-appropriate baseline. The active child is always clear when the device is shared."],
+      ["Protection and limits", "Start monitoring after granting required access, then set category budgets, allowed and blocked sites, and editable sleep and prayer schedules."],
+      ["Parent voice reminders", "Record task or prayer reminders. A notification opens 3ialna to play the local recording; it does not autoplay in the background."],
+      ["Reports and privacy", "Review usage by date. Recordings and sensitive data stay on the device, and any email sharing requires your review and consent."],
+      ["You stay in control", "Every setting remains editable. Add the Quick Settings shortcut from Kids management for faster active-child switching."],
+    ],
     privacy: "Privacy by design",
     privacyBody: "Controls are based on time, apps, domains, and prayer-aware routines. The app does not need to read a child’s conversations or analyze what they type.",
     install: "Install and configure",
@@ -270,7 +284,7 @@ export default function Home() {
           <div className="hero-caption"><span>01</span><b>{isArabic ? "روتين رقمي هادئ" : "A calmer digital rhythm"}</b></div>
         </section>
 
-        <section id="how" className="intro-band section-grid"><div><span className="section-kicker">02 / {isArabic ? "لماذا عيالنا" : "Why 3ialna"}</span><h2>{t.guide}</h2></div><p>{t.guideIntro}</p><div className="privacy-callout"><LockKeyhole size={20} /><div><b>{t.privacy}</b><span>{t.privacyBody}</span></div></div></section>
+        <section id="how" className="walkthrough-section"><div className="walkthrough-heading"><div><span className="section-kicker">02 / {isArabic ? "الجولة التعريفية" : "Feature tour"}</span><h2>{t.guide}</h2></div><p>{t.guideIntro}</p></div><ol className="walkthrough-list">{t.walkthrough.map(([title, body], index) => <li className="walkthrough-step" key={title}><span className="walkthrough-number">{String(index + 1).padStart(2, "0")}</span><h3>{title}</h3><p>{body}</p></li>)}</ol></section>
 
         <section id="download" className="release-section section-grid"><div className="release-copy"><span className="section-kicker">{t.releaseKicker}</span><h2>{t.releaseTitle}</h2><p>{t.releaseBody}</p><a className="release-request" href="#contact"><Mail size={16} />{t.requestInvite}<ArrowUpRight size={15} /></a></div><div className="release-panel"><div className="release-status"><span className="release-pulse" aria-hidden="true" />{isArabic ? "إصدار متاح" : "Release available"}</div><div className="release-facts"><div><span>{isArabic ? "المنصة" : "Platform"}</span><b>{currentRelease.platform}</b></div><div><span>{isArabic ? "الإصدار" : "Version"}</span><b>{releaseVersion}</b></div><div><span>{isArabic ? "قناة التثبيت" : "Install channel"}</span><b>{t.releaseChannel}</b></div></div><a className="button release-button" href={preferredDownloadUrl} target="_blank" rel="noreferrer"><Download size={18} />{t.releaseButton}<ExternalLink size={16} /></a><p className="release-detection" role="status"><Smartphone size={16} />{detectionMessage}</p><div className="apk-choice-list"><b>{t.apkChoiceTitle}</b>{apkChoices.map((choice) => <a key={choice.key} href={choice.url} target="_blank" rel="noreferrer"><Download size={14} />{choice.label}<ExternalLink size={13} /></a>)}</div><p className="release-notice"><ShieldCheck size={17} />{t.releaseNotice}</p><p className="release-updated">{t.releaseUpdated}: {releaseDate}</p><div className="release-qr-grid"><div className="release-qr-card"><QRCodeSVG value={preferredDownloadUrl} size={128} level="M" includeMargin bgColor="#f7f3eb" fgColor="#174a3b" /><div><b>{t.testerQrTitle}</b><span>{t.testerQrBody}</span></div></div><div className="release-qr-card"><QRCodeSVG value={publicSiteUrl} size={128} level="M" includeMargin bgColor="#f7f3eb" fgColor="#174a3b" /><div><b>{t.siteQrTitle}</b><span>{t.siteQrBody}</span></div></div></div></div></section>
 
