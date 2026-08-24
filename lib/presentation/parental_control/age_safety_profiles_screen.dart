@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../data/local/age_safety_profile_service.dart';
+import '../../data/local/child_usage_ledger_service.dart';
 import '../../data/local/locale_controller.dart';
 import '../../data/system/child_shortcut_service.dart';
 import '../../domain/models/age_safety_profile.dart';
@@ -62,6 +63,11 @@ class _AgeSafetyProfilesScreenState extends State<AgeSafetyProfilesScreen> {
 
   Future<void> _setActive(String? childId) async {
     if (childId == null) return;
+    final ChildProfile? outgoing = _service!.activeChild();
+    if (outgoing != null && outgoing.id != childId) {
+      await const ChildUsageLedgerService()
+          .captureActiveChildUsage(childId: outgoing.id);
+    }
     await _service!.setActiveChild(childId);
     await _load();
   }

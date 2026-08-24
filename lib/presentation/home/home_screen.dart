@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/social_media_apps.dart';
 import '../../data/local/settings_service.dart';
 import '../../data/local/locale_controller.dart';
+import '../../data/local/child_usage_ledger_service.dart';
 import '../../data/system/accessibility_service_helper.dart';
 import '../../data/system/child_shortcut_service.dart';
 import '../../data/system/app_usage_service.dart';
@@ -70,6 +71,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   late SettingsService _settings;
   late AgeSafetyProfileService _childProfiles;
   final AppUsageService _usageService = const AppUsageService();
+  final ChildUsageLedgerService _childUsageLedger =
+      const ChildUsageLedgerService();
   final FirstRunPermissionService _firstRunPermissions =
       const FirstRunPermissionService();
   final OverlayService _overlayService = const OverlayService();
@@ -88,6 +91,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final DrupalSyncService _drupalSyncService = DrupalSyncService();
   final SocialAuthService _socialAuthService = SocialAuthService();
   LocalUserProfile? _profile;
+  ChildProfile? _activeChild;
   bool _essentialPermissionGuideInProgress = false;
   bool _homeSettingsInitialized = false;
 
@@ -110,13 +114,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     AgeSafetyProfileService.changes.addListener(_onChildProfileChanged);
     ChildShortcutService.listen(
       (String childId) async {
+        await _captureOutgoingChildUsage();
         await _childProfiles.setActiveChild(childId);
         _loadSettings();
       },
       onQuickSettingsRequested: _showActiveChildPicker,
     );
     final String? shortcutChildId = await ChildShortcutService.consumeInitialChildId();
-    if (shortcutChildId != null) await _childProfiles.setActiveChild(shortcutChildId);
+    if (shortcutChildId != null) {
+      await _captureOutgoingChildUsage();
+      await _childProfiles.setActiveChild(shortcutChildId);
+    }
     final bool quickSettingsRequest =
         await ChildShortcutService.consumeQuickSettingsRequest();
     await ChildShortcutService.sync(_childProfiles.loadChildren());
@@ -219,6 +227,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     ChildShortcutService.sync(_childProfiles.loadChildren());
   }
 
+  Future<void> _captureOutgoingChildUsage() async {
+    final ChildProfile? active = _childProfiles.activeChild();
+    if (active == null) return;
+    await _childUsageLedger.captureActiveChildUsage(childId: active.id);
+  }
+
   void _startPrayerStatusUpdates() {
     _prayerStatusTimer?.cancel();
     _prayerStatusTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
@@ -296,6 +310,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
     );
     if (selectedId == null || !mounted) return;
+    await _captureOutgoingChildUsage();
     await _childProfiles.setActiveChild(selectedId);
     await ChildShortcutService.sync(_childProfiles.loadChildren());
     if (!mounted) return;
@@ -326,10 +341,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return enabled;
   }
 
-  /// Loads saved time limit and monitoring state from settings.
+  /// Loads active-child limits and device monitoring state.
   void _loadSettings() {
+    final ChildProfile? active = _childProfiles.activeChild();
     setState(() {
-      timeLimitMinutes = _settings.timeLimitMinutes;
+      _activeChild = active;
+      timeLimitMinutes =
+          active?.preset.dailyLimitMinutes ?? _settings.timeLimitMinutes;
       isMonitoring = _settings.isMonitoring;
       _isDeviceLocked = _settings.isDeviceLocked;
       if (_isDeviceLocked) {
@@ -568,16 +586,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _submitDailyReport() async {
-    await _refreshUsage();
+    // Existing sync payloads remain device-level: child identifiers and child
+    // usage attribution stay in the local parent report only.
+    final AppUsageSummary deviceUsage =
+        await _usageService.loadTodayUsageSummary();
 
     final String date = DateTime.now().toIso8601String().split('T').first;
     final DailyUsageReport report = DailyUsageReport(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       date: date,
-      totalUsageMinutes: totalUsageMinutes,
-      appUsage: usageDataMinutes,
+      totalUsageMinutes: deviceUsage.totalMinutes,
+      appUsage: deviceUsage.perAppMinutes,
       categoryUsage: <String, int>{
-        'social_media': usageDataMinutes.values.fold<int>(0, (int acc, int v) => acc + v),
+        'social_media': deviceUsage.perAppMinutes.values
+            .fold<int>(0, (int acc, int value) => acc + value),
       },
       isSynced: false,
     );
@@ -688,9 +710,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  /// Saves time limit and monitoring state to settings.
+  /// Saves device-wide monitoring state. Daily limits are stored per child.
   Future<void> _saveSettings() async {
-    await _settings.setTimeLimitMinutes(timeLimitMinutes);
     await _settings.setIsMonitoring(isMonitoring);
   }
 
@@ -837,14 +858,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   /// Fetches app usage for today and updates state.
   Future<void> _checkAppUsage() async {
-    final AppUsageSummary usageSummary = await _usageService.loadTodayUsageSummary();
+    final ChildProfile? active = _childProfiles.activeChild();
+    if (active == null) return;
+    await _childUsageLedger.captureActiveChildUsage(childId: active.id);
+    final DateTime now = DateTime.now();
+    final ChildUsageLedgerAggregate usageSummary =
+        await _childUsageLedger.loadAggregate(
+      childId: active.id,
+      start: DateTime(now.year, now.month, now.day),
+      end: now,
+    );
 
     if (!mounted) {
       return;
     }
 
     setState(() {
-      usageDataMinutes = usageSummary.perAppMinutes;
+      _activeChild = active;
+      timeLimitMinutes = active.preset.dailyLimitMinutes;
+      usageDataMinutes = usageSummary.appUsageMinutes;
       totalUsageMinutes = usageSummary.totalMinutes;
     });
 
@@ -982,10 +1014,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       return;
     }
 
-    setState(() {
-      timeLimitMinutes = newLimit;
-    });
-    await _saveSettings();
+    final ChildProfile? active = _childProfiles.activeChild();
+    if (active == null) return;
+    await _childProfiles.updateChild(
+      active.copyWith(
+        preset: active.preset.copyWith(dailyLimitMinutes: newLimit),
+        profileFollowsBirthDate: false,
+      ),
+    );
+    _loadSettings();
   }
 
   /// Starts the native Android foreground service for real background checks.
@@ -1321,7 +1358,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Used today: $totalUsageMinutes '
+                    '${_activeChild?.name ?? (_isArabic ? 'الطفل النشط' : 'Active child')}: '
+                    '${_isArabic ? 'استخدم اليوم' : 'Used today'} $totalUsageMinutes '
                     '${context.l10n.minutesSuffix}',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),

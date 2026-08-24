@@ -97,6 +97,34 @@ void main() {
     expect(service.activeChild()!.profileFollowsBirthDate, isFalse);
   });
 
+  test('keeps daily limits independent when the active child changes',
+      () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final AgeSafetyProfileService service = AgeSafetyProfileService(prefs);
+    final ChildProfile first = await service.addChild(
+      name: 'Maha',
+      birthDate: DateTime(2018, 6, 4),
+      gender: ChildGender.girl,
+    );
+    final ChildProfile second = await service.addChild(
+      name: 'Omar',
+      birthDate: DateTime(2012, 6, 4),
+      gender: ChildGender.boy,
+    );
+
+    await service.setActiveChild(first.id);
+    await service.save(service.load().copyWith(dailyLimitMinutes: 35));
+    await service.setActiveChild(second.id);
+    await service.save(service.load().copyWith(dailyLimitMinutes: 105));
+
+    expect(service.activeChild()!.id, second.id);
+    expect(service.load().dailyLimitMinutes, 105);
+    await service.setActiveChild(first.id);
+    expect(service.activeChild()!.id, first.id);
+    expect(service.load().dailyLimitMinutes, 35);
+  });
+
   test('migrates a legacy profile as a protected parent selection', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{
       'age_safety_profile_config':

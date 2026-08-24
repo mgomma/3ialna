@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/constants/social_media_apps.dart';
+import '../../data/local/age_safety_profile_service.dart';
+import '../../data/local/child_usage_ledger_service.dart';
 import '../../data/local/locale_controller.dart';
 import '../../data/system/app_usage_service.dart';
+import '../../domain/models/child_profile.dart';
 
 enum _ReportRange { today, sevenDays, custom }
 
@@ -15,20 +19,46 @@ class ParentUsageReportScreen extends StatefulWidget {
 }
 
 class _ParentUsageReportScreenState extends State<ParentUsageReportScreen> {
-  final AppUsageService _usageService = const AppUsageService();
+  static const String _allChildren = '__all_children__';
+
+  final ChildUsageLedgerService _usageLedger = const ChildUsageLedgerService();
   _ReportRange _range = _ReportRange.today;
   late DateTime _start;
   late DateTime _end;
   AppUsageSummary? _summary;
+  List<ChildProfile> _children = <ChildProfile>[];
+  String _selectedChildId = _allChildren;
   bool _loading = true;
 
   bool get _ar => LocaleController.instance.isArabic;
+
+  ChildProfile? get _selectedChild {
+    for (final ChildProfile child in _children) {
+      if (child.id == _selectedChildId) return child;
+    }
+    return null;
+  }
+
+  String? get _selectedChildFilter =>
+      _selectedChildId == _allChildren ? null : _selectedChildId;
 
   @override
   void initState() {
     super.initState();
     _setRange(_ReportRange.today, reload: false);
-    _load();
+    _loadChildrenAndReport();
+  }
+
+  Future<void> _loadChildrenAndReport() async {
+    final AgeSafetyProfileService profiles =
+        AgeSafetyProfileService(await SharedPreferences.getInstance());
+    final List<ChildProfile> children = profiles.loadChildren();
+    if (!mounted) return;
+    setState(() {
+      _children = children;
+      _selectedChildId = profiles.activeChild()?.id ?? _allChildren;
+    });
+    await _load();
   }
 
   void _setRange(_ReportRange range, {bool reload = true}) {
@@ -51,13 +81,18 @@ class _ParentUsageReportScreenState extends State<ParentUsageReportScreen> {
 
   Future<void> _load() async {
     setState(() => _loading = true);
-    final AppUsageSummary summary = await _usageService.loadUsageSummaryForRange(
+    final ChildUsageLedgerAggregate aggregate =
+        await _usageLedger.loadAggregate(
+      childId: _selectedChildFilter,
       start: _start,
       end: _end,
     );
     if (!mounted) return;
     setState(() {
-      _summary = summary;
+      _summary = AppUsageSummary(
+        perAppMinutes: aggregate.appUsageMinutes,
+        totalMinutes: aggregate.totalMinutes,
+      );
       _loading = false;
     });
   }
@@ -87,10 +122,15 @@ class _ParentUsageReportScreenState extends State<ParentUsageReportScreen> {
   }
 
   String _rangeLabel() {
-    final MaterialLocalizations localizations = MaterialLocalizations.of(context);
+    final MaterialLocalizations localizations =
+        MaterialLocalizations.of(context);
     return '${localizations.formatMediumDate(_start)} — '
         '${localizations.formatMediumDate(_end)}';
   }
+
+  String get _selectedChildLabel => _selectedChild == null
+      ? (_ar ? 'كل الأطفال' : 'All children')
+      : _selectedChild!.name;
 
   @override
   Widget build(BuildContext context) {
@@ -109,15 +149,41 @@ class _ParentUsageReportScreenState extends State<ParentUsageReportScreen> {
         title: Text(_ar ? 'تقرير الاستخدام للوالدين' : 'Parent usage report'),
       ),
       body: RefreshIndicator(
-        onRefresh: _load,
+        onRefresh: _loadChildrenAndReport,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: <Widget>[
             Text(
               _ar
-                  ? 'يعتمد التقرير على بيانات الاستخدام المحلية في Android ولا يُرسل تلقائيًا.'
-                  : 'This report uses on-device Android usage data and is not sent automatically.',
+                  ? 'يعرض التقرير الاستخدام المحلي المنسوب للطفل المحدد بعد اختياره على هذا الجهاز. لا يحدد Android الأشخاص تلقائيًا ولا يُرسل عيالنا هذا الإسناد.'
+                  : 'This report shows locally attributed usage after a child is selected on this device. Android does not identify people automatically, and 3ialna does not send this attribution.',
               style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              key: const Key('parent-report-child-filter'),
+              initialValue: _selectedChildId,
+              decoration: InputDecoration(
+                labelText: _ar ? 'تصفية حسب الطفل' : 'Filter by child',
+                border: const OutlineInputBorder(),
+              ),
+              items: <DropdownMenuItem<String>>[
+                DropdownMenuItem<String>(
+                  value: _allChildren,
+                  child: Text(_ar ? 'كل الأطفال' : 'All children'),
+                ),
+                ..._children.map(
+                  (ChildProfile child) => DropdownMenuItem<String>(
+                    value: child.id,
+                    child: Text(child.name),
+                  ),
+                ),
+              ],
+              onChanged: (String? childId) {
+                if (childId == null) return;
+                setState(() => _selectedChildId = childId);
+                _load();
+              },
             ),
             const SizedBox(height: 16),
             Wrap(
@@ -152,10 +218,32 @@ class _ParentUsageReportScreenState extends State<ParentUsageReportScreen> {
                   children: <Widget>[
                     Text(_rangeLabel(),
                         style: Theme.of(context).textTheme.labelLarge),
+                    const SizedBox(height: 4),
+                    Text(
+                      _selectedChildLabel,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
                     const SizedBox(height: 8),
                     Text(_duration(summary.totalMinutes),
                         style: Theme.of(context).textTheme.displaySmall),
-                    Text(_ar ? 'إجمالي وقت استخدام الجهاز' : 'Total device usage'),
+                    Text(
+                      _selectedChild == null
+                          ? (_ar
+                              ? 'إجمالي الاستخدام المحلي المنسوب للأطفال'
+                              : 'Total locally attributed child usage')
+                          : (_ar
+                              ? 'وقت الاستخدام المنسوب لهذا الطفل'
+                              : 'Usage attributed to this child'),
+                    ),
+                    if (_selectedChild != null) ...<Widget>[
+                      const SizedBox(height: 6),
+                      Text(
+                        _ar
+                            ? 'الحد اليومي للملف: ${_selectedChild!.preset.dailyLimitMinutes} دقيقة'
+                            : 'Profile daily limit: ${_selectedChild!.preset.dailyLimitMinutes} min',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -172,8 +260,8 @@ class _ParentUsageReportScreenState extends State<ParentUsageReportScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 28),
                 child: Text(_ar
-                    ? 'لا توجد بيانات تطبيقات متتبعة في هذا النطاق. تحقق من إذن بيانات الاستخدام.'
-                    : 'No tracked-app data in this range. Check Usage Access permission.'),
+                    ? 'لا توجد بيانات منسوبة في هذا النطاق. اختر الطفل أولًا ثم استخدم الجهاز لتسجيل الاستهلاك محليًا.'
+                    : 'No attributed usage is available for this range. Select a child first, then use the device so usage can be recorded locally.'),
               )
             else
               ...apps.map(

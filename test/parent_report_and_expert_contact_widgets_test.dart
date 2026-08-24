@@ -33,6 +33,10 @@ void main() {
 
     expect(find.byType(ChoiceChip), findsNWidgets(2));
     expect(find.byType(ActionChip), findsOneWidget);
+    expect(
+      find.byKey(const Key('parent-report-child-filter')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('expert contact directs parents to define a child before showing the form',
