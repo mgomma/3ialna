@@ -22,6 +22,14 @@ class ActiveChildQuickSettingsTileService : TileService() {
 
     override fun onClick() {
         super.onClick()
+        if (isSecure && isLocked) {
+            unlockAndRun { openActiveChildSelector() }
+            return
+        }
+        openActiveChildSelector()
+    }
+
+    private fun openActiveChildSelector() {
         val intent = Intent(this, MainActivity::class.java).apply {
             action = Intent.ACTION_MAIN
             addCategory(Intent.CATEGORY_LAUNCHER)
