@@ -46,7 +46,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Define at least one child first'), findsOneWidget);
+    expect(find.text('عرّف طفلًا واحدًا على الأقل أولًا'), findsOneWidget);
     expect(
       find.byKey(const Key('expert-contact-open-kids-management')),
       findsOneWidget,
