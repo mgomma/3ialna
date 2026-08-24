@@ -65,18 +65,18 @@ const copy = {
     download: "تنزيل APK للاختبار",
     releaseKicker: "03 / إصدار Android التجريبي",
     releaseTitle: "نسخة Android التجريبية متاحة للتنزيل المباشر",
-    releaseBody: "نزّل ملف APK مباشرة من هذه الصفحة على هاتف Android. لا تحتاج إلى دعوة اختبار أو تسجيل الدخول إلى Firebase.",
+    releaseBody: "ابدأ بالنسخة الأصغر المناسبة للتجربة على هاتف Android. إذا لم يقبل الهاتف تثبيتها، استخدم بديل arm64 المدرج أدناه. لا تحتاج إلى دعوة اختبار أو تسجيل الدخول إلى Firebase.",
     releasePlatform: "Android",
     releaseVersion: "0.1.0 · البنية 1",
     releaseChannel: "إصدار تقييم عام",
-    releaseButton: "تنزيل APK التقييمي",
+    releaseButton: "تنزيل النسخة الأصغر · armv7",
     releaseNotice: "هذه نسخة تقييم وليست إصدار متجر. قد يطلب Android السماح بالتثبيت من المتصفح أو مدير الملفات. إذا ظهرت رسالة «يتعارض مع حزمة موجودة»، فالتطبيق القديم موقّع بمفتاح مختلف. لا تحذفه قبل تصدير إعداد قابل للمشاركة؛ الحذف يمسح بيانات الأطفال وPIN والتسجيلات والاستخدام المحلية.",
-    apkChoiceTitle: "اختر ملفًا أصغر يناسب هاتفك",
-    apkChoiceArm64: "معظم هواتف Android الحديثة · arm64",
-    apkChoiceArmv7: "هواتف Android أقدم · armv7",
+    apkChoiceTitle: "إذا لم يتم التثبيت، جرّب البديل المناسب لهاتفك",
+    apkChoiceArm64: "بديل للهواتف الحديثة التي لا تقبل النسخة الأصغر · arm64",
+    apkChoiceArmv7: "النسخة الأصغر للتجربة أولاً · armv7",
     requestInvite: "تحتاج إلى مساعدة؟ تواصل معنا",
-    testerQrTitle: "امسح لتنزيل APK مباشرة",
-    testerQrBody: "يفتح التنزيل على هاتف Android دون تسجيل دخول.",
+    testerQrTitle: "امسح لتنزيل النسخة الأصغر",
+    testerQrBody: "يفتح تنزيل armv7 على هاتف Android دون تسجيل دخول.",
     siteQrTitle: "امسح لمشاركة الدليل",
     siteQrBody: "افتح صفحة الإعداد على أي هاتف.",
     releaseUpdated: "آخر تحديث",
@@ -140,18 +140,18 @@ const copy = {
     download: "Download test APK",
     releaseKicker: "03 / Android test release",
     releaseTitle: "The Android evaluation build is ready for direct download",
-    releaseBody: "Download the APK directly from this page on an Android phone. No Firebase sign-in or tester invitation is required.",
+    releaseBody: "Start with the smaller evaluation APK on an Android phone. If the phone cannot install it, use the arm64 fallback listed below. No Firebase sign-in or tester invitation is required.",
     releasePlatform: "Android",
     releaseVersion: "0.1.0 · Build 1",
     releaseChannel: "Public evaluation release",
-    releaseButton: "Download evaluation APK",
+    releaseButton: "Download smaller APK · armv7",
     releaseNotice: "This is an evaluation build, not a store release. Android may ask you to allow installation from your browser or file manager. If Android says the package conflicts with an existing package, the installed copy has a different signing key. Do not uninstall before exporting a shareable setup; uninstalling removes local child data, PINs, recordings, and usage.",
-    apkChoiceTitle: "Choose a smaller APK for your device",
-    apkChoiceArm64: "Most modern Android phones · arm64",
-    apkChoiceArmv7: "Older Android phones · armv7",
+    apkChoiceTitle: "If installation fails, try the compatible alternative",
+    apkChoiceArm64: "Fallback for modern phones that cannot install the smaller build · arm64",
+    apkChoiceArmv7: "Smaller build to try first · armv7",
     requestInvite: "Need help? Contact us",
-    testerQrTitle: "Scan to download the APK directly",
-    testerQrBody: "Opens the Android download without sign-in.",
+    testerQrTitle: "Scan to download the smaller APK",
+    testerQrBody: "Opens the armv7 Android download without sign-in.",
     siteQrTitle: "Scan to share the guide",
     siteQrBody: "Open the setup page on any phone.",
     releaseUpdated: "Last updated",
@@ -178,9 +178,10 @@ export default function Home() {
   const releaseVersion = `${currentRelease.version} · ${isArabic ? "البنية" : "Build"} ${currentRelease.build}`;
   const releaseDate = new Intl.DateTimeFormat(isArabic ? "ar-SA" : "en-US", { dateStyle: "medium" }).format(new Date(currentRelease.publishedAt));
   const contactWasSubmitted = new URLSearchParams(window.location.search).get("sent") === "1";
+  const preferredDownloadUrl = currentRelease.downloadUrls.armv7;
   const apkChoices = [
-    { key: "arm64", label: t.apkChoiceArm64, url: currentRelease.downloadUrls.arm64 },
     { key: "armv7", label: t.apkChoiceArmv7, url: currentRelease.downloadUrls.armv7 },
+    { key: "arm64", label: t.apkChoiceArm64, url: currentRelease.downloadUrls.arm64 },
   ] as const;
 
   return (
@@ -208,7 +209,7 @@ export default function Home() {
 
         <section id="how" className="intro-band section-grid"><div><span className="section-kicker">02 / {isArabic ? "لماذا عيالنا" : "Why 3ialna"}</span><h2>{t.guide}</h2></div><p>{t.guideIntro}</p><div className="privacy-callout"><LockKeyhole size={20} /><div><b>{t.privacy}</b><span>{t.privacyBody}</span></div></div></section>
 
-        <section id="download" className="release-section section-grid"><div className="release-copy"><span className="section-kicker">{t.releaseKicker}</span><h2>{t.releaseTitle}</h2><p>{t.releaseBody}</p><a className="release-request" href="#contact"><Mail size={16} />{t.requestInvite}<ArrowUpRight size={15} /></a></div><div className="release-panel"><div className="release-status"><span className="release-pulse" aria-hidden="true" />{isArabic ? "إصدار متاح" : "Release available"}</div><div className="release-facts"><div><span>{isArabic ? "المنصة" : "Platform"}</span><b>{currentRelease.platform}</b></div><div><span>{isArabic ? "الإصدار" : "Version"}</span><b>{releaseVersion}</b></div><div><span>{isArabic ? "قناة التثبيت" : "Install channel"}</span><b>{t.releaseChannel}</b></div></div><a className="button release-button" href={currentRelease.downloadUrl} target="_blank" rel="noreferrer"><Download size={18} />{t.releaseButton}<ExternalLink size={16} /></a><div className="apk-choice-list"><b>{t.apkChoiceTitle}</b>{apkChoices.map((choice) => <a key={choice.key} href={choice.url} target="_blank" rel="noreferrer"><Download size={14} />{choice.label}<ExternalLink size={13} /></a>)}</div><p className="release-notice"><ShieldCheck size={17} />{t.releaseNotice}</p><p className="release-updated">{t.releaseUpdated}: {releaseDate}</p><div className="release-qr-grid"><div className="release-qr-card"><QRCodeSVG value={currentRelease.downloadUrl} size={128} level="M" includeMargin bgColor="#f7f3eb" fgColor="#174a3b" /><div><b>{t.testerQrTitle}</b><span>{t.testerQrBody}</span></div></div><div className="release-qr-card"><QRCodeSVG value={publicSiteUrl} size={128} level="M" includeMargin bgColor="#f7f3eb" fgColor="#174a3b" /><div><b>{t.siteQrTitle}</b><span>{t.siteQrBody}</span></div></div></div></div></section>
+        <section id="download" className="release-section section-grid"><div className="release-copy"><span className="section-kicker">{t.releaseKicker}</span><h2>{t.releaseTitle}</h2><p>{t.releaseBody}</p><a className="release-request" href="#contact"><Mail size={16} />{t.requestInvite}<ArrowUpRight size={15} /></a></div><div className="release-panel"><div className="release-status"><span className="release-pulse" aria-hidden="true" />{isArabic ? "إصدار متاح" : "Release available"}</div><div className="release-facts"><div><span>{isArabic ? "المنصة" : "Platform"}</span><b>{currentRelease.platform}</b></div><div><span>{isArabic ? "الإصدار" : "Version"}</span><b>{releaseVersion}</b></div><div><span>{isArabic ? "قناة التثبيت" : "Install channel"}</span><b>{t.releaseChannel}</b></div></div><a className="button release-button" href={preferredDownloadUrl} target="_blank" rel="noreferrer"><Download size={18} />{t.releaseButton}<ExternalLink size={16} /></a><div className="apk-choice-list"><b>{t.apkChoiceTitle}</b>{apkChoices.map((choice) => <a key={choice.key} href={choice.url} target="_blank" rel="noreferrer"><Download size={14} />{choice.label}<ExternalLink size={13} /></a>)}</div><p className="release-notice"><ShieldCheck size={17} />{t.releaseNotice}</p><p className="release-updated">{t.releaseUpdated}: {releaseDate}</p><div className="release-qr-grid"><div className="release-qr-card"><QRCodeSVG value={preferredDownloadUrl} size={128} level="M" includeMargin bgColor="#f7f3eb" fgColor="#174a3b" /><div><b>{t.testerQrTitle}</b><span>{t.testerQrBody}</span></div></div><div className="release-qr-card"><QRCodeSVG value={publicSiteUrl} size={128} level="M" includeMargin bgColor="#f7f3eb" fgColor="#174a3b" /><div><b>{t.siteQrTitle}</b><span>{t.siteQrBody}</span></div></div></div></div></section>
 
         <section id="setup" className="setup-section section-grid"><div className="sticky-heading"><span className="section-kicker">04 / {isArabic ? "الدليل العملي" : "The practical guide"}</span><h2>{t.install}</h2><p>{t.installIntro}</p><a className="button dark-button" href="#profiles"><ArrowDown size={17} />{isArabic ? "تابع إلى الملفات" : "Continue to profiles"}</a></div><div className="steps">{t.steps.map(([title, body], index) => <article className="step" key={title}><div className="step-index">{String(index + 1).padStart(2, "0")}</div><div><h3>{title}</h3><p>{body}</p></div><Check size={18} className="step-check" /></article>)}</div><div className="installation-details"><article><h3>{t.androidInstallTitle}</h3><ol>{t.androidInstallSteps.map((step) => <li key={step}>{step}</li>)}</ol></article><article><h3>{t.iosInstallTitle}</h3><ol>{t.iosInstallSteps.map((step) => <li key={step}>{step}</li>)}</ol></article><aside><h3>{t.packTitle}</h3><p>{t.packBody}</p></aside></div></section>
 
