@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:mu_super_app/data/local/age_safety_profile_service.dart';
 import 'package:mu_super_app/data/local/locale_controller.dart';
+import 'package:mu_super_app/domain/models/child_profile.dart';
 import 'package:mu_super_app/presentation/reports/parent_usage_report_screen.dart';
 import 'package:mu_super_app/presentation/support/educational_expert_contact_screen.dart';
 
@@ -12,6 +14,15 @@ void main() {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     LocaleController.instance = LocaleController(prefs);
   });
+
+  Future<void> addDefinedChild() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await AgeSafetyProfileService(prefs).addChild(
+      name: 'Maha',
+      birthDate: DateTime(2018, 6, 4),
+      gender: ChildGender.girl,
+    );
+  }
 
   testWidgets('parent report exposes date-filter controls',
       (WidgetTester tester) async {
@@ -24,8 +35,24 @@ void main() {
     expect(find.byType(ActionChip), findsOneWidget);
   });
 
+  testWidgets('expert contact directs parents to define a child before showing the form',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: EducationalExpertContactScreen()),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Define at least one child first'), findsOneWidget);
+    expect(
+      find.byKey(const Key('expert-contact-open-kids-management')),
+      findsOneWidget,
+    );
+    expect(find.byType(TextFormField), findsNothing);
+  });
+
   testWidgets('expert contact form requires an explicit child-data consent control',
       (WidgetTester tester) async {
+    await addDefinedChild();
     await tester.pumpWidget(
       const MaterialApp(home: EducationalExpertContactScreen()),
     );
@@ -38,6 +65,7 @@ void main() {
   testWidgets(
       'expert contact accepts Arabic-Indic mobile digits before showing the consent gate',
       (WidgetTester tester) async {
+    await addDefinedChild();
     await tester.pumpWidget(
       const MaterialApp(home: EducationalExpertContactScreen()),
     );

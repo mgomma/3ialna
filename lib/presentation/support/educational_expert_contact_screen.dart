@@ -8,6 +8,7 @@ import '../../data/local/settings_service.dart';
 import '../../data/system/educational_expert_mailto.dart';
 import '../../domain/models/child_profile.dart';
 import '../../domain/validation/country_mobile_phone_validator.dart';
+import '../parental_control/age_safety_profiles_screen.dart';
 
 class EducationalExpertContactScreen extends StatefulWidget {
   const EducationalExpertContactScreen({super.key});
@@ -32,6 +33,17 @@ class _EducationalExpertContactScreenState
 
   bool get _ar => LocaleController.instance.isArabic;
 
+  /// `Child 1` is a local starter profile created for safeguards. It is not
+  /// sufficiently parent-defined to include in an educational-expert request.
+  List<ChildProfile> get _definedChildren => _children
+      .where((ChildProfile child) {
+        final String name = child.name.trim().toLowerCase();
+        return name.isNotEmpty && name != 'child' && name != 'child 1';
+      })
+      .toList(growable: false);
+
+  bool get _hasDefinedChild => _definedChildren.isNotEmpty;
+
   @override
   void initState() {
     super.initState();
@@ -42,7 +54,6 @@ class _EducationalExpertContactScreenState
     final SharedPreferences preferences = await SharedPreferences.getInstance();
     final AgeSafetyProfileService service = AgeSafetyProfileService(preferences);
     final SettingsService settings = SettingsService(preferences);
-    await service.ensureDefaultChild();
     if (!mounted) return;
     setState(() {
       _children = service.loadChildren();
@@ -54,10 +65,10 @@ class _EducationalExpertContactScreenState
   }
 
   String _childDetails() {
-    if (_children.isEmpty) {
+    if (!_hasDefinedChild) {
       return _ar ? 'لا توجد ملفات أطفال.' : 'No child profiles.';
     }
-    return _children
+    return _definedChildren
         .map((ChildProfile child) => _ar
             ? '- ${child.name}: ${child.ageYears} سنة'
             : '- ${child.name}: ${child.ageYears} years')
@@ -87,6 +98,16 @@ class _EducationalExpertContactScreenState
   }
 
   Future<void> _openEmailDraft() async {
+    if (!_hasDefinedChild) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_ar
+              ? 'عرّف طفلًا واحدًا على الأقل قبل طلب التواصل مع الخبير.'
+              : 'Define at least one child before requesting an expert.'),
+        ),
+      );
+      return;
+    }
     if (!_formKey.currentState!.validate()) return;
     final CountryMobilePhoneValidation phoneValidation =
         _validateMobileNumber(_phone.text);
@@ -121,6 +142,52 @@ class _EducationalExpertContactScreenState
     );
   }
 
+  Future<void> _openKidsManagement() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const AgeSafetyProfilesScreen(
+          openChildManagerOnStart: true,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    await _loadChildren();
+  }
+
+  Widget _buildChildRequirement() => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              const Icon(Icons.family_restroom_outlined, size: 56),
+              const SizedBox(height: 18),
+              Text(
+                _ar
+                    ? 'عرّف طفلًا واحدًا على الأقل أولًا'
+                    : 'Define at least one child first',
+                style: Theme.of(context).textTheme.headlineSmall,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _ar
+                    ? 'تتضمن رسالة الخبير اسم الطفل وعمره فقط بعد موافقتك. أضف أو عدّل بيانات طفل من إدارة الأطفال ثم عُد إلى هذا الطلب.'
+                    : 'The expert request can include a child’s name and age only with your consent. Add or edit a child in Kids Management, then return to this request.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                key: const Key('expert-contact-open-kids-management'),
+                onPressed: _openKidsManagement,
+                icon: const Icon(Icons.manage_accounts_outlined),
+                label: Text(_ar ? 'فتح إدارة الأطفال' : 'Open Kids Management'),
+              ),
+            ],
+          ),
+        ),
+      );
+
   @override
   void dispose() {
     _phone.dispose();
@@ -146,93 +213,96 @@ class _EducationalExpertContactScreenState
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : Form(
-              key: _formKey,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: <Widget>[
-                  Text(
-                    _ar
-                        ? 'املأ البيانات المطلوبة. سيُفتح تطبيق البريد لتراجع الرسالة ثم ترسلها بنفسك؛ لا تُرسل عيالنا هذه البيانات تلقائيًا.'
-                        : 'Fill in the required details. Your email app will open so you can review and send the message yourself; 3ialna does not send this data automatically.',
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                  const SizedBox(height: 20),
-                  TextFormField(
-                    controller: _phone,
-                    keyboardType: TextInputType.phone,
-                    decoration: InputDecoration(
-                      labelText:
-                          _ar ? 'رقم الجوال للتواصل' : 'Mobile number for contact',
-                      helperText: _ar
-                          ? 'الدولة المحددة: $countryName ($callingCode).'
-                          : 'Selected country: $countryName ($callingCode).',
-                      border: const OutlineInputBorder(),
-                    ),
-                    validator: _mobileValidationError,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _details,
-                    minLines: 4,
-                    maxLines: 8,
-                    decoration: InputDecoration(
-                      labelText: _ar
-                          ? 'كيف يمكن للخبير مساعدتك؟'
-                          : 'How can the expert help?',
-                      border: const OutlineInputBorder(),
-                    ),
-                    validator: (String? value) =>
-                        value == null || value.trim().isEmpty
-                            ? (_ar
-                                ? 'أدخل تفاصيل الطلب.'
-                                : 'Enter request details.')
-                            : null,
-                  ),
-                  const SizedBox(height: 16),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Text(
-                            _ar
-                                ? 'سيظهر في مسودة البريد:'
-                                : 'The email draft will include:',
-                            style: Theme.of(context).textTheme.titleSmall,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(_childDetails()),
-                        ],
+          : !_hasDefinedChild
+              ? _buildChildRequirement()
+              : Form(
+                  key: _formKey,
+                  child: ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: <Widget>[
+                      Text(
+                        _ar
+                            ? 'املأ البيانات المطلوبة. سيُفتح تطبيق البريد لتراجع الرسالة ثم ترسلها بنفسك؛ لا تُرسل عيالنا هذه البيانات تلقائيًا.'
+                            : 'Fill in the required details. Your email app will open so you can review and send the message yourself; 3ialna does not send this data automatically.',
+                        style: Theme.of(context).textTheme.bodyLarge,
                       ),
-                    ),
+                      const SizedBox(height: 20),
+                      TextFormField(
+                        controller: _phone,
+                        keyboardType: TextInputType.phone,
+                        decoration: InputDecoration(
+                          labelText: _ar
+                              ? 'رقم الجوال للتواصل'
+                              : 'Mobile number for contact',
+                          helperText: _ar
+                              ? 'الدولة المحددة: $countryName ($callingCode).'
+                              : 'Selected country: $countryName ($callingCode).',
+                          border: const OutlineInputBorder(),
+                        ),
+                        validator: _mobileValidationError,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _details,
+                        minLines: 4,
+                        maxLines: 8,
+                        decoration: InputDecoration(
+                          labelText: _ar
+                              ? 'كيف يمكن للخبير مساعدتك؟'
+                              : 'How can the expert help?',
+                          border: const OutlineInputBorder(),
+                        ),
+                        validator: (String? value) =>
+                            value == null || value.trim().isEmpty
+                                ? (_ar
+                                    ? 'أدخل تفاصيل الطلب.'
+                                    : 'Enter request details.')
+                                : null,
+                      ),
+                      const SizedBox(height: 16),
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Text(
+                                _ar
+                                    ? 'سيظهر في مسودة البريد:'
+                                    : 'The email draft will include:',
+                                style: Theme.of(context).textTheme.titleSmall,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(_childDetails()),
+                            ],
+                          ),
+                        ),
+                      ),
+                      CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        value: _includeChildren,
+                        onChanged: (bool? value) =>
+                            setState(() => _includeChildren = value ?? false),
+                        title: Text(
+                          _ar
+                              ? 'أوافق على تضمين أسماء الأطفال وأعمارهم في هذه الرسالة إلى الخبير.'
+                              : 'I agree to include children’s names and ages in this email to the expert.',
+                        ),
+                        controlAffinity: ListTileControlAffinity.leading,
+                      ),
+                      const SizedBox(height: 10),
+                      FilledButton.icon(
+                        onPressed: _openEmailDraft,
+                        icon: const Icon(Icons.email_outlined),
+                        label: Text(
+                          _ar
+                              ? 'فتح مسودة البريد للمراجعة والإرسال'
+                              : 'Open email draft to review and send',
+                        ),
+                      ),
+                    ],
                   ),
-                  CheckboxListTile(
-                    contentPadding: EdgeInsets.zero,
-                    value: _includeChildren,
-                    onChanged: (bool? value) =>
-                        setState(() => _includeChildren = value ?? false),
-                    title: Text(
-                      _ar
-                          ? 'أوافق على تضمين أسماء الأطفال وأعمارهم في هذه الرسالة إلى الخبير.'
-                          : 'I agree to include children’s names and ages in this email to the expert.',
-                    ),
-                    controlAffinity: ListTileControlAffinity.leading,
-                  ),
-                  const SizedBox(height: 10),
-                  FilledButton.icon(
-                    onPressed: _openEmailDraft,
-                    icon: const Icon(Icons.email_outlined),
-                    label: Text(
-                      _ar
-                          ? 'فتح مسودة البريد للمراجعة والإرسال'
-                          : 'Open email draft to review and send',
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                ),
     );
   }
 }
