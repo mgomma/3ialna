@@ -10,6 +10,7 @@ import 'parent_voice_notification_service.dart';
 import 'overlay_service.dart';
 import 'ios_screen_time_safeguard_service.dart';
 import 'prayer_time_service.dart';
+import 'prayer_voice_reminder_schedule.dart';
 
   /// Scheduler that manages prayer time locks and notifications.
 class PrayerLockScheduler {
@@ -37,7 +38,7 @@ class PrayerLockScheduler {
   /// Starts the scheduler with the given settings.
   Future<void> start(PrayerLockSettings settings) async {
     if (!settings.enabled) {
-      await stop();
+      await stop(cancelBackgroundPrayerVoice: true);
       return;
     }
 
@@ -59,7 +60,7 @@ class PrayerLockScheduler {
   }
 
   /// Stops the scheduler and cancels all scheduled locks and notifications.
-  Future<void> stop() async {
+  Future<void> stop({bool cancelBackgroundPrayerVoice = false}) async {
     _isActive = false;
     _monitoringTimer?.cancel();
     _monitoringTimer = null;
@@ -71,6 +72,11 @@ class PrayerLockScheduler {
     _activeLocks.clear();
     for (final Prayer prayer in Prayer.values) {
       await _notificationService.cancelNotification(_getNotificationId(prayer));
+    }
+    if (cancelBackgroundPrayerVoice) {
+      await ParentVoiceNotificationService(
+        recordingKey: ParentVoiceNotificationService.prayerReminderRecordingKey,
+      ).cancelPrayerBackgroundPlayback();
     }
     await _releasePrayerOverlay();
     await IosScreenTimeSafeguardService().clearPrayerShields();
@@ -108,6 +114,24 @@ class PrayerLockScheduler {
     for (final Prayer prayer in Prayer.values) {
       await _notificationService.cancelNotification(_getNotificationId(prayer));
     }
+
+    final ParentVoiceNotificationService prayerVoiceService =
+        ParentVoiceNotificationService(
+      recordingKey: ParentVoiceNotificationService.prayerReminderRecordingKey,
+    );
+    await prayerVoiceService.cancelPrayerBackgroundPlayback();
+    bool automaticVoiceScheduled = false;
+    if (settings.voiceNotificationsEnabled) {
+      automaticVoiceScheduled = await prayerVoiceService
+          .schedulePrayerBackgroundPlayback(
+        PrayerVoiceReminderSchedule.upcomingTimes(
+          prayerTimeService: _prayerTimeService,
+          settings: settings,
+          now: now,
+        ),
+      );
+    }
+    await prayerVoiceService.dispose();
 
     // First, check if we're currently in a lock period and save it immediately
     bool foundActiveLock = false;
@@ -165,6 +189,7 @@ class PrayerLockScheduler {
                   recordingKey: ParentVoiceNotificationService.prayerReminderRecordingKey,
                 )
               : null,
+          silent: automaticVoiceScheduled,
         );
       }
 

@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.content.ContextCompat
 import com.ialna.app.usage.MonitorForegroundService
+import com.ialna.app.voice.VoicePlaybackScheduler
 
 /**
  * Restarts the monitoring foreground service after boots, device unlocks, or app updates
@@ -16,11 +17,15 @@ class BootReceiver : BroadcastReceiver() {
         val action = intent?.action ?: return
         if (action == Intent.ACTION_BOOT_COMPLETED ||
             action == Intent.ACTION_LOCKED_BOOT_COMPLETED ||
-            action == Intent.ACTION_MY_PACKAGE_REPLACED
+            action == Intent.ACTION_MY_PACKAGE_REPLACED ||
+            action == Intent.ACTION_USER_UNLOCKED ||
+            action == "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED"
         ) {
             if (isMonitoringEnabled(context)) {
                 startMonitoringService(context)
             }
+            VoicePlaybackScheduler.reschedule(context)
+            VoicePlaybackScheduler.reschedulePrayer(context)
         }
     }
 

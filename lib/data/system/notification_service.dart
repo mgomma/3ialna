@@ -151,6 +151,7 @@ class NotificationService {
     required String body,
     required DateTime scheduledDate,
     VoiceReminderAction? voiceAction,
+    bool silent = false,
   }) async {
     try {
       if (!await _ensurePermission()) {
@@ -167,7 +168,10 @@ class NotificationService {
         title,
         body,
         _convertToTZDateTime(scheduledDate),
-        _notificationDetails(withVoiceAction: voiceAction != null),
+        _notificationDetails(
+          withVoiceAction: voiceAction != null,
+          silent: silent,
+        ),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         matchDateTimeComponents: DateTimeComponents.time,
         payload: voiceAction?.payload,
@@ -285,7 +289,10 @@ class NotificationService {
     }
   }
 
-  NotificationDetails _notificationDetails({required bool withVoiceAction}) {
+  NotificationDetails _notificationDetails({
+    required bool withVoiceAction,
+    bool silent = false,
+  }) {
     final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       withVoiceAction ? 'parent_voice_reminders' : 'prayer_lock_channel',
       withVoiceAction ? 'Parent voice reminders' : 'Prayer Lock Notifications',
@@ -295,6 +302,8 @@ class NotificationService {
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,
+      playSound: !silent,
+      enableVibration: !silent,
       actions: withVoiceAction
           ? const <AndroidNotificationAction>[
               AndroidNotificationAction(
@@ -308,6 +317,7 @@ class NotificationService {
     );
     final DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
       categoryIdentifier: withVoiceAction ? _voiceReminderCategory : null,
+      presentSound: !silent,
     );
     return NotificationDetails(android: androidDetails, iOS: iosDetails);
   }

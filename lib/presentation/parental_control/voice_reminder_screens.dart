@@ -55,7 +55,7 @@ class _VoiceReminderRecordingScreenState extends State<VoiceReminderRecordingScr
         await _voiceService.startRecording();
         if (mounted) setState(() => _recordingNow = true);
         if (Platform.isIOS) {
-          _iosLimit = Timer(const Duration(seconds: 30), () {
+          _iosLimit = Timer(const Duration(seconds: 25), () {
             if (_recordingNow) _toggleRecord();
           });
         }
@@ -113,8 +113,8 @@ class _VoiceReminderRecordingScreenState extends State<VoiceReminderRecordingScr
           const SizedBox(height: 8),
           Text(
             _ar
-                ? 'يبقى الصوت على هذا الجهاز. يفتح الإشعار عيالنا ليشغّل التسجيل؛ لا يعمل تلقائيًا في الخلفية.'
-                : 'The voice note stays on this device. A notification opens 3ialna to play it; it never auto-plays in the background.',
+                ? 'يبقى الصوت على هذا الجهاز. يعمل التذكير المجدول عند قفل الهاتف أو إغلاق عيالنا؛ يشغّل Android الصوت محليًا ويقدّمه iPhone كصوت إشعار.'
+                : 'The voice note stays on this device. A scheduled reminder works while the phone is locked or 3ialna is closed; Android plays it locally and iPhone delivers it as a notification sound.',
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 28),

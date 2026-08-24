@@ -341,12 +341,29 @@ class MainActivity : FlutterActivity() {
                         result.success(VoicePlaybackScheduler.schedule(this, path, atMillis))
                     }
                 }
+                "schedulePrayerVoicePlayback" -> {
+                    val path = call.argument<String>("path")
+                    val times = (call.argument<List<Number>>("atMillisList") ?: emptyList())
+                        .map { it.toLong() }
+                    if (path.isNullOrBlank() || times.isEmpty()) {
+                        result.error("INVALID_ARGUMENT", "A voice path and prayer reminder times are required", null)
+                    } else {
+                        result.success(VoicePlaybackScheduler.schedulePrayer(this, path, times))
+                    }
+                }
                 "cancelVoicePlayback" -> {
                     VoicePlaybackScheduler.cancel(this)
                     result.success(true)
                 }
+                "cancelPrayerVoicePlayback" -> {
+                    VoicePlaybackScheduler.cancelPrayer(this)
+                    result.success(true)
+                }
                 "isVoicePlaybackScheduled" -> {
                     result.success(VoicePlaybackScheduler.isScheduled(this))
+                }
+                "canScheduleExactAlarms" -> {
+                    result.success(VoicePlaybackScheduler.canScheduleExactAlarms(this))
                 }
                 "requestExactAlarmPermission" -> {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {

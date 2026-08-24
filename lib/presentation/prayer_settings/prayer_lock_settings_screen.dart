@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../data/local/settings_service.dart';
@@ -137,6 +139,42 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
     if (mounted) {
       Navigator.of(context).pop(_settings);
     }
+  }
+
+  Future<void> _requestBackgroundPrayerVoiceAccess() async {
+    final ParentVoiceNotificationService voiceService =
+        ParentVoiceNotificationService(
+      recordingKey: ParentVoiceNotificationService.prayerReminderRecordingKey,
+    );
+    if (Platform.isAndroid) {
+      final bool allowed = await voiceService.canScheduleExactAlarms();
+      if (!allowed) {
+        await voiceService.requestExactAlarmPermission();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(_text(
+                'Allow Alarms & reminders, then return to 3ialna so prayer voice reminders can run on time while the phone is locked.',
+                'اسمح بخيار المنبّهات والتذكيرات ثم عُد إلى عيالنا لتعمل تذكيرات الصلاة الصوتية في وقتها حتى عند قفل الهاتف.',
+              )),
+            ),
+          );
+        }
+      }
+    } else if (Platform.isIOS) {
+      final bool granted = await voiceService.requestVoiceNotificationPermission();
+      if (!granted && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_text(
+              'Allow notifications in iPhone Settings so the scheduled prayer sound can play while 3ialna is closed.',
+              'اسمح بالإشعارات في إعدادات iPhone ليعمل صوت تذكير الصلاة المجدول حتى عند إغلاق عيالنا.',
+            )),
+          ),
+        );
+      }
+    }
+    await voiceService.dispose();
   }
 
   @override
@@ -371,7 +409,7 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(_text('Voice notifications', 'إشعارات صوت الوالدين')),
-              subtitle: Text(_text('Show a Play parent voice action in the prayer reminder notification', 'إظهار إجراء تشغيل صوت الوالدين في إشعار تذكير الصلاة')),
+              subtitle: Text(_text('Schedule the local parent voice two minutes before each prayer, including while the phone is locked.', 'جدولة صوت الوالدين المحلي قبل كل صلاة بدقيقتين، حتى عند قفل الهاتف.')),
               value: _settings.voiceNotificationsEnabled,
               onChanged: (bool value) {
                 setState(() {
@@ -383,7 +421,7 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.mic_none_outlined),
               title: Text(_text('Prayer reminder voice note', 'ملاحظة صوتية لتذكير الصلاة')),
-              subtitle: Text(_text('Recorded locally. The notification opens 3ialna to play it; it never auto-plays in the background.', 'تُسجل محليًا. يفتح الإشعار عيالنا لتشغيلها ولا تعمل تلقائيًا في الخلفية.')),
+              subtitle: Text(_text('Recorded locally. Android can play it from a scheduled reminder; iPhone delivers it as a notification sound.', 'تُسجل محليًا. يمكن لـ Android تشغيلها من التذكير المجدول، ويقدّمها iPhone كصوت إشعار.')),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Navigator.of(context).push(
@@ -397,8 +435,17 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
                 );
               },
             ),
+            if (_settings.voiceNotificationsEnabled)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.alarm_on_outlined),
+                title: Text(_text('Enable on-time background reminders', 'تفعيل التذكيرات في وقتها بالخلفية')),
+                subtitle: Text(_text('Required once so reminders can arrive when 3ialna is closed or the screen is locked.', 'مطلوب مرة واحدة لوصول التذكيرات عند إغلاق عيالنا أو قفل الشاشة.')),
+                trailing: const Icon(Icons.open_in_new),
+                onTap: _requestBackgroundPrayerVoiceAccess,
+              ),
             const SizedBox(height: 8),
-            Text(_text('Custom messages are shown 2 minutes before each prayer. The optional voice action opens the local recording inside 3ialna.', 'تظهر الرسائل المخصصة قبل كل صلاة بدقيقتين. يفتح إجراء الصوت الاختياري التسجيل المحلي داخل عيالنا.'), style: const TextStyle(color: Colors.grey)),
+            Text(_text('The next seven days are scheduled locally and refreshed when 3ialna opens. Android uses an exact reminder alarm; iPhone uses a notification sound shorter than 29 seconds.', 'تُجدول الأيام السبعة القادمة محليًا وتُحدّث عند فتح عيالنا. يستخدم Android منبّهًا دقيقًا، ويستخدم iPhone صوت إشعار أقصر من 29 ثانية.'), style: const TextStyle(color: Colors.grey)),
             const SizedBox(height: 16),
             ...Prayer.values.map(
               (Prayer prayer) => Padding(

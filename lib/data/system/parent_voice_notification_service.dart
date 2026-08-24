@@ -68,10 +68,42 @@ class ParentVoiceNotificationService {
         false;
   }
 
+  /// Schedules background playback for every upcoming prayer reminder. Native
+  /// code owns delivery while Flutter is suspended or the device is locked.
+  Future<bool> schedulePrayerBackgroundPlayback(
+    Iterable<DateTime> scheduledTimes,
+  ) async {
+    final File? file = await getRecording();
+    final List<int> times = scheduledTimes
+        .where((DateTime value) => value.isAfter(DateTime.now()))
+        .map((DateTime value) => value.millisecondsSinceEpoch)
+        .toSet()
+        .toList()
+      ..sort();
+    if (file == null || times.isEmpty) return false;
+
+    return await _backgroundChannel.invokeMethod<bool>(
+          'schedulePrayerVoicePlayback',
+          <String, Object>{
+            'path': file.path,
+            'atMillisList': times,
+          },
+        ) ??
+        false;
+  }
+
   Future<void> cancelBackgroundPlayback() => _backgroundChannel.invokeMethod<void>('cancelVoicePlayback');
+
+  Future<void> cancelPrayerBackgroundPlayback() =>
+      _backgroundChannel.invokeMethod<void>('cancelPrayerVoicePlayback');
 
   Future<bool> isBackgroundPlaybackScheduled() async {
     return await _backgroundChannel.invokeMethod<bool>('isVoicePlaybackScheduled') ?? false;
+  }
+
+  Future<bool> canScheduleExactAlarms() async {
+    return await _backgroundChannel.invokeMethod<bool>('canScheduleExactAlarms') ??
+        true;
   }
 
   Future<void> requestExactAlarmPermission() => _backgroundChannel.invokeMethod<void>('requestExactAlarmPermission');
