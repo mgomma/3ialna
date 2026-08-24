@@ -11,6 +11,7 @@ import '../../domain/models/prayer_lock_settings.dart';
 import '../../domain/services/prayer_calculation_method_policy.dart';
 import '../parental_control/voice_reminder_screens.dart';
 import '../../data/system/parent_voice_notification_service.dart';
+import '../../data/system/battery_optimization_service.dart';
 import '../widgets/disclosure_dialog.dart';
 
 /// Screen for configuring prayer time lock settings.
@@ -178,14 +179,12 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
   }
 
   Future<void> _reviewBatteryOptimization() async {
-    final ParentVoiceNotificationService voiceService =
-        ParentVoiceNotificationService(
-      recordingKey: ParentVoiceNotificationService.prayerReminderRecordingKey,
-    );
+    const BatteryOptimizationService batteryOptimizationService =
+        BatteryOptimizationService();
     final bool alreadyExempt =
-        await voiceService.isIgnoringBatteryOptimizations();
+        await batteryOptimizationService.isIgnoringBatteryOptimizations();
     if (!alreadyExempt) {
-      await voiceService.openBatteryOptimizationSettings();
+      await batteryOptimizationService.openSystemSettings();
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -196,7 +195,6 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
         ),
       );
     }
-    await voiceService.dispose();
   }
 
   @override

@@ -5,6 +5,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
+import 'battery_optimization_service.dart';
 class ParentVoiceNotificationService {
   ParentVoiceNotificationService({
     AudioRecorder? recorder,
@@ -109,16 +110,12 @@ class ParentVoiceNotificationService {
   /// Returns whether Android currently exempts 3ialna from battery
   /// optimization. This is informational only; the app never requests a
   /// direct whitelist exemption.
-  Future<bool> isIgnoringBatteryOptimizations() async {
-    return await _backgroundChannel.invokeMethod<bool>(
-          'isIgnoringBatteryOptimizations',
-        ) ??
-        false;
-  }
+  Future<bool> isIgnoringBatteryOptimizations() =>
+      const BatteryOptimizationService().isIgnoringBatteryOptimizations();
 
   /// Opens Android's general Battery Optimization settings for parent review.
   Future<void> openBatteryOptimizationSettings() =>
-      _backgroundChannel.invokeMethod<void>('openBatteryOptimizationSettings');
+      const BatteryOptimizationService().openSystemSettings();
 
   Future<void> requestExactAlarmPermission() => _backgroundChannel.invokeMethod<void>('requestExactAlarmPermission');
 

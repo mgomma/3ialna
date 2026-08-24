@@ -1,6 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mu_super_app/data/system/parent_voice_notification_service.dart';
+import 'package:mu_super_app/data/system/battery_optimization_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -27,13 +27,10 @@ void main() {
       }
     });
 
-    final ParentVoiceNotificationService service =
-        ParentVoiceNotificationService();
+    const BatteryOptimizationService service = BatteryOptimizationService();
 
     expect(await service.isIgnoringBatteryOptimizations(), isFalse);
-    await service.openBatteryOptimizationSettings();
+    await service.openSystemSettings();
     expect(openedSystemSettings, isTrue);
-
-    await service.dispose();
   });
 }
