@@ -1,8 +1,12 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:mu_super_app/data/local/age_safety_profile_service.dart';
+import 'package:mu_super_app/data/local/parental_control_storage_service.dart';
 import 'package:mu_super_app/data/local/shareable_profile_pack_service.dart';
 import 'package:mu_super_app/domain/models/age_safety_profile.dart';
+import 'package:mu_super_app/domain/models/child_profile.dart';
 import 'package:mu_super_app/domain/models/managed_app_category.dart';
 import 'package:mu_super_app/domain/models/schedule.dart';
 
@@ -18,6 +22,10 @@ void main() {
       );
 
   group('ShareableProfilePack privacy boundary', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+    });
+
     test('exports an allowlisted reusable payload without child identity or private device data', () {
       final Map<String, dynamic> exported = jsonDecode(jsonEncode(pack().toJson())) as Map<String, dynamic>;
       final String encoded = jsonEncode(exported).toLowerCase();
@@ -32,6 +40,28 @@ void main() {
       expect(encoded, isNot(contains('parent-pin')));
       expect(encoded, isNot(contains('voice-recording')));
       expect(encoded, isNot(contains('usage-stats')));
+    });
+
+    test('real service export does not read identity fields from the active child profile', () async {
+      final SharedPreferences preferences = await SharedPreferences.getInstance();
+      final AgeSafetyProfileService profiles = AgeSafetyProfileService(preferences);
+      final child = await profiles.addChild(
+        name: 'Layla Hassan',
+        birthDate: DateTime(2017, 4, 12),
+        gender: ChildGender.girl,
+      );
+      await profiles.setActiveChild(child.id);
+
+      final String exported = await ShareableProfilePackService(profiles, ParentalControlStorageService()).export(
+        profileName: 'Calm evening routine',
+        creatorName: 'A parent',
+      );
+      final String normalized = exported.toLowerCase();
+
+      expect(normalized, isNot(contains('layla hassan')));
+      expect(normalized, isNot(contains('2017-04-12')));
+      expect(normalized, isNot(contains('girl')));
+      expect(jsonDecode(exported), isA<Map<String, dynamic>>());
     });
 
     test('round-trips reusable rules while preserving only the voluntary setup and creator names', () {
