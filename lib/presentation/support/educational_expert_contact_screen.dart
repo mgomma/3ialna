@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/local/age_safety_profile_service.dart';
 import '../../data/local/locale_controller.dart';
+import '../../data/system/educational_expert_mailto.dart';
 import '../../domain/models/child_profile.dart';
 
 class EducationalExpertContactScreen extends StatefulWidget {
@@ -70,13 +71,9 @@ class _EducationalExpertContactScreenState
     final String body = _ar
         ? 'طلب تواصل مع خبير تربوي\n\nرقم الجوال: ${_phone.text.trim()}\n\nتفاصيل المساعدة المطلوبة:\n${_details.text.trim()}\n\nأسماء الأطفال وأعمارهم (بموافقة الوالد):\n${_childDetails()}'
         : 'Educational expert contact request\n\nMobile: ${_phone.text.trim()}\n\nRequested help:\n${_details.text.trim()}\n\nChildren’s names and ages (with parent consent):\n${_childDetails()}';
-    final Uri email = Uri(
-      scheme: 'mailto',
-      path: '3ialna.app@gmail.com',
-      queryParameters: <String, String>{
-        'subject': 'طلب تواصل مع خبير تربوى',
-        'body': body,
-      },
+    final Uri email = buildEducationalExpertMailto(
+      subject: 'طلب تواصل مع خبير تربوى',
+      body: body,
     );
     final bool opened =
         await launchUrl(email, mode: LaunchMode.externalApplication);

@@ -68,4 +68,14 @@ void main() {
     expect(settings.isDeviceLocked, isTrue);
     expect(settings.loadOverlayData().appName, 'TikTok');
   });
+
+  test('persists feature walkthrough completion', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final SettingsService settings =
+        SettingsService(await SharedPreferences.getInstance());
+
+    expect(settings.featureWalkthroughSeen, isFalse);
+    await settings.setFeatureWalkthroughSeen();
+    expect(settings.featureWalkthroughSeen, isTrue);
+  });
 }

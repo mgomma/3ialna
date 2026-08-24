@@ -33,6 +33,7 @@ import '../../domain/models/social_auth_profile.dart';
 import '../../l10n/app_localizations.dart';
 import '../parental_control/parent_dashboard_screen.dart';
 import '../parental_control/pin_auth_screen.dart';
+import '../onboarding/feature_walkthrough_screen.dart';
 import '../prayer_settings/prayer_lock_settings_screen.dart';
 import '../reports/parent_usage_report_screen.dart';
 import '../support/educational_expert_contact_screen.dart';
@@ -171,6 +172,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     // Check prayer locks immediately on startup
     await _checkPrayerLocks();
+    _showFeatureWalkthroughIfNeeded();
+  }
+
+  void _showFeatureWalkthroughIfNeeded() {
+    if (_settings.featureWalkthroughSeen || !mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted || _settings.featureWalkthroughSeen) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => FeatureWalkthroughScreen(
+            onCompleted: _settings.setFeatureWalkthroughSeen,
+          ),
+        ),
+      );
+    });
   }
 
   void _initializePrayerLockScheduler() {
@@ -1079,6 +1095,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
           ),
           tooltip: _isArabic ? 'تقرير الاستخدام للوالدين' : 'Parent usage report',
+        ),
+        IconButton(
+          icon: const Icon(Icons.auto_awesome_outlined),
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => FeatureWalkthroughScreen(
+                onCompleted: _settings.setFeatureWalkthroughSeen,
+              ),
+            ),
+          ),
+          tooltip: _isArabic ? 'جولة تعريفية' : 'Feature tour',
         ),
         IconButton(
           icon: const Icon(Icons.public),
