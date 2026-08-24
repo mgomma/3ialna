@@ -12,6 +12,7 @@ import '../../domain/services/prayer_calculation_method_policy.dart';
 import '../parental_control/voice_reminder_screens.dart';
 import '../../data/system/parent_voice_notification_service.dart';
 import '../../data/system/battery_optimization_service.dart';
+import '../../data/system/prayer_voice_reminder_verification.dart';
 import '../widgets/disclosure_dialog.dart';
 
 /// Screen for configuring prayer time lock settings.
@@ -28,6 +29,7 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
 
   PrayerLockSettings _settings = PrayerLockSettings.defaults();
   bool _isLoading = false;
+  bool _isSchedulingVoiceReminderTest = false;
   String? _locationError;
   Future<void>? _pendingMethodWrite;
 
@@ -161,6 +163,15 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
             ),
           );
         }
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_text(
+              'Alarms & reminders is ready. Record a note, then run the one-minute test below.',
+              'خيار المنبّهات والتذكيرات جاهز. سجّل ملاحظة ثم شغّل اختبار الدقيقة الواحدة أدناه.',
+            )),
+          ),
+        );
       }
     } else if (Platform.isIOS) {
       final bool granted = await voiceService.requestVoiceNotificationPermission();
@@ -176,6 +187,93 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
       }
     }
     await voiceService.dispose();
+  }
+
+  Future<void> _scheduleVoiceReminderVerification() async {
+    if (!_settings.voiceNotificationsEnabled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_text(
+            'Enable prayer voice notifications before running the test.',
+            'فعّل إشعارات صوت تذكير الصلاة قبل تشغيل الاختبار.',
+          )),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isSchedulingVoiceReminderTest = true);
+    final ParentVoiceNotificationService voiceService =
+        ParentVoiceNotificationService(
+      recordingKey: ParentVoiceNotificationService.prayerReminderRecordingKey,
+    );
+    try {
+      final bool hasRecording = await voiceService.getRecording() != null;
+      bool platformPermissionGranted = true;
+      if (Platform.isAndroid) {
+        platformPermissionGranted = await voiceService.canScheduleExactAlarms();
+      } else if (Platform.isIOS) {
+        platformPermissionGranted =
+            await voiceService.requestVoiceNotificationPermission();
+      }
+
+      if (!PrayerVoiceReminderVerification.canSchedule(
+        hasRecording: hasRecording,
+        platformPermissionGranted: platformPermissionGranted,
+      )) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_text(
+              hasRecording
+                  ? 'Allow the required reminder permission, then try the test again.'
+                  : 'Record a prayer reminder voice note before running the test.',
+              hasRecording
+                  ? 'اسمح بإذن التذكير المطلوب ثم أعد الاختبار.'
+                  : 'سجّل ملاحظة صوتية لتذكير الصلاة قبل تشغيل الاختبار.',
+            )),
+          ),
+        );
+        return;
+      }
+
+      final DateTime scheduledAt =
+          PrayerVoiceReminderVerification.scheduledAt(DateTime.now());
+      final bool scheduled =
+          await voiceService.scheduleBackgroundPlayback(scheduledAt);
+      if (!mounted) return;
+      if (!scheduled) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_text(
+              '3ialna could not schedule the test. Review reminder permissions and try again.',
+              'تعذر على عيالنا جدولة الاختبار. راجع أذونات التذكير ثم حاول مرة أخرى.',
+            )),
+          ),
+        );
+        return;
+      }
+
+      await showDialog<void>(
+        context: context,
+        builder: (BuildContext dialogContext) => AlertDialog(
+          title: Text(_text('One-minute test scheduled', 'تمت جدولة اختبار الدقيقة الواحدة')),
+          content: Text(_text(
+            'Lock the phone now. Keep 3ialna closed if you wish. The local prayer voice reminder should play in about one minute.',
+            'اقفل الهاتف الآن. يمكنك إبقاء عيالنا مغلقًا. ينبغي أن يعمل صوت تذكير الصلاة المحلي خلال نحو دقيقة واحدة.',
+          )),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(_text('Done', 'حسنًا')),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      await voiceService.dispose();
+      if (mounted) setState(() => _isSchedulingVoiceReminderTest = false);
+    }
   }
 
   Future<void> _reviewBatteryOptimization() async {
@@ -460,7 +558,7 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.alarm_on_outlined),
                 title: Text(_text('Enable on-time background reminders', 'تفعيل التذكيرات في وقتها بالخلفية')),
-                subtitle: Text(_text('Required once so reminders can arrive when 3ialna is closed or the screen is locked.', 'مطلوب مرة واحدة لوصول التذكيرات عند إغلاق عيالنا أو قفل الشاشة.')),
+                subtitle: Text(_text('Step 1: required once so reminders can arrive when 3ialna is closed or the screen is locked.', 'الخطوة 1: مطلوب مرة واحدة لوصول التذكيرات عند إغلاق عيالنا أو قفل الشاشة.')),
                 trailing: const Icon(Icons.open_in_new),
                 onTap: _requestBackgroundPrayerVoiceAccess,
               ),
@@ -473,11 +571,34 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
                   'مراجعة تحسين البطارية (اختياري)',
                 )),
                 subtitle: Text(_text(
-                  'Exact alarms already work through Android Doze. Open the system list only if this phone delays reminders; 3ialna never requests automatic whitelisting.',
-                  'تعمل المنبهات الدقيقة خلال وضع السكون في Android. افتح قائمة النظام فقط إذا كان الهاتف يؤخر التذكيرات؛ لا يطلب عيالنا إضافة تلقائية إلى القائمة البيضاء.',
+                  'Step 2 (optional): exact alarms already work through Android Doze. Open the system list only if this phone delays reminders; 3ialna never requests automatic whitelisting.',
+                  'الخطوة 2 (اختيارية): تعمل المنبهات الدقيقة خلال وضع السكون في Android. افتح قائمة النظام فقط إذا كان الهاتف يؤخر التذكيرات؛ لا يطلب عيالنا إضافة تلقائية إلى القائمة البيضاء.',
                 )),
                 trailing: const Icon(Icons.open_in_new),
                 onTap: _reviewBatteryOptimization,
+              ),
+            if (_settings.voiceNotificationsEnabled)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: _isSchedulingVoiceReminderTest
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.verified_user_outlined),
+                title: Text(_text(
+                  'Test a one-minute locked-device reminder',
+                  'اختبر تذكيرًا لمدة دقيقة واحدة عند قفل الجهاز',
+                )),
+                subtitle: Text(_text(
+                  'Step 3: schedule a safe local test, lock the phone, and confirm the reminder arrives without keeping 3ialna open.',
+                  'الخطوة 3: جدولة اختبار محلي آمن، ثم اقفل الهاتف وتأكد من وصول التذكير دون إبقاء عيالنا مفتوحًا.',
+                )),
+                trailing: const Icon(Icons.play_circle_outline),
+                onTap: _isSchedulingVoiceReminderTest
+                    ? null
+                    : _scheduleVoiceReminderVerification,
               ),
             const SizedBox(height: 8),
             Text(_text('The next seven days are scheduled locally and refreshed when 3ialna opens. Android uses an exact reminder alarm; iPhone uses a notification sound shorter than 29 seconds.', 'تُجدول الأيام السبعة القادمة محليًا وتُحدّث عند فتح عيالنا. يستخدم Android منبّهًا دقيقًا، ويستخدم iPhone صوت إشعار أقصر من 29 ثانية.'), style: const TextStyle(color: Colors.grey)),
