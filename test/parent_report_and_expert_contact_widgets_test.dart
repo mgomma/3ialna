@@ -24,12 +24,6 @@ void main() {
     );
   }
 
-  Future<void> removeAllDefinedChildren() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString('parental_control_children', '[]');
-    await prefs.remove('parental_control_active_child_id');
-  }
-
   testWidgets('parent report exposes date-filter controls',
       (WidgetTester tester) async {
     await tester.pumpWidget(
@@ -43,9 +37,12 @@ void main() {
 
   testWidgets('expert contact directs parents to define a child before showing the form',
       (WidgetTester tester) async {
-    await removeAllDefinedChildren();
     await tester.pumpWidget(
-      const MaterialApp(home: EducationalExpertContactScreen()),
+      const MaterialApp(
+        home: EducationalExpertContactScreen(
+          childrenOverride: <ChildProfile>[],
+        ),
+      ),
     );
     await tester.pumpAndSettle();
 

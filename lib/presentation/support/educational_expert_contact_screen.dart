@@ -11,7 +11,13 @@ import '../../domain/validation/country_mobile_phone_validator.dart';
 import '../parental_control/age_safety_profiles_screen.dart';
 
 class EducationalExpertContactScreen extends StatefulWidget {
-  const EducationalExpertContactScreen({super.key});
+  const EducationalExpertContactScreen({
+    super.key,
+    this.childrenOverride,
+  });
+
+  /// Used by isolated UI tests; normal app navigation always loads local data.
+  final List<ChildProfile>? childrenOverride;
 
   @override
   State<EducationalExpertContactScreen> createState() =>
@@ -56,7 +62,7 @@ class _EducationalExpertContactScreenState
     final SettingsService settings = SettingsService(preferences);
     if (!mounted) return;
     setState(() {
-      _children = service.loadChildren();
+      _children = widget.childrenOverride ?? service.loadChildren();
       _country = CountryMobilePhoneValidator.canonicalCountry(
         settings.selectedCountry,
       );
