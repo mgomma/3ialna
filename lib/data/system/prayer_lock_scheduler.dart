@@ -1,13 +1,11 @@
 import 'dart:async';
 import 'dart:developer' as developer;
-import 'dart:io';
 
 import '../../data/local/settings_service.dart';
 import '../../domain/models/overlay_data.dart';
 import '../../domain/models/prayer.dart';
 import '../../domain/models/prayer_lock_settings.dart';
 import 'notification_service.dart';
-import 'voice_notification_service.dart';
 import 'parent_voice_notification_service.dart';
 import 'overlay_service.dart';
 import 'ios_screen_time_safeguard_service.dart';
@@ -29,8 +27,6 @@ class PrayerLockScheduler {
   final NotificationService _notificationService;
   final OverlayService _overlayService;
   final SettingsService? _settingsService;
-  final VoiceNotificationService _voiceNotificationService = VoiceNotificationService();
-  final ParentVoiceNotificationService _parentVoiceService = ParentVoiceNotificationService();
 
   Timer? _monitoringTimer;
   Timer? _checkTimer;
@@ -73,8 +69,9 @@ class PrayerLockScheduler {
       timer.cancel();
     }
     _activeLocks.clear();
-    await _notificationService.cancelAllNotifications();
-    await _parentVoiceService.cancelBackgroundPlayback();
+    for (final Prayer prayer in Prayer.values) {
+      await _notificationService.cancelNotification(_getNotificationId(prayer));
+    }
     await IosScreenTimeSafeguardService().clearPrayerShields();
     _currentSettings = null;
   }
@@ -106,8 +103,10 @@ class PrayerLockScheduler {
       }).toList(growable: false),
     );
 
-    // Cancel existing notifications
-    await _notificationService.cancelAllNotifications();
+    // Cancel only prayer notifications. Parent task reminders use a separate ID range.
+    for (final Prayer prayer in Prayer.values) {
+      await _notificationService.cancelNotification(_getNotificationId(prayer));
+    }
 
     // First, check if we're currently in a lock period and save it immediately
     bool foundActiveLock = false;
@@ -161,10 +160,13 @@ class PrayerLockScheduler {
           title: '${prayer.displayName} Prayer Time',
           body: message,
           scheduledDate: notificationTime,
+          voiceAction: settings.voiceNotificationsEnabled
+              ? const VoiceReminderAction(
+                  kind: 'prayer',
+                  recordingKey: ParentVoiceNotificationService.prayerReminderRecordingKey,
+                )
+              : null,
         );
-        if (settings.voiceNotificationsEnabled) {
-          await _parentVoiceService.scheduleBackgroundPlayback(notificationTime);
-        }
       }
 
       // Schedule lock at prayer time
@@ -263,17 +265,6 @@ class PrayerLockScheduler {
         DateTime.now(),
       ),
     );
-
-    if (settings.voiceNotificationsEnabled) {
-      final File? parentRecording = await _parentVoiceService.getRecording();
-      if (parentRecording != null) {
-        await _parentVoiceService.playRecording();
-      } else {
-        final String message = settings.notificationMessages[prayer] ??
-            'Prayer time is approaching. Your device will be locked in 2 minutes.';
-        await _voiceNotificationService.speak(message);
-      }
-    }
 
     // Create a custom overlay data for prayer locks.
     await _overlayService.showLimitWarning(data);

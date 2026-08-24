@@ -6,6 +6,8 @@ import '../../data/system/location_service.dart';
 import '../../domain/models/prayer.dart';
 import '../../domain/models/prayer_lock_settings.dart';
 import '../../domain/services/prayer_calculation_method_policy.dart';
+import '../parental_control/voice_reminder_screens.dart';
+import '../../data/system/parent_voice_notification_service.dart';
 import '../widgets/disclosure_dialog.dart';
 
 /// Screen for configuring prayer time lock settings.
@@ -346,7 +348,7 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text('Voice notifications'),
-              subtitle: const Text('Speak the same written message when the prayer lock begins'),
+              subtitle: const Text('Show a Play parent voice action in the prayer reminder notification'),
               value: _settings.voiceNotificationsEnabled,
               onChanged: (bool value) {
                 setState(() {
@@ -354,8 +356,26 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
                 });
               },
             ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.mic_none_outlined),
+              title: const Text('Prayer reminder voice note'),
+              subtitle: const Text('Recorded locally. The notification opens 3ialna to play it; it never auto-plays in the background.'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const VoiceReminderRecordingScreen(
+                      recordingKey: ParentVoiceNotificationService.prayerReminderRecordingKey,
+                      title: 'Prayer reminder voice',
+                      description: 'Record a parent voice note for the child to hear after opening a prayer reminder.',
+                    ),
+                  ),
+                );
+              },
+            ),
             const SizedBox(height: 8),
-            const Text('Custom messages shown 2 minutes before each prayer and spoken when the lock begins', style: TextStyle(color: Colors.grey)),
+            const Text('Custom messages are shown 2 minutes before each prayer. The optional voice action opens the local recording inside 3ialna.', style: TextStyle(color: Colors.grey)),
             const SizedBox(height: 16),
             ...Prayer.values.map(
               (Prayer prayer) => Padding(

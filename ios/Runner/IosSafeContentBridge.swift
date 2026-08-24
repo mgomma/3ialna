@@ -52,7 +52,7 @@ final class IosSafeContentBridge {
         result(FlutterError(code: "DNS_PROXY_LOAD_FAILED", message: "تعذر تحميل إعداد حماية DNS.", details: error?.localizedDescription))
         return
       }
-      let provider = NEDNSProxyProviderProtocol(providerBundleIdentifier: "com.example.muSuperApp.SafeContentDNSProxy")
+      let provider = NEDNSProxyProviderProtocol(providerBundleIdentifier: "com.ialna.app.SafeContentDNSProxy")
       manager.providerProtocol = provider
       manager.localizedDescription = "3ialna Safe Content"
       manager.saveToPreferences { saveError in

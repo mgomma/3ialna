@@ -6,7 +6,7 @@
   <true/>
   <key>com.apple.security.application-groups</key>
   <array>
-    <string>group.com.example.muSuperApp</string>
+    <string>group.com.ialna.app</string>
   </array>
 </dict>
 </plist>

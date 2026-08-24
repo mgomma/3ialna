@@ -29,7 +29,7 @@ private final class SafeContentDNSPolicyStore {
   private(set) var allowedDomains: Set<String> = []
 
   func reload() {
-    let defaults = UserDefaults(suiteName: "group.com.example.muSuperApp")
+    let defaults = UserDefaults(suiteName: "group.com.ialna.app")
     blockedDomains = Set((defaults?.array(forKey: "safe_content.blocked_domains") as? [String] ?? []).compactMap(Self.normalize))
     allowedDomains = Set((defaults?.array(forKey: "safe_content.allowed_domains") as? [String] ?? []).compactMap(Self.normalize))
   }

@@ -19,6 +19,7 @@ import 'age_safety_profiles_screen.dart';
 import 'parent_voice_notification_screen.dart';
 import 'profile_pack_screen.dart';
 import 'diagnostic_report_screen.dart';
+import 'task_voice_reminder_screen.dart';
 import '../../l10n/app_localizations.dart';
 
 /// Main dashboard screen for parental controls.
@@ -489,6 +490,12 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                     label: _isArabic ? 'تعريف طفل جديد' : 'Define new child',
                     color: colorScheme.tertiary,
                     onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const AgeSafetyProfilesScreen(initialAction: ChildProfilesInitialAction.addChild))),
+                  ),
+                  _ActionCard(
+                    icon: Icons.record_voice_over_outlined,
+                    label: _isArabic ? 'مهام وتذكيرات الطفل' : 'Child tasks and reminders',
+                    color: colorScheme.secondary,
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const TaskVoiceReminderScreen())),
                   ),
                   _ActionCard(
                     icon: Icons.mark_email_unread_outlined,

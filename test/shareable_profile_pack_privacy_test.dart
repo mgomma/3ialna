@@ -31,7 +31,7 @@ void main() {
       final String encoded = jsonEncode(exported).toLowerCase();
 
       expect(exported.keys, containsAll(<String>['format', 'version', 'profileName', 'creatorName', 'preset', 'appRules', 'schedule']));
-      for (final String prohibitedKey in <String>['children', 'childName', 'birthDate', 'gender', 'pin', 'usage', 'recording']) {
+      for (final String prohibitedKey in <String>['children', 'childName', 'birthDate', 'gender', 'pin', 'usage', 'recording', 'taskReminder', 'reminderLabel']) {
         expect(exported.keys, isNot(contains(prohibitedKey)));
       }
       expect(encoded, isNot(contains('layla')));
@@ -40,6 +40,8 @@ void main() {
       expect(encoded, isNot(contains('parent-pin')));
       expect(encoded, isNot(contains('voice-recording')));
       expect(encoded, isNot(contains('usage-stats')));
+      expect(encoded, isNot(contains('drink water')));
+      expect(encoded, isNot(contains('task-reminder-audio')));
     });
 
     test('real service export does not read identity fields from the active child profile', () async {
@@ -90,6 +92,8 @@ void main() {
         'parentPin',
         'voice_recording',
         'usageStats',
+        'taskReminder',
+        'reminder_label',
       ];
 
       for (final String key in prohibitedKeys) {

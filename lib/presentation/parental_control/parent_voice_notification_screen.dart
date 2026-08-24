@@ -110,22 +110,6 @@ class _ParentVoiceNotificationScreenState extends State<ParentVoiceNotificationS
             icon: Icon(_recordingNow ? Icons.stop : Icons.mic),
             label: Text(_recordingNow ? (_ar ? 'إيقاف التسجيل' : 'Stop recording') : (_ar ? 'بدء التسجيل' : 'Start recording')),
           ),
-          if (Platform.isAndroid) ...[
-            const SizedBox(height: 10),
-            OutlinedButton.icon(
-              onPressed: _voiceService.requestExactAlarmPermission,
-              icon: const Icon(Icons.alarm),
-              label: Text(_ar ? 'السماح بالتنبيه في الخلفية' : 'Allow background alarm playback'),
-            ),
-          ],
-          if (Platform.isIOS) ...[
-            const SizedBox(height: 10),
-            OutlinedButton.icon(
-              onPressed: _voiceService.requestVoiceNotificationPermission,
-              icon: const Icon(Icons.notifications_active_outlined),
-              label: Text(_ar ? 'السماح بالتنبيه الصوتي' : 'Allow voice notification'),
-            ),
-          ],
           if (_recording != null) ...[
             const SizedBox(height: 18),
             ListTile(
@@ -143,7 +127,7 @@ class _ParentVoiceNotificationScreenState extends State<ParentVoiceNotificationS
           ],
           const SizedBox(height: 28),
           Text(
-            _ar ? 'ملاحظة: سيظل النص المكتوب ظاهرًا في الإشعار، ويمكن استخدام التسجيل عند بدء روتين التنبيه.' : 'The written notification remains visible, and this recording can be used when the notification routine starts.',
+            _ar ? 'ملاحظة: يظل النص المكتوب ظاهرًا في الإشعار. يفتح الإشعار عيالنا لتشغيل التسجيل محليًا، ولا يعمل الصوت تلقائيًا في الخلفية.' : 'The written notification remains visible. A notification opens 3ialna to play this local recording; audio does not autoplay in the background.',
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],

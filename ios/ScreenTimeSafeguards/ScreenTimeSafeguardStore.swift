@@ -3,7 +3,7 @@ import Foundation
 import ManagedSettings
 
 enum ScreenTimeSafeguardStore {
-  static let appGroup = "group.com.example.muSuperApp"
+  static let appGroup = "group.com.ialna.app"
   static let selectionKey = "screen_time_safeguard_selection"
   static let activeActivitiesKey = "screen_time_safeguard_active_activities"
   static let sleepActivity = DeviceActivityName("3ialna.sleep")

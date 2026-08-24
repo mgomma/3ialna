@@ -4,9 +4,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'data/local/locale_controller.dart';
 import 'data/system/error_report_service.dart';
+import 'data/system/notification_service.dart';
 import 'l10n/app_localizations.dart';
 import 'presentation/home/home_screen.dart';
 import 'presentation/overlay/overlay_warning_screen.dart';
+import 'presentation/parental_control/voice_reminder_screens.dart';
+
+final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
 /// Entry point for the main application.
 Future<void> main() async {
@@ -14,7 +18,25 @@ Future<void> main() async {
   await ErrorReportService.initialize();
   final SharedPreferences prefs = await SharedPreferences.getInstance();
   LocaleController.instance = LocaleController(prefs);
+  final NotificationService notifications = NotificationService();
+  await notifications.initialize();
   runApp(const SocialMediaLimiterApp());
+  void openVoiceReminder(VoiceReminderAction action) {
+    appNavigatorKey.currentState?.push(
+      MaterialPageRoute<void>(
+        builder: (_) => VoiceReminderPlaybackScreen(
+          recordingKey: action.recordingKey,
+          kind: action.kind,
+        ),
+      ),
+    );
+  }
+
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    final VoiceReminderAction? pending = notifications.takePendingVoiceAction();
+    if (pending != null) openVoiceReminder(pending);
+  });
+  notifications.voiceActions.listen(openVoiceReminder);
 }
 
 /// Entry point for the overlay window.
@@ -43,6 +65,7 @@ class SocialMediaLimiterApp extends StatelessWidget {
       builder: (BuildContext context, Widget? child) => MaterialApp(
       onGenerateTitle: (BuildContext context) =>
           context.l10n.appTitle,
+      navigatorKey: appNavigatorKey,
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.system,
       localizationsDelegates: const <LocalizationsDelegate<dynamic>>[

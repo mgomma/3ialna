@@ -6,12 +6,21 @@ import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
 class ParentVoiceNotificationService {
-  ParentVoiceNotificationService({AudioRecorder? recorder})
-      : _recorder = recorder ?? AudioRecorder();
+  ParentVoiceNotificationService({
+    AudioRecorder? recorder,
+    String recordingKey = defaultRecordingKey,
+  })  : _recorder = recorder ?? AudioRecorder(),
+        _recordingKey = recordingKey;
+
+  static const String defaultRecordingKey = 'parent_voice_notification';
+  static const String prayerReminderRecordingKey = 'prayer_reminder_voice';
+
+  static String taskRecordingKey(String taskId) => 'task_reminder_$taskId';
 
   final AudioRecorder _recorder;
   final AudioPlayer _player = AudioPlayer();
-  String get fileName => Platform.isIOS ? 'parent_voice_notification.wav' : 'parent_voice_notification.m4a';
+  final String _recordingKey;
+  String get fileName => Platform.isIOS ? '$_recordingKey.wav' : '$_recordingKey.m4a';
   static const MethodChannel _backgroundChannel = MethodChannel('parent_voice_notifications');
 
   Future<String> get _filePath async {
@@ -72,7 +81,6 @@ class ParentVoiceNotificationService {
   }
 
   Future<void> deleteRecording() async {
-    await cancelBackgroundPlayback();
     final File file = File(await _filePath);
     if (file.existsSync()) await file.delete();
   }
