@@ -152,5 +152,132 @@ void main() {
       await tester.tap(find.byTooltip('Remove rule'));
       expect(removedDomain, 'blocked.example');
     });
+
+    testWidgets('rejects an invalid domain without calling the add callback', (tester) async {
+      var addCount = 0;
+      await tester.pumpWidget(
+        _testApp(
+          DomainRulesTabs(
+            blockedDomains: const {},
+            allowedDomains: const {},
+            isArabic: false,
+            onAddBlocked: (_) => addCount += 1,
+            onAddAllowed: (_) {},
+            onRemoveBlocked: (_) {},
+            onRemoveAllowed: (_) {},
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Add domain'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).last, 'not a domain');
+      await tester.tap(find.text('Block domain'));
+      await tester.pumpAndSettle();
+
+      expect(addCount, 0);
+      expect(find.text('Enter a valid domain such as example.com.'), findsOneWidget);
+    });
+
+    testWidgets('rejects a normalized duplicate without calling the add callback', (tester) async {
+      var addCount = 0;
+      await tester.pumpWidget(
+        _testApp(
+          DomainRulesTabs(
+            blockedDomains: const {},
+            allowedDomains: const {'example.com'},
+            isArabic: false,
+            onAddBlocked: (_) {},
+            onAddAllowed: (_) => addCount += 1,
+            onRemoveBlocked: (_) {},
+            onRemoveAllowed: (_) {},
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Allowed (1)'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Add exception'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).last, 'https://WWW.Example.com/path');
+      await tester.tap(find.text('Allow domain'));
+      await tester.pumpAndSettle();
+
+      expect(addCount, 0);
+      expect(find.text('This domain already exists.'), findsOneWidget);
+    });
+
+    testWidgets('normalizes and returns a newly added blocked domain', (tester) async {
+      String? addedDomain;
+      await tester.pumpWidget(
+        _testApp(
+          DomainRulesTabs(
+            blockedDomains: const {},
+            allowedDomains: const {},
+            isArabic: false,
+            onAddBlocked: (domain) => addedDomain = domain,
+            onAddAllowed: (_) {},
+            onRemoveBlocked: (_) {},
+            onRemoveAllowed: (_) {},
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Add domain'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).last, 'https://WWW.Blocked.example/path');
+      await tester.tap(find.text('Block domain'));
+      await tester.pumpAndSettle();
+
+      expect(addedDomain, 'blocked.example');
+    });
+
+    testWidgets('clearing the search restores the complete domain list', (tester) async {
+      await tester.pumpWidget(
+        _testApp(
+          DomainRulesTabs(
+            blockedDomains: const {'blocked.example', 'other.example'},
+            allowedDomains: const {},
+            isArabic: false,
+            onAddBlocked: (_) {},
+            onAddAllowed: (_) {},
+            onRemoveBlocked: (_) {},
+            onRemoveAllowed: (_) {},
+          ),
+        ),
+      );
+
+      await tester.enterText(find.byType(TextField), 'blocked');
+      await tester.pump();
+      expect(find.text('other.example'), findsNothing);
+
+      await tester.tap(find.byTooltip('Clear search'));
+      await tester.pump();
+      expect(find.text('blocked.example'), findsOneWidget);
+      expect(find.text('other.example'), findsOneWidget);
+    });
+
+    testWidgets('shows the empty state for a filter with no matching domains', (tester) async {
+      await tester.pumpWidget(
+        _testApp(
+          DomainRulesTabs(
+            blockedDomains: const {'blocked.example'},
+            allowedDomains: const {},
+            isArabic: false,
+            onAddBlocked: (_) {},
+            onAddAllowed: (_) {},
+            onRemoveBlocked: (_) {},
+            onRemoveAllowed: (_) {},
+          ),
+        ),
+      );
+
+      await tester.enterText(find.byType(TextField), 'no-match');
+      await tester.pump();
+
+      expect(find.text('blocked.example'), findsNothing);
+      expect(find.text('No custom blocked domains. Use categories or add a domain manually.'), findsOneWidget);
+      expect(find.text('Add domain'), findsOneWidget);
+    });
   });
 }
