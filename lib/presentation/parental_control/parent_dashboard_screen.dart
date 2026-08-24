@@ -18,6 +18,7 @@ import 'ios_authorization_onboarding_screen.dart';
 import 'age_safety_profiles_screen.dart';
 import 'parent_voice_notification_screen.dart';
 import 'profile_pack_screen.dart';
+import 'diagnostic_report_screen.dart';
 import '../../l10n/app_localizations.dart';
 
 /// Main dashboard screen for parental controls.
@@ -102,6 +103,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
             builder: (context) => PinAuthScreen(
               onAuthenticated: () {
                 Navigator.of(context).pop();
+                if (!mounted) return;
                 setState(() {
                   _isAuthenticated = true;
                 });
@@ -126,6 +128,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
     final blockedApps = await _storage.getBlockedApps();
     final timeLimits = await _storage.getTimeLimits();
 
+    if (!mounted) return;
     setState(() {
       _isDeviceAdminEnabled = isDeviceAdmin;
       _isKioskModeActive = isKioskActive;
@@ -476,15 +479,16 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                     onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const ProfilePackScreen())),
                   ),
                   _ActionCard(
-                    icon: Icons.contact_support_outlined,
-                    label: _isArabic ? 'نموذج التواصل' : 'Contact form',
+                    icon: Icons.edit_note_outlined,
+                    label: _isArabic ? 'تعديل بيانات الطفل الأول' : 'Edit first child details',
                     color: colorScheme.secondary,
-                    onTap: () async {
-                      final Uri contact = Uri.parse('https://mgomma.github.io/3ialna/#contact');
-                      if (!await launchUrl(contact, mode: LaunchMode.externalApplication) && context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open the 3ialna contact form.')));
-                      }
-                    },
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const AgeSafetyProfilesScreen(initialAction: ChildProfilesInitialAction.editFirst))),
+                  ),
+                  _ActionCard(
+                    icon: Icons.person_add_alt_1,
+                    label: _isArabic ? 'تعريف طفل جديد' : 'Define new child',
+                    color: colorScheme.tertiary,
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const AgeSafetyProfilesScreen(initialAction: ChildProfilesInitialAction.addChild))),
                   ),
                   _ActionCard(
                     icon: Icons.mark_email_unread_outlined,
@@ -497,6 +501,12 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                     label: _isArabic ? 'عن عيالنا' : 'About 3ialna',
                     color: colorScheme.primary,
                     onTap: _openAboutWebsite,
+                  ),
+                  _ActionCard(
+                    icon: Icons.bug_report_outlined,
+                    label: _isArabic ? 'إرسال تقرير الأعطال' : 'Send diagnostic report',
+                    color: colorScheme.error,
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const DiagnosticReportScreen())),
                   ),
                 ],
               ),

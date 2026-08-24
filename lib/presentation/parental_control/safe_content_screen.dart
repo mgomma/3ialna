@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../data/local/safe_content_policy_storage_service.dart';
+import '../../data/system/error_report_service.dart';
 import '../../data/system/safe_content_vpn_service.dart';
 import '../../domain/models/safe_content_policy.dart';
 import 'widgets/domain_rules_tabs.dart';
@@ -16,7 +17,7 @@ class SafeContentScreen extends StatefulWidget {
   State<SafeContentScreen> createState() => _SafeContentScreenState();
 }
 
-class _SafeContentScreenState extends State<SafeContentScreen> {
+class _SafeContentScreenState extends State<SafeContentScreen> with WidgetsBindingObserver {
   final SafeContentPolicyStorageService _storage =
       SafeContentPolicyStorageService();
   final SafeContentVpnService _vpnService = SafeContentVpnService();
@@ -33,7 +34,23 @@ class _SafeContentScreenState extends State<SafeContentScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    SafeContentVpnService.setPermissionResultHandler(_onVpnPermissionResult);
     _loadPolicy();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    SafeContentVpnService.setPermissionResultHandler(null);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshVpnStatus(showError: false);
+    }
   }
 
   Future<void> _loadPolicy() async {
@@ -57,10 +74,11 @@ class _SafeContentScreenState extends State<SafeContentScreen> {
         _vpnRunning = running;
         _vpnError = null;
       });
-    } on PlatformException catch (error) {
+    } catch (error, stackTrace) {
+      ErrorReportService.recordHandled(source: 'vpn_status_refresh', error: error, stackTrace: stackTrace);
       if (!mounted) return;
       setState(() {
-        _vpnError = error.message ?? error.code;
+        _vpnError = _friendlyError(error);
       });
       if (showError) _showMessage(_vpnError!);
     }
@@ -89,8 +107,8 @@ class _SafeContentScreenState extends State<SafeContentScreen> {
         return;
       }
       await _refreshVpnStatus();
-    } on PlatformException catch (error) {
-      _handleVpnError(error);
+    } catch (error, stackTrace) {
+      _handleVpnError(error, stackTrace);
     }
   }
 
@@ -103,8 +121,8 @@ class _SafeContentScreenState extends State<SafeContentScreen> {
       }
       await _vpnService.start();
       await _refreshVpnStatus();
-    } on PlatformException catch (error) {
-      _handleVpnError(error);
+    } catch (error, stackTrace) {
+      _handleVpnError(error, stackTrace);
     }
   }
 
@@ -113,14 +131,25 @@ class _SafeContentScreenState extends State<SafeContentScreen> {
     try {
       await _vpnService.stop();
       await _refreshVpnStatus();
-    } on PlatformException catch (error) {
-      _handleVpnError(error);
+    } catch (error, stackTrace) {
+      _handleVpnError(error, stackTrace);
     }
   }
 
-  void _handleVpnError(PlatformException error) {
+  Future<void> _onVpnPermissionResult(bool granted) async {
     if (!mounted) return;
-    setState(() => _vpnError = error.message ?? error.code);
+    await _refreshVpnStatus(showError: false);
+    if (!granted && mounted) {
+      _showMessage(_isArabic ? 'لم يتم منح إذن VPN. يمكنك المحاولة مرة أخرى لاحقًا.' : 'VPN permission was not granted. You can try again later.');
+    }
+  }
+
+  String _friendlyError(Object error) => error is PlatformException ? (error.message ?? error.code) : error.runtimeType.toString();
+
+  void _handleVpnError(Object error, StackTrace stackTrace) {
+    ErrorReportService.recordHandled(source: 'vpn_permission_or_start', error: error, stackTrace: stackTrace);
+    if (!mounted) return;
+    setState(() => _vpnError = _friendlyError(error));
     _showMessage(_isArabic
         ? 'تعذر تشغيل الحماية. تحقق من إذن VPN ثم حاول مرة أخرى.'
         : 'Protection could not start. Check VPN permission and try again.');

@@ -9,6 +9,7 @@ import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
 import android.graphics.drawable.Icon
 import android.os.Build
+import android.os.Bundle
 import android.provider.Settings
 import android.net.Uri
 import android.net.VpnService
@@ -22,6 +23,7 @@ import io.flutter.plugin.common.MethodChannel
 import com.ialna.app.usage.MonitorForegroundService
 import com.ialna.app.kiosk.KioskModeHelper
 import com.ialna.app.apps.AppListHelper
+import com.ialna.app.diagnostics.CrashReportRecorder
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.util.Base64
@@ -42,6 +44,11 @@ class MainActivity : FlutterActivity() {
     private val vpnPermissionRequestCode = 1002
     private val deviceAdminRequestCode = 1001
     private var pendingChildShortcutId: String? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        CrashReportRecorder.install(applicationContext)
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -100,8 +107,13 @@ class MainActivity : FlutterActivity() {
                     result.success(KioskModeHelper.isDeviceAdminEnabled(this))
                 }
                 "requestDeviceAdmin" -> {
-                    KioskModeHelper.requestDeviceAdmin(this, deviceAdminRequestCode)
-                    result.success(null)
+                    try {
+                        KioskModeHelper.requestDeviceAdmin(this, deviceAdminRequestCode)
+                        result.success(null)
+                    } catch (error: Exception) {
+                        CrashReportRecorder.record(this, "device_admin_request", error)
+                        result.error("DEVICE_ADMIN_REQUEST_FAILED", "Could not open device admin settings.", null)
+                    }
                 }
                 "startKioskMode" -> {
                     val success = KioskModeHelper.startKioskMode(this)
@@ -239,8 +251,13 @@ class MainActivity : FlutterActivity() {
                     if (permissionIntent == null) {
                         result.success(true)
                     } else {
-                        startActivityForResult(permissionIntent, vpnPermissionRequestCode)
-                        result.success(false)
+                        try {
+                            startActivityForResult(permissionIntent, vpnPermissionRequestCode)
+                            result.success(false)
+                        } catch (error: Exception) {
+                            CrashReportRecorder.record(this, "vpn_permission_request", error)
+                            result.error("VPN_PERMISSION_REQUEST_FAILED", "Could not open VPN permission settings.", null)
+                        }
                     }
                 }
                 "startVpn" -> {
@@ -332,6 +349,17 @@ class MainActivity : FlutterActivity() {
             pendingChildShortcutId = childId
             flutterEngine?.dartExecutor?.binaryMessenger?.let { messenger ->
                 MethodChannel(messenger, childChannel).invokeMethod("onChildShortcut", childId)
+            }
+        }
+    }
+
+    @Deprecated("Use Activity Result APIs when replacing the FlutterActivity permission bridge.")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == vpnPermissionRequestCode) {
+            val granted = VpnService.prepare(this) == null
+            flutterEngine?.dartExecutor?.binaryMessenger?.let { messenger ->
+                MethodChannel(messenger, safeContentVpnChannel).invokeMethod("onVpnPermissionResult", granted)
             }
         }
     }

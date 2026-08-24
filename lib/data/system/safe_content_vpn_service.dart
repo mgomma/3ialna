@@ -2,6 +2,20 @@ import 'package:flutter/services.dart';
 
 class SafeContentVpnService {
   static const MethodChannel _channel = MethodChannel('safe_content/vpn');
+  static Future<void> Function(bool granted)? _onPermissionResult;
+  static bool _handlerInstalled = false;
+
+  static void setPermissionResultHandler(Future<void> Function(bool granted)? handler) {
+    _onPermissionResult = handler;
+    if (_handlerInstalled) return;
+    _handlerInstalled = true;
+    _channel.setMethodCallHandler((MethodCall call) async {
+      if (call.method == 'onVpnPermissionResult') {
+        final bool granted = call.arguments as bool? ?? false;
+        await _onPermissionResult?.call(granted);
+      }
+    });
+  }
 
   Future<bool> isPermissionGranted() async {
     return await _channel.invokeMethod<bool>('isVpnPermissionGranted') ?? false;

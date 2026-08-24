@@ -7,8 +7,12 @@ import '../../data/system/child_shortcut_service.dart';
 import '../../domain/models/age_safety_profile.dart';
 import '../../domain/models/child_profile.dart';
 
+enum ChildProfilesInitialAction { editFirst, addChild }
+
 class AgeSafetyProfilesScreen extends StatefulWidget {
-  const AgeSafetyProfilesScreen({super.key});
+  const AgeSafetyProfilesScreen({super.key, this.initialAction});
+
+  final ChildProfilesInitialAction? initialAction;
 
   @override
   State<AgeSafetyProfilesScreen> createState() => _AgeSafetyProfilesScreenState();
@@ -20,6 +24,7 @@ class _AgeSafetyProfilesScreenState extends State<AgeSafetyProfilesScreen> {
   List<ChildProfile> _children = <ChildProfile>[];
   ChildProfile? _active;
   bool _loading = true;
+  bool _handledInitialAction = false;
 
   bool get _ar => LocaleController.instance.isArabic;
   String get _minuteLabel => _ar ? 'دقيقة' : 'minutes';
@@ -42,6 +47,18 @@ class _AgeSafetyProfilesScreenState extends State<AgeSafetyProfilesScreen> {
       _loading = false;
     });
     await ChildShortcutService.sync(service.loadChildren());
+    if (!_handledInitialAction && widget.initialAction != null) {
+      _handledInitialAction = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        switch (widget.initialAction!) {
+          case ChildProfilesInitialAction.editFirst:
+            _editChild(child: _children.first);
+          case ChildProfilesInitialAction.addChild:
+            _editChild();
+        }
+      });
+    }
   }
 
   Future<void> _save(AgeSafetyProfilePreset preset) async {
