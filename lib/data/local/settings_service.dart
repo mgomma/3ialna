@@ -24,6 +24,7 @@ const String _prefsKeyIsStrictMode = 'is_strict_mode';
 const String _prefsKeyIsDeviceLocked = 'is_device_locked';
 const String _prefsKeySelectedCountry = 'selected_country_profile';
 const String _prefsKeyEssentialPermissionsPrompted = 'essential_permissions_prompted_v1';
+const String _prayerOverlayPrefix = 'Prayer Time Lock';
 
 /// Thin wrapper around [SharedPreferences] to keep persistence logic in one
 /// place and out of widgets.
@@ -207,5 +208,26 @@ class SettingsService {
     await _prefs.remove(_prefsKeyPrayerLockActiveName);
     await _prefs.remove(_prefsKeyPrayerLockActiveStart);
     await _prefs.remove(_prefsKeyPrayerLockActiveEnd);
+  }
+
+  String? get activePrayerLockName =>
+      _prefs.getString(_prefsKeyPrayerLockActiveName);
+
+  /// Releases persisted state only when the visible lock was created for a
+  /// prayer interval. This prevents an expired prayer period from dismissing
+  /// an unrelated app-limit overlay.
+  Future<bool> releasePrayerOverlayIfOwned({String? prayerName}) async {
+    if (prayerName != null && activePrayerLockName != prayerName) {
+      return false;
+    }
+    final String overlayName = _prefs.getString(_prefsKeyOverlayApp) ?? '';
+    final bool isPrayerOverlay = overlayName.startsWith(_prayerOverlayPrefix);
+    await clearActivePrayerLockPeriod();
+    if (!isPrayerOverlay) return false;
+    await _prefs.remove(_prefsKeyOverlayApp);
+    await _prefs.remove(_prefsKeyOverlayUsed);
+    await _prefs.remove(_prefsKeyOverlayLimit);
+    await setIsDeviceLocked(false);
+    return true;
   }
 }

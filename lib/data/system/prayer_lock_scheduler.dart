@@ -72,6 +72,7 @@ class PrayerLockScheduler {
     for (final Prayer prayer in Prayer.values) {
       await _notificationService.cancelNotification(_getNotificationId(prayer));
     }
+    await _releasePrayerOverlay();
     await IosScreenTimeSafeguardService().clearPrayerShields();
     _currentSettings = null;
   }
@@ -204,12 +205,7 @@ class PrayerLockScheduler {
         final Duration remaining = lockEndTime.difference(DateTime.now());
         if (remaining.inMilliseconds > 0) {
           _activeLocks[prayer] = Timer(remaining, () {
-            _overlayService.closeOverlay();
-            _activeLocks.remove(prayer);
-            // Clear active lock period when it ends
-            if (_settingsService != null) {
-              _settingsService.clearActivePrayerLockPeriod();
-            }
+            unawaited(_releasePrayerOverlay(prayer));
           });
         }
       }
@@ -240,12 +236,7 @@ class PrayerLockScheduler {
         _activeLocks[prayer] = Timer(
           Duration(minutes: durationMinutes),
           () {
-            _overlayService.closeOverlay();
-            _activeLocks.remove(prayer);
-            // Clear active lock period when it ends
-            if (_settingsService != null) {
-              _settingsService.clearActivePrayerLockPeriod();
-            }
+            unawaited(_releasePrayerOverlay(prayer));
           },
         );
       });
@@ -341,22 +332,29 @@ class PrayerLockScheduler {
           final Duration remaining = lockEndTime.difference(now);
           if (remaining.inMilliseconds > 0) {
             _activeLocks[prayer] = Timer(remaining, () {
-              _overlayService.closeOverlay();
-              _activeLocks.remove(prayer);
-              // Clear active lock period when it ends
-              if (_settingsService != null) {
-                _settingsService.clearActivePrayerLockPeriod();
-              }
+              unawaited(_releasePrayerOverlay(prayer));
             });
           }
         }
         break; // Only one prayer can be active at a time
       } else if (now.isAfter(lockEndTime)) {
-        // Lock period has passed, clear it
-        if (_settingsService != null) {
-          await _settingsService.clearActivePrayerLockPeriod();
-        }
+        // Release only this prayer's lock. Older prayer times must not dismiss
+        // an unrelated social-app limit overlay.
+        await _releasePrayerOverlay(prayer);
       }
+    }
+  }
+
+  Future<void> _releasePrayerOverlay([Prayer? prayer]) async {
+    _activeLocks.remove(prayer);
+    final String? prayerName = prayer?.displayName;
+    final bool shouldClose =
+        await _settingsService?.releasePrayerOverlayIfOwned(
+              prayerName: prayerName,
+            ) ??
+            true;
+    if (shouldClose) {
+      await _overlayService.closeOverlay();
     }
   }
 

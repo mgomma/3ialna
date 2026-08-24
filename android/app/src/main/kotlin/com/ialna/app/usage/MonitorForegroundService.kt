@@ -416,6 +416,7 @@ class MonitorForegroundService : Service() {
     private fun checkPrayerLocksAndMaybeBlock() {
         val prefs = getSharedPreferences(FLUTTER_PREFS, Context.MODE_PRIVATE)
         if (!prefs.getBoolean("${PFX}$_PREF_ACTIVE_PRAYER_ENABLED", true)) {
+            releasePrayerOverlayIfOwned(prefs)
             return
         }
         
@@ -430,6 +431,7 @@ class MonitorForegroundService : Service() {
         val isEnabled = prayerSettingsJson.contains("\"enabled\":true")
         if (!isEnabled) {
             Log.d(TAG, "Prayer locks are disabled")
+            releasePrayerOverlayIfOwned(prefs)
             return
         }
         
@@ -442,8 +444,10 @@ class MonitorForegroundService : Service() {
         Log.d(TAG, "Prayer lock check - start: $lockStartStr, end: $lockEndStr, name: $prayerName")
         
         if (lockStartStr == null || lockEndStr == null || prayerName == null) {
-            // No active prayer lock period
+            // Recover a visible prayer overlay even if a previous scheduler
+            // cleared its timestamps before closing the window.
             Log.d(TAG, "No active prayer lock period found")
+            releasePrayerOverlayIfOwned(prefs)
             return
         }
         
@@ -513,19 +517,10 @@ class MonitorForegroundService : Service() {
                 )
             }
         } else if (now >= lockEnd) {
-            // Lock period has ended, clear it
-            Log.d(TAG, "Prayer lock period ended, clearing")
-            
-            // Clear prayer lock overlay session
-            val prayerLockKey = "prayer_lock_$prayerName"
-            clearOverlayShown(prayerLockKey)
-            
-            prefs.edit()
-                .remove("${PFX}$_PREF_PRAYER_LOCK_ACTIVE_NAME")
-                .remove("${PFX}$_PREF_PRAYER_LOCK_ACTIVE_START")
-                .remove("${PFX}$_PREF_PRAYER_LOCK_ACTIVE_END")
-                .apply()
-            lastPrayerLockToastTime = 0L // Reset toast cooldown
+            // Clearing preferences alone leaves a visible overlay or strict
+            // kiosk lock behind, so release the prayer-owned UI explicitly.
+            Log.d(TAG, "Prayer lock period ended, releasing")
+            releasePrayerOverlayIfOwned(prefs, prayerName)
         } else {
             // Not yet in lock period - show warning 2 minutes before
             val minutesUntilStart = (lockStart - now) / 1000 / 60
@@ -537,6 +532,51 @@ class MonitorForegroundService : Service() {
                 }
             }
             Log.d(TAG, "Not yet in prayer lock period (${minutesUntilStart} minutes until start)")
+        }
+    }
+
+    private fun releasePrayerOverlayIfOwned(
+        prefs: android.content.SharedPreferences,
+        prayerName: String? = null,
+    ) {
+        val activePrayerName = prefs.getString("${PFX}$_PREF_PRAYER_LOCK_ACTIVE_NAME", null)
+        if (prayerName != null && activePrayerName != prayerName) return
+
+        val overlayName = prefs.getString("${PFX}overlay_app_name", "") ?: ""
+        val ownsOverlay = overlayName.startsWith("Prayer Time Lock")
+        if (ownsOverlay) {
+            try {
+                stopService(Intent(this, OverlayService::class.java).apply {
+                    action = "CLOSE_OVERLAY"
+                })
+            } catch (error: Exception) {
+                Log.w(TAG, "Could not close expired prayer overlay", error)
+            }
+        }
+
+        val editor = prefs.edit()
+            .remove("${PFX}$_PREF_PRAYER_LOCK_ACTIVE_NAME")
+            .remove("${PFX}$_PREF_PRAYER_LOCK_ACTIVE_START")
+            .remove("${PFX}$_PREF_PRAYER_LOCK_ACTIVE_END")
+        if (ownsOverlay) {
+            editor.remove("${PFX}overlay_app_name")
+                .remove("${PFX}overlay_used_minutes")
+                .remove("${PFX}overlay_limit_minutes")
+                .remove("${PFX}overlay_package_name")
+                .putBoolean("${PFX}is_device_locked", false)
+        }
+        editor.apply()
+
+        if (activePrayerName != null) {
+            clearOverlayShown("prayer_lock_$activePrayerName")
+        }
+        lastPrayerLockToastTime = 0L
+
+        if (ownsOverlay && prefs.getBoolean("${PFX}is_strict_mode", false)) {
+            startActivity(Intent(this, MainActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                putExtra(MainActivity.EXTRA_RELEASE_PRAYER_LOCK, true)
+            })
         }
     }
 

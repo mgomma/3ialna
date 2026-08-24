@@ -487,6 +487,13 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun handleLockIntent(intent: Intent) {
+        if (intent.getBooleanExtra(EXTRA_RELEASE_PRAYER_LOCK, false)) {
+            Log.i(TAG, "Received prayer lock release, stopping Kiosk Mode")
+            KioskModeHelper.stopKioskMode(this)
+            flutterEngine?.dartExecutor?.binaryMessenger?.let { messenger ->
+                MethodChannel(messenger, kioskChannel).invokeMethod("onDeviceUnlocked", null)
+            }
+        }
         if (intent.getBooleanExtra("EXTRA_HARD_LOCK", false)) {
             Log.i(TAG, "Received EXTRA_HARD_LOCK, starting Kiosk Mode")
             KioskModeHelper.startKioskMode(this)
@@ -738,5 +745,7 @@ class MainActivity : FlutterActivity() {
         private const val EXTRA_CHILD_SHORTCUT_ID = "com.ialna.app.EXTRA_CHILD_SHORTCUT_ID"
         const val EXTRA_OPEN_CHILD_SELECTOR =
             "com.ialna.app.EXTRA_OPEN_CHILD_SELECTOR"
+        const val EXTRA_RELEASE_PRAYER_LOCK =
+            "com.ialna.app.EXTRA_RELEASE_PRAYER_LOCK"
     }
 }

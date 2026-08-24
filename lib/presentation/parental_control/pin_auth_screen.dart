@@ -33,6 +33,7 @@ class _PinAuthScreenState extends State<PinAuthScreen> {
   String? _errorMessage;
   bool _biometricAvailable = false;
   bool _isAuthenticatingBiometrically = false;
+  static final RegExp _acceptedDigits = RegExp(r'[0-9٠-٩۰-۹]');
 
   @override
   void initState() {
@@ -86,8 +87,15 @@ class _PinAuthScreenState extends State<PinAuthScreen> {
   }
 
   void _onPinChanged(int index, String value) {
-    if (value.length > 1) {
-      _controllers[index].text = value[value.length - 1];
+    final String normalized = _normalizeDigits(value);
+    if (normalized != value) {
+      _controllers[index].value = TextEditingValue(
+        text: normalized,
+        selection: TextSelection.collapsed(offset: normalized.length),
+      );
+    }
+    if (normalized.length > 1) {
+      _controllers[index].text = normalized[normalized.length - 1];
     }
 
     _enteredPin = _controllers.map((c) => c.text).join();
@@ -103,6 +111,18 @@ class _PinAuthScreenState extends State<PinAuthScreen> {
     if (_enteredPin.length == 4) {
       _handlePinComplete();
     }
+  }
+
+  String _normalizeDigits(String value) {
+    return value.runes.map((int rune) {
+      if (rune >= 0x0660 && rune <= 0x0669) {
+        return String.fromCharCode(0x30 + rune - 0x0660);
+      }
+      if (rune >= 0x06F0 && rune <= 0x06F9) {
+        return String.fromCharCode(0x30 + rune - 0x06F0);
+      }
+      return String.fromCharCode(rune);
+    }).join();
   }
 
   void _handlePinComplete() async {
@@ -220,9 +240,12 @@ class _PinAuthScreenState extends State<PinAuthScreen> {
                       textAlign: TextAlign.center,
                       obscureText: true,
                       maxLength: 1,
+                      autofocus: index == 0,
                       keyboardType: TextInputType.number,
+                      textInputAction:
+                          index == 3 ? TextInputAction.done : TextInputAction.next,
                       inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
+                        FilteringTextInputFormatter.allow(_acceptedDigits),
                       ],
                       style: theme.textTheme.headlineSmall,
                       decoration: const InputDecoration(
@@ -230,6 +253,13 @@ class _PinAuthScreenState extends State<PinAuthScreen> {
                         counterText: '',
                       ),
                       onChanged: (value) => _onPinChanged(index, value),
+                      onSubmitted: (_) {
+                        if (index < 3) {
+                          _focusNodes[index + 1].requestFocus();
+                        } else if (_enteredPin.length == 4) {
+                          _handlePinComplete();
+                        }
+                      },
                       onTap: () {
                         _focusNodes[index].requestFocus();
                       },
@@ -281,4 +311,3 @@ class _PinAuthScreenState extends State<PinAuthScreen> {
     );
   }
 }
-
