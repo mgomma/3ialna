@@ -97,6 +97,10 @@ jobs:
           X64_URL: ${{ steps.public_release.outputs.x64_url }}
         run: |
           set -euo pipefail
+          # Test or documentation commits can land on dev while the APK builds.
+          # Begin the metadata commit from the newest remote tip so they remain intact.
+          git fetch origin "$GITHUB_REF_NAME"
+          git checkout -B "$GITHUB_REF_NAME" "origin/$GITHUB_REF_NAME"
           published_at="$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
           cat > website/src/release.generated.ts <<EOF
           // Desert Signal style reminder: release facts are practical, calm, and transparent.
@@ -124,7 +128,11 @@ jobs:
             exit 0
           fi
           git commit -m "chore(website): sync public debug APK [skip ci]"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
+          if ! git push origin "HEAD:${GITHUB_REF_NAME}"; then
+            # Retry once if another non-conflicting source or test commit arrives.
+            git pull --rebase origin "$GITHUB_REF_NAME"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
           gh workflow run deploy-website.yml --ref "$GITHUB_REF_NAME"
       - name: Check Firebase configuration
         id: firebase_configuration
