@@ -23,7 +23,9 @@ void main() {
       final String encoded = jsonEncode(exported).toLowerCase();
 
       expect(exported.keys, containsAll(<String>['format', 'version', 'profileName', 'creatorName', 'preset', 'appRules', 'schedule']));
-      expect(exported.keys, isNot(containsAny(<String>['children', 'childName', 'birthDate', 'gender', 'pin', 'usage', 'recording'])));
+      for (final String prohibitedKey in <String>['children', 'childName', 'birthDate', 'gender', 'pin', 'usage', 'recording']) {
+        expect(exported.keys, isNot(contains(prohibitedKey)));
+      }
       expect(encoded, isNot(contains('layla')));
       expect(encoded, isNot(contains('2017-04-12')));
       expect(encoded, isNot(contains('female')));
