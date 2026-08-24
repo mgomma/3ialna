@@ -71,9 +71,17 @@ android {
 
     buildTypes {
         release {
-            // Uses release signing for production builds.
-            // Debug signing fallback is allowed only when explicitly enabled via
-            // -PallowDebugReleaseSigning=true for local non-publish checks.
+            // R8 and resource shrinking are enabled only for the separately
+            // labelled release-mode evaluation artifact. It remains debug-signed
+            // unless the maintainer configures a production release keystore.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
+            // Uses release signing for production builds. Debug-signing fallback
+            // is enabled explicitly by the evaluation-release workflow only.
             signingConfig = if (hasReleaseKeystore) {
                 signingConfigs.getByName("release")
             } else {

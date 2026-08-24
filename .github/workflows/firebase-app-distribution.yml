@@ -42,9 +42,13 @@ jobs:
           cache: true
       - name: Install Flutter packages
         run: flutter pub get
-      - name: Build public debug APK
-        run: flutter build apk --debug --split-per-abi
-      - name: Publish public debug pre-release
+      - name: Build optimized public evaluation APKs
+        env:
+          # Allows the release-mode build to use the Android debug key only for
+          # this explicitly labelled public evaluation artifact.
+          ORG_GRADLE_PROJECT_allowDebugReleaseSigning: "true"
+        run: flutter build apk --release --split-per-abi --target-platform android-arm,android-arm64
+      - name: Publish optimized public evaluation pre-release
         id: public_release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -54,21 +58,19 @@ jobs:
           version_name="${app_version%%+*}"
           build_number="${app_version#*+}"
           if [ "$build_number" = "$app_version" ]; then build_number="0"; fi
-          release_tag="debug-v${version_name}-b${build_number}-run${GITHUB_RUN_ID}-a${GITHUB_RUN_ATTEMPT}"
+          release_tag="optimized-v${version_name}-b${build_number}-run${GITHUB_RUN_ID}-a${GITHUB_RUN_ATTEMPT}"
           # Keep these names identical to Flutter's split-APK output filenames.
           # GitHub CLI uploads the file basename, so using custom display aliases
           # here produced metadata URLs that did not exist and returned 404.
-          arm64_asset="app-arm64-v8a-debug.apk"
-          armv7_asset="app-armeabi-v7a-debug.apk"
-          x64_asset="app-x86_64-debug.apk"
+          arm64_asset="app-arm64-v8a-release.apk"
+          armv7_asset="app-armeabi-v7a-release.apk"
           arm64_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${release_tag}/${arm64_asset}"
           armv7_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${release_tag}/${armv7_asset}"
-          x64_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${release_tag}/${x64_asset}"
 
           cat > "$RUNNER_TEMP/public-debug-notes.md" <<EOF
-          ## Public Android evaluation build
+          ## Optimized public Android evaluation build
 
-          These APKs are **debug-signed, architecture-specific evaluation builds** for Android. The arm64 file is for most current Android phones; they are not Play Store releases and should not be used as a production distribution channel.
+          These APKs are **release-mode optimized, debug-signed, architecture-specific evaluation builds** for Android. R8 and Android resource shrinking are enabled. The arm64 file is for most current Android phones; they are not Play Store releases and should not be used as a production distribution channel.
 
           - Version: ${version_name} (${build_number})
           - Source commit: ${GITHUB_SHA}
@@ -76,11 +78,10 @@ jobs:
           EOF
 
           gh release create "$release_tag" \
-            "build/app/outputs/flutter-apk/app-arm64-v8a-debug.apk#${arm64_asset}" \
-            "build/app/outputs/flutter-apk/app-armeabi-v7a-debug.apk#${armv7_asset}" \
-            "build/app/outputs/flutter-apk/app-x86_64-debug.apk#${x64_asset}" \
+            "build/app/outputs/flutter-apk/app-arm64-v8a-release.apk#${arm64_asset}" \
+            "build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk#${armv7_asset}" \
             --repo "$GITHUB_REPOSITORY" \
-            --title "3ialna debug evaluation ${version_name} (${build_number})" \
+            --title "3ialna optimized evaluation ${version_name} (${build_number})" \
             --notes-file "$RUNNER_TEMP/public-debug-notes.md" \
             --prerelease
 
@@ -89,7 +90,6 @@ jobs:
           echo "download_url=$arm64_url" >> "$GITHUB_OUTPUT"
           echo "arm64_url=$arm64_url" >> "$GITHUB_OUTPUT"
           echo "armv7_url=$armv7_url" >> "$GITHUB_OUTPUT"
-          echo "x64_url=$x64_url" >> "$GITHUB_OUTPUT"
       - name: Synchronize public website download metadata
         env:
           GH_TOKEN: ${{ github.token }}
@@ -98,7 +98,6 @@ jobs:
           DOWNLOAD_URL: ${{ steps.public_release.outputs.download_url }}
           ARM64_URL: ${{ steps.public_release.outputs.arm64_url }}
           ARMV7_URL: ${{ steps.public_release.outputs.armv7_url }}
-          X64_URL: ${{ steps.public_release.outputs.x64_url }}
         run: |
           set -euo pipefail
           # Test or documentation commits can land on dev while the APK builds.
@@ -113,12 +112,11 @@ jobs:
             platform: "Android",
             version: "$VERSION_NAME",
             build: "$BUILD_NUMBER",
-            distribution: "GitHub public debug release",
+            distribution: "GitHub optimized debug-signed evaluation release",
             downloadUrl: "$DOWNLOAD_URL",
             downloadUrls: {
               arm64: "$ARM64_URL",
               armv7: "$ARMV7_URL",
-              x64: "$X64_URL",
             },
             publishedAt: "$published_at",
           } as const;
@@ -170,7 +168,7 @@ jobs:
           if [ -n "$FIREBASE_TESTER_GROUPS" ]; then
             group_args="--groups $FIREBASE_TESTER_GROUPS"
           fi
-          firebase appdistribution:distribute build/app/outputs/flutter-apk/app-arm64-v8a-debug.apk \
+          firebase appdistribution:distribute build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
             --app "$FIREBASE_APP_ID" \
             --release-notes "$RELEASE_NOTES" \
             $group_args \
