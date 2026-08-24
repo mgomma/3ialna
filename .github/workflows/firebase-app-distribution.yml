@@ -55,9 +55,12 @@ jobs:
           build_number="${app_version#*+}"
           if [ "$build_number" = "$app_version" ]; then build_number="0"; fi
           release_tag="debug-v${version_name}-b${build_number}-run${GITHUB_RUN_ID}-a${GITHUB_RUN_ATTEMPT}"
-          arm64_asset="3ialna-arm64-v8a-debug.apk"
-          armv7_asset="3ialna-armeabi-v7a-debug.apk"
-          x64_asset="3ialna-x86_64-debug.apk"
+          # Keep these names identical to Flutter's split-APK output filenames.
+          # GitHub CLI uploads the file basename, so using custom display aliases
+          # here produced metadata URLs that did not exist and returned 404.
+          arm64_asset="app-arm64-v8a-debug.apk"
+          armv7_asset="app-armeabi-v7a-debug.apk"
+          x64_asset="app-x86_64-debug.apk"
           arm64_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${release_tag}/${arm64_asset}"
           armv7_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${release_tag}/${armv7_asset}"
           x64_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${release_tag}/${x64_asset}"
