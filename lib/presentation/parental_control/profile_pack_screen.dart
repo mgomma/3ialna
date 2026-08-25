@@ -55,8 +55,8 @@ class _ProfilePackScreenState extends State<ProfilePackScreen> {
       context: context,
       builder: (BuildContext context) => AlertDialog(
         title: Text(_ar ? 'استيراد إعداد مشترك' : 'Import a shared setup'),
-        content: SizedBox(
-          width: 480,
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
           child: TextField(
             controller: pack,
             minLines: 7,
