@@ -23,7 +23,14 @@ class _SummaryMetric extends StatelessWidget {
   Widget build(BuildContext context) => Card(
         child: Padding(
           padding: const EdgeInsets.all(12),
-          child: Column(children: <Widget>[Icon(icon), const SizedBox(height: 5), Text(value, textAlign: TextAlign.center), Text(label, textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodySmall)],
+          child: Column(
+            children: <Widget>[
+              Icon(icon),
+              const SizedBox(height: 5),
+              Text(value, textAlign: TextAlign.center),
+              Text(label, textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodySmall),
+            ],
+          ),
         ),
       );
 }
