@@ -60,6 +60,29 @@ void main() {
     expect(normalized, contains('notification_action_received'));
   });
 
+  test('email URI uses the sanitized report and does not include sensitive values', () async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('error_reports_v1', <String>[
+      jsonEncode(<String, String>{
+        'timestamp': '2026-08-24T10:00:00.000Z',
+        'source': 'flutter',
+        'errorType': 'StateError: child name Layla PIN 1234',
+        'stack': 'package:mu_super_app/data/system/error_report_service.dart:21',
+      }),
+    ]);
+
+    final Uri email = await ErrorReportService.buildEmailUri();
+    final String body = email.queryParameters['body'] ?? '';
+
+    expect(email.scheme, 'mailto');
+    expect(email.path, '3ialna.app@gmail.com');
+    expect(email.queryParameters['subject'], '3ialna diagnostic report');
+    expect(body, contains('3ialna-diagnostic-report'));
+    expect(body.toLowerCase(), isNot(contains('layla')));
+    expect(body, isNot(contains('1234')));
+    expect(body.toLowerCase(), isNot(contains('child name')));
+  });
+
   test('suppresses legacy lifecycle-only startup rows while preserving an allowlisted outcome', () async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setStringList('error_reports_v1', <String>[
