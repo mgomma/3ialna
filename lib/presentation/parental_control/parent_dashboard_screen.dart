@@ -27,6 +27,7 @@ import 'task_voice_reminder_screen.dart';
 import '../reports/parent_usage_report_screen.dart';
 import 'parent_tools_screen.dart';
 import 'reward_center_screen.dart';
+import 'widgets/request_approval_components.dart';
 import '../../l10n/app_localizations.dart';
 
 /// Main dashboard screen for parental controls.
@@ -641,11 +642,9 @@ class _ActionCard extends StatelessWidget {
                 child: Text(label, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
               ),
               if (badge > 0)
-                Container(
-                  margin: const EdgeInsetsDirectional.only(end: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                  decoration: BoxDecoration(color: theme.colorScheme.error, borderRadius: BorderRadius.circular(10)),
-                  child: Text('$badge', style: TextStyle(color: theme.colorScheme.onError, fontWeight: FontWeight.bold, fontSize: 12)),
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(end: 8),
+                  child: PendingRequestBadge(count: badge),
                 ),
               Icon(Icons.chevron_right, color: theme.colorScheme.onSurfaceVariant),
             ],

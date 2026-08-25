@@ -40,6 +40,16 @@ class AppLocalizations {
           'You have used {appName} for {used} minutes today, '
               'which exceeds your limit of {limit} minutes.',
       'takeABreak': 'Take a Break',
+      'requestExtraTime': 'Request extra time',
+      'requestPending': 'Request pending',
+      'reviewExtraTimeRequest': 'Review extra-time request',
+      'approve': 'Approve',
+      'decline': 'Decline',
+      'requestSent': 'Request sent to your parent',
+      'requestForChild': 'Request from {child}',
+      'pendingRequestCount': '{count} pending extra-time requests',
+      'durationMinutes': '{minutes} minutes',
+      'tokensAvailable': '{count} Flex Tokens available',
       'overlayPermissionTitle':
           'Overlay permission required',
       'overlayPermissionBody':
@@ -115,6 +125,16 @@ class AppLocalizations {
           'لقد استخدمت {appName} لمدة {used} دقيقة اليوم، '
               'وذلك يتجاوز حدك البالغ {limit} دقيقة.',
       'takeABreak': 'خذ استراحة',
+      'requestExtraTime': 'طلب وقت إضافي',
+      'requestPending': 'الطلب قيد المراجعة',
+      'reviewExtraTimeRequest': 'مراجعة طلب وقت إضافي',
+      'approve': 'موافقة',
+      'decline': 'رفض',
+      'requestSent': 'تم إرسال الطلب إلى الوالد',
+      'requestForChild': 'طلب من {child}',
+      'pendingRequestCount': '{count} طلبات وقت إضافي معلقة',
+      'durationMinutes': '{minutes} دقائق',
+      'tokensAvailable': 'التوكنات المتاحة: {count}',
       'overlayPermissionTitle':
           'مطلوب إذن الظهور فوق التطبيقات',
       'overlayPermissionBody':
@@ -196,6 +216,16 @@ class AppLocalizations {
   String get timeLimitReachedTitle =>
       _text('timeLimitReachedTitle');
   String get takeABreak => _text('takeABreak');
+  String get requestExtraTime => _text('requestExtraTime');
+  String get requestPending => _text('requestPending');
+  String get reviewExtraTimeRequest => _text('reviewExtraTimeRequest');
+  String get approve => _text('approve');
+  String get decline => _text('decline');
+  String get requestSent => _text('requestSent');
+  String requestForChild(String child) => _text('requestForChild').replaceAll('{child}', child);
+  String pendingRequestCount(int count) => _text('pendingRequestCount').replaceAll('{count}', '$count');
+  String durationMinutes(int minutes) => _text('durationMinutes').replaceAll('{minutes}', '$minutes');
+  String tokensAvailable(int count) => _text('tokensAvailable').replaceAll('{count}', '$count');
   String get overlayPermissionTitle =>
       _text('overlayPermissionTitle');
   String get overlayPermissionBody =>

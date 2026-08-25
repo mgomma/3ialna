@@ -6,6 +6,7 @@ import '../../data/local/reward_service.dart';
 import '../../data/system/parent_voice_notification_service.dart';
 import '../../domain/models/child_profile.dart';
 import 'pin_auth_screen.dart';
+import 'widgets/request_approval_components.dart';
 
 class RewardCenterScreen extends StatefulWidget {
   const RewardCenterScreen({super.key});
@@ -73,9 +74,36 @@ class _RewardCenterScreenState extends State<RewardCenterScreen> {
     if (mounted) setState(() {});
   }
 
-  Future<void> _approve(ChildExtraTimeRequest request) async {
+  String _childName(String childId) {
+    for (final ChildProfile child in _children) {
+      if (child.id == childId) return child.name;
+    }
+    return childId;
+  }
+
+  Future<void> _openDecision(ChildExtraTimeRequest request) async {
     final bool? authenticated = await Navigator.of(context).push<bool>(MaterialPageRoute<bool>(builder: (BuildContext context) => PinAuthScreen(onAuthenticated: () => Navigator.of(context).pop(true))));
-    if (authenticated != true) return;
+    if (authenticated != true || !mounted) return;
+    final bool? approve = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (BuildContext sheetContext) => ApprovalDecisionSheet(
+        request: request,
+        childName: _childName(request.childId),
+        tokenAvailable: _balances[request.childId]?.available ?? 0,
+        onApprove: () => Navigator.of(sheetContext).pop(true),
+        onDecline: () => Navigator.of(sheetContext).pop(false),
+      ),
+    );
+    if (approve == true) {
+      await _approveAfterAuthentication(request);
+    } else if (approve == false) {
+      await _rewards.updateRequestStatus(request.id, 'rejected');
+      await _load();
+    }
+  }
+
+  Future<void> _approveAfterAuthentication(ChildExtraTimeRequest request) async {
     final ChildExtraTimeRequest? approved = await _rewards.approveRequest(request.id);
     if (approved == null) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_ar ? 'لا يوجد توكن متاح أو تمت معالجة الطلب.' : 'No token is available or this request was already processed.')));
@@ -151,7 +179,13 @@ class _RewardCenterScreenState extends State<RewardCenterScreen> {
                 Text(_ar ? 'طلبات وقت إضافي (${_requests.where((ChildExtraTimeRequest item) => item.status == 'pending').length})' : 'Extra-time requests (${_requests.where((ChildExtraTimeRequest item) => item.status == 'pending').length})', style: Theme.of(context).textTheme.titleLarge),
                 if (_requests.where((ChildExtraTimeRequest item) => item.status == 'pending').isEmpty) Text(_ar ? 'لا توجد طلبات معلقة.' : 'No pending requests.'),
                 for (final ChildExtraTimeRequest request in _requests.where((ChildExtraTimeRequest item) => item.status == 'pending'))
-                  Card(child: ListTile(title: Text(_ar ? 'طلب ${request.minutes} دقائق' : 'Request for ${request.minutes} minutes'), subtitle: Text(_ar ? 'يحتاج موافقة الوالد' : 'Needs parent approval'), trailing: Wrap(children: <Widget>[IconButton(onPressed: () => _reject(request), icon: const Icon(Icons.close)), IconButton(onPressed: () => _approve(request), icon: const Icon(Icons.check))]))),
+                  PendingRequestCard(
+                    request: request,
+                    childName: _childName(request.childId),
+                    tokenAvailable: _balances[request.childId]?.available ?? 0,
+                    onDecline: () => _openDecision(request),
+                    onApprove: () => _openDecision(request),
+                  ),
                 const SizedBox(height: 12),
                 Text(_ar ? 'الحالة والطلبات والتسجيلات محفوظة محليًا على الجهاز.' : 'Balances, requests, and recordings stay local on this device.', style: Theme.of(context).textTheme.bodySmall),
               ],

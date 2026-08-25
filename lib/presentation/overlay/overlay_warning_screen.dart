@@ -12,6 +12,7 @@ import '../../data/system/overlay_service.dart';
 import '../../domain/models/overlay_data.dart';
 import '../../l10n/app_localizations.dart';
 import '../parental_control/pin_auth_screen.dart';
+import '../parental_control/widgets/request_approval_components.dart';
 
 /// A minimal app used inside the overlay window.
 class OverlayWarningApp extends StatelessWidget {
@@ -209,18 +210,12 @@ class _OverlayWarningScreenState extends State<OverlayWarningScreen> {
     if (!mounted) return;
     final int? minutes = durations.length == 1
         ? durations.first
-        : await showDialog<int>(
-            context: context,
-            builder: (BuildContext context) => SimpleDialog(
-              title: const Text('Request extra time'),
-              children: durations.map((int value) => SimpleDialogOption(onPressed: () => Navigator.of(context).pop(value), child: Text('$value minutes'))).toList(),
-            ),
-          );
+        : await ChildRequestDurationDialog.show(context, durations);
     if (minutes == null) return;
     await _rewardService.createRequest(childId: childId, minutes: minutes, packageName: packageName ?? '');
     if (mounted) {
       setState(() => _requestPending = true);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Request sent to parent.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).requestSent)));
     }
   }
 
@@ -352,16 +347,7 @@ class _OverlayWarningScreenState extends State<OverlayWarningScreen> {
                       const SizedBox(height: 12),
                       SizedBox(
                         width: double.infinity,
-                        child: OutlinedButton(
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            side: const BorderSide(color: Colors.white70, width: 1.5),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          onPressed: _requestPending ? null : _requestMoreTime,
-                          child: Text(_requestPending ? 'Request Pending' : 'Request Extra Time', style: const TextStyle(fontWeight: FontWeight.bold)),
-                        ),
+                        child: ChildRequestPendingBanner(pending: _requestPending, onRequest: _requestMoreTime),
                       ),
                       const SizedBox(height: 8),
                       SizedBox(

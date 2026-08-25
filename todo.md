@@ -367,3 +367,15 @@ Signed iOS workflow attempt #2 was rerun after the owner reported corrected secr
 - [ ] Add a pending-request count badge and parent inbox entry.
 - [ ] Add Android-focused regression coverage and physical-device steps for concurrency and duplicate approval.
 - [ ] Run CI, push the implementation, and report any device-only validation limits.
+
+## Request overlay and approval inbox UI specification
+- [ ] Document component hierarchy and state model for child requests and parent approval.
+- [ ] Define Arabic-first wireframes, bilingual copy, accessibility, privacy, and responsive behavior.
+- [ ] Add implementation acceptance criteria and test scenarios.
+
+## Complete request overlay and approval inbox UI refactor
+- [ ] Extract reusable child request button, duration dialog, and pending banner.
+- [ ] Extract parent pending badge, request card, and authenticated approval sheet.
+- [ ] Move request/inbox copy into Arabic and English localization resources.
+- [ ] Add dedicated widget and privacy regression tests.
+- [ ] Run CI, fix issues, and push the complete refactor.
