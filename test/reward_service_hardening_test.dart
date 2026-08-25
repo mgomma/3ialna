@@ -10,6 +10,23 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
   });
 
+  test('reads legacy balance JSON and migrates it on the next write', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'flex_token_balances_v1': jsonEncode(<String, Object>{
+        'child-1': <String, Object>{'available': 2, 'updatedAt': DateTime(2026, 1, 1).toIso8601String()},
+      }),
+    });
+    const RewardService service = RewardService();
+
+    expect((await service.loadTokens('child-1')).available, 2);
+    await service.issueToken('child-1');
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final Map<String, dynamic> stored = jsonDecode(prefs.getString('flex_token_balances_v1')!) as Map<String, dynamic>;
+
+    expect(stored['schemaVersion'], 1);
+    expect(stored['balances']['child-1']['available'], 3);
+  });
+
   test('clamps a corrupted negative balance to zero', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{
       'flex_token_balances_v1': jsonEncode(<String, Object>{
@@ -40,6 +57,19 @@ void main() {
     }));
 
     expect((await service.loadTokens('child-1')).available, 0);
+  });
+
+  test('versioned request storage preserves only local-safe request fields', () async {
+    const RewardService service = RewardService();
+    await service.createRequest(childId: 'child-1', minutes: 5, packageName: 'com.example.game');
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final Map<String, dynamic> stored = jsonDecode(prefs.getString('child_extra_time_requests_v1')!) as Map<String, dynamic>;
+
+    expect(stored['schemaVersion'], 1);
+    expect(stored['requests'], hasLength(1));
+    expect(stored['requests'][0].keys, isNot(contains('childName')));
+    expect(stored['requests'][0].keys, isNot(contains('birthDate')));
+    expect(stored['requests'][0].keys, isNot(contains('recordingPath')));
   });
 
   test('approval consumes one token and a second approval is rejected', () async {

@@ -75,6 +75,7 @@ class RewardService {
   static const String _rewardsKey = 'reward_options_v1';
   static const String _tokensKey = 'flex_token_balances_v1';
   static const String _requestsKey = 'child_extra_time_requests_v1';
+  static const int _schemaVersion = 1;
 
   // SharedPreferences has no compare-and-swap operation. This in-process queue
   // prevents concurrent read-modify-write calls from losing updates.
@@ -102,13 +103,13 @@ class RewardService {
 
   Future<FlexTokenBalance> loadTokens(String childId) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    return _readBalance(_decodeMap(prefs.getString(_tokensKey)), childId);
+    return _readBalance(_decodeTokenBalances(prefs.getString(_tokensKey)), childId);
   }
 
   Future<FlexTokenBalance> issueToken(String childId) async {
     return _serialized<FlexTokenBalance>(() async {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
-      final Map<String, dynamic> raw = _decodeMap(prefs.getString(_tokensKey));
+      final Map<String, dynamic> raw = _decodeTokenBalances(prefs.getString(_tokensKey));
       final FlexTokenBalance current = _readBalance(raw, childId);
       final FlexTokenBalance updated = current.copyWith(available: current.available + 1, updatedAt: DateTime.now());
       await _writeBalance(prefs, raw, updated);
@@ -119,7 +120,7 @@ class RewardService {
   Future<FlexTokenBalance> consumeToken(String childId) async {
     return _serialized<FlexTokenBalance>(() async {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
-      final Map<String, dynamic> raw = _decodeMap(prefs.getString(_tokensKey));
+      final Map<String, dynamic> raw = _decodeTokenBalances(prefs.getString(_tokensKey));
       final FlexTokenBalance current = _readBalance(raw, childId);
       if (current.available <= 0) return current;
       final FlexTokenBalance updated = current.copyWith(available: current.available - 1, updatedAt: DateTime.now());
@@ -160,7 +161,7 @@ class RewardService {
       final int index = requests.indexWhere((ChildExtraTimeRequest item) => item.id == requestId);
       if (index < 0 || requests[index].status != 'pending') return null;
       final ChildExtraTimeRequest request = requests[index];
-      final Map<String, dynamic> rawTokens = _decodeMap(prefs.getString(_tokensKey));
+      final Map<String, dynamic> rawTokens = _decodeTokenBalances(prefs.getString(_tokensKey));
       final FlexTokenBalance balance = _readBalance(rawTokens, request.childId);
       if (balance.available <= 0) return null;
       final FlexTokenBalance updatedBalance = balance.copyWith(available: balance.available - 1, updatedAt: DateTime.now());
@@ -217,12 +218,14 @@ class RewardService {
 
   Future<void> _writeBalance(SharedPreferences prefs, Map<String, dynamic> raw, FlexTokenBalance balance) async {
     raw[balance.childId] = <String, Object>{'available': balance.available, 'updatedAt': balance.updatedAt.toIso8601String()};
-    await prefs.setString(_tokensKey, jsonEncode(raw));
+    await prefs.setString(_tokensKey, jsonEncode(<String, Object>{'schemaVersion': _schemaVersion, 'balances': raw}));
   }
 
   List<ChildExtraTimeRequest> _readRequests(SharedPreferences prefs) {
     try {
-      return (jsonDecode(prefs.getString(_requestsKey) ?? '[]') as List<dynamic>)
+      final dynamic decoded = jsonDecode(prefs.getString(_requestsKey) ?? '[]');
+      final dynamic requestData = decoded is Map<String, dynamic> ? decoded['requests'] : decoded;
+      return (requestData is List<dynamic> ? requestData : <dynamic>[])
           .whereType<Map<String, dynamic>>()
           .map(ChildExtraTimeRequest.fromJson)
           .where((ChildExtraTimeRequest item) => item.id.isNotEmpty && item.childId.isNotEmpty)
@@ -233,7 +236,15 @@ class RewardService {
   }
 
   Future<void> _writeRequests(SharedPreferences prefs, List<ChildExtraTimeRequest> requests) async {
-    await prefs.setString(_requestsKey, jsonEncode(requests.map((ChildExtraTimeRequest item) => item.toJson()).toList()));
+    await prefs.setString(_requestsKey, jsonEncode(<String, Object>{'schemaVersion': _schemaVersion, 'requests': requests.map((ChildExtraTimeRequest item) => item.toJson()).toList()}));
+  }
+
+  Map<String, dynamic> _decodeTokenBalances(String? raw) {
+    final Map<String, dynamic> decoded = _decodeMap(raw);
+    final dynamic balances = decoded['balances'];
+    if (balances is Map<String, dynamic>) return Map<String, dynamic>.from(balances);
+    // v0 stored the child map directly; read it and migrate on the next write.
+    return decoded;
   }
 
   Map<String, dynamic> _decodeMap(String? raw) {
