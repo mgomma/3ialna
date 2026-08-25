@@ -87,14 +87,14 @@ class _PauseControlScreenState extends State<PauseControlScreen> {
                   FilledButton.icon(onPressed: _resumeNow, icon: const Icon(Icons.play_arrow), label: Text(_ar ? 'استئناف الحماية الآن' : 'Resume safeguards now')),
                 ] else ...<Widget>[
                   DropdownButtonFormField<String>(
-                    value: _reason,
+                    initialValue: _reason,
                     decoration: InputDecoration(labelText: _ar ? 'السبب' : 'Reason'),
                     items: _reasons.entries.map((MapEntry<String, List<String>> entry) => DropdownMenuItem<String>(value: entry.key, child: Text(entry.value[_ar ? 0 : 1]))).toList(),
                     onChanged: (String? value) => setState(() => _reason = value ?? _reason),
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<int>(
-                    value: _minutes,
+                    initialValue: _minutes,
                     decoration: InputDecoration(labelText: _ar ? 'المدة' : 'Duration'),
                     items: <int>[15, 30, 60, 120].map((int value) => DropdownMenuItem<int>(value: value, child: Text(_ar ? '$value دقيقة' : '$value minutes'))).toList(),
                     onChanged: (int? value) => setState(() => _minutes = value ?? _minutes),

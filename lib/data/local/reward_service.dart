@@ -201,7 +201,7 @@ class RewardService {
 
   Future<T> _serialized<T>(Future<T> Function() action) {
     final Future<T> operation = _writeQueue.then<T>((_) => action());
-    _writeQueue = operation.then<void>((_) {}, onError: (_, Object __) {});
+    _writeQueue = operation.then<void>((_) {}, onError: (_, Object error) {});
     return operation;
   }
 
