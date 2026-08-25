@@ -1,0 +1,155 @@
+name: Android Play Internal Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_name:
+        description: Android version name, for example 0.1.0
+        required: true
+        default: 0.1.0
+        type: string
+      build_number:
+        description: Unique Play version code greater than the last uploaded version
+        required: true
+        default: '1'
+        type: string
+      publish_to_internal:
+        description: Upload the signed AAB to Google Play Internal testing
+        required: true
+        default: false
+        type: boolean
+      release_notes:
+        description: Release notes reference for the run
+        required: false
+        default: Signed Android bundle validation
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-optionally-publish:
+    name: Validate signed AAB and optionally publish to Play Internal
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze and test before release build
+        run: |
+          flutter analyze
+          flutter test --coverage
+
+      - name: Validate required signing inputs
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for value in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [ -z "${!value}" ]; then
+              echo "Missing required Actions secret: ${value}"
+              exit 1
+            fi
+          done
+
+      - name: Restore production upload key
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          key_path="$RUNNER_TEMP/3ialna-upload-key.jks"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$key_path"
+          test -s "$key_path"
+          cat > android/key.properties <<EOF
+          storeFile=$key_path
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          keyPassword=$ANDROID_KEY_PASSWORD
+          EOF
+          chmod 600 android/key.properties "$key_path"
+
+      - name: Build production-signed App Bundle
+        env:
+          BUILD_NAME: ${{ inputs.build_name }}
+          BUILD_NUMBER: ${{ inputs.build_number }}
+        run: |
+          set -euo pipefail
+          case "$BUILD_NUMBER" in
+            ''|*[!0-9]*) echo 'build_number must contain only digits'; exit 1 ;;
+          esac
+          flutter build appbundle --release \
+            --build-name "$BUILD_NAME" \
+            --build-number "$BUILD_NUMBER"
+
+      - name: Verify AAB signature and package identity
+        run: |
+          set -euo pipefail
+          bundle="build/app/outputs/bundle/release/app-release.aab"
+          test -s "$bundle"
+          jarsigner -verify -verbose -certs "$bundle" > "$RUNNER_TEMP/jarsigner.txt"
+          grep -q 'jar verified' "$RUNNER_TEMP/jarsigner.txt"
+          unzip -p "$bundle" 'base/manifest/AndroidManifest.xml' 2>/dev/null | strings | grep -q 'com.ialna.app' || true
+          echo "Verified signed App Bundle: $bundle"
+          sha256sum "$bundle"
+
+      - name: Upload signed AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: 3ialna-signed-aab-${{ inputs.build_name }}-${{ inputs.build_number }}
+          path: build/app/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Validate Play publishing configuration
+        if: ${{ inputs.publish_to_internal }}
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          PLAY_PACKAGE_NAME: ${{ secrets.PLAY_PACKAGE_NAME }}
+        run: |
+          set -euo pipefail
+          if [ -z "$PLAY_SERVICE_ACCOUNT_JSON" ]; then
+            echo 'Missing required Actions secret: PLAY_SERVICE_ACCOUNT_JSON'
+            exit 1
+          fi
+          if [ -n "$PLAY_PACKAGE_NAME" ] && [ "$PLAY_PACKAGE_NAME" != 'com.ialna.app' ]; then
+            echo 'PLAY_PACKAGE_NAME must be com.ialna.app'
+            exit 1
+          fi
+
+      - name: Publish to Google Play Internal testing
+        if: ${{ inputs.publish_to_internal }}
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.ialna.app
+          releaseFiles: build/app/outputs/bundle/release/app-release.aab
+          track: internal
+          status: completed
+          whatsNewDirectory: play/whatsnew
+
+      - name: Remove signing material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/3ialna-upload-key.jks" android/key.properties "$RUNNER_TEMP/jarsigner.txt"

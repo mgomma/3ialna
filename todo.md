@@ -379,3 +379,16 @@ Signed iOS workflow attempt #2 was rerun after the owner reported corrected secr
 - [ ] Move request/inbox copy into Arabic and English localization resources.
 - [ ] Add dedicated widget and privacy regression tests.
 - [ ] Run CI, fix issues, and push the complete refactor.
+
+## Website and Play Store release preparation
+- [ ] Finish CI validation for the extracted request and approval UI.
+- [ ] Update the bilingual website with the child request and parent approval journey.
+- [ ] Write local command-line instructions for safe push and automatic release workflows.
+- [ ] Prepare Android Play Store release configuration and a submission checklist without publishing.
+- [ ] Validate website, save a checkpoint, and push repository documentation/configuration changes.
+
+## Final release follow-up
+
+- [x] Re-authenticate GitHub CLI and verify all jobs for the latest Flutter CI run.
+- [ ] Verify production Android upload-key and Play App Signing configuration, then build and validate a signed AAB through Internal testing.
+- [ ] Review the final landing-page copy and publish the website from the Management UI.
