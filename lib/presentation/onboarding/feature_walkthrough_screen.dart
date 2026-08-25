@@ -181,14 +181,18 @@ class _FeatureWalkthroughScreenState extends State<FeatureWalkthroughScreen> {
                 onPageChanged: (int value) => setState(() => _page = value),
                 itemBuilder: (BuildContext context, int index) {
                   final _WalkthroughPage page = _pages[index];
-                  return Padding(
-                    padding: const EdgeInsets.all(28),
-                    child: Center(
+                  return LayoutBuilder(
+                    builder: (BuildContext context, BoxConstraints constraints) =>
+                        SingleChildScrollView(
+                      padding: const EdgeInsets.all(28),
                       child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 480),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
+                        constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 480),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
                             CircleAvatar(
                               radius: 52,
                               backgroundColor: page.color.withValues(alpha: 0.14),
@@ -208,7 +212,9 @@ class _FeatureWalkthroughScreenState extends State<FeatureWalkthroughScreen> {
                             ),
                             const SizedBox(height: 24),
                             _interactivePreview(),
-                          ],
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ),

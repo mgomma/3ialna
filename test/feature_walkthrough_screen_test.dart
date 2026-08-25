@@ -53,6 +53,7 @@ void main() {
     await tester.tap(find.byKey(const Key('walkthrough-add-child')));
     await tester.pump();
     expect(find.text('Profiles in this example: 2'), findsOneWidget);
+    expect(tester.takeException(), isNull);
 
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
