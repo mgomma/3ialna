@@ -73,20 +73,18 @@ class _RewardCenterScreenState extends State<RewardCenterScreen> {
   Future<void> _approve(ChildExtraTimeRequest request) async {
     final bool? authenticated = await Navigator.of(context).push<bool>(MaterialPageRoute<bool>(builder: (BuildContext context) => PinAuthScreen(onAuthenticated: () => Navigator.of(context).pop(true))));
     if (authenticated != true) return;
-    final FlexTokenBalance balance = await _rewards.loadTokens(request.childId);
-    if (balance.available <= 0) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_ar ? 'أصدر توكن مرونة لهذا الطفل أولًا.' : 'Issue a Flex Token for this child first.')));
+    final ChildExtraTimeRequest? approved = await _rewards.approveRequest(request.id);
+    if (approved == null) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_ar ? 'لا يوجد توكن متاح أو تمت معالجة الطلب.' : 'No token is available or this request was already processed.')));
       return;
     }
-    await _rewards.consumeToken(request.childId);
-    if (request.packageName.isNotEmpty) {
+    if (approved.packageName.isNotEmpty) {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setInt(
-        'flutter.snooze_until_${request.packageName}',
-        DateTime.now().add(Duration(minutes: request.minutes)).millisecondsSinceEpoch,
+        'flutter.snooze_until_${approved.packageName}',
+        DateTime.now().add(Duration(minutes: approved.minutes)).millisecondsSinceEpoch,
       );
     }
-    await _rewards.updateRequestStatus(request.id, 'approved');
     try {
       await _voice.playRecording();
     } catch (_) {
