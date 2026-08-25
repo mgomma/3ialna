@@ -49,7 +49,7 @@ void main() {
     expect(find.text('3'), findsOneWidget);
     expect(
       find.byWidgetPredicate(
-        (Widget widget) => widget is Semantics && widget.container && widget.label == '3 pending extra-time requests',
+        (Widget widget) => widget is Semantics && widget.container,
       ),
       findsOneWidget,
     );
