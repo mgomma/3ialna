@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mu_super_app/data/local/reward_service.dart';
@@ -8,7 +9,12 @@ import 'package:mu_super_app/presentation/parental_control/widgets/request_appro
 Widget _host(Widget child, {Locale locale = const Locale('en')}) {
   return MaterialApp(
     locale: locale,
-    localizationsDelegates: const <LocalizationsDelegate<dynamic>>[AppLocalizations.delegate],
+    localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
     supportedLocales: AppLocalizations.supportedLocales,
     home: Scaffold(body: child),
   );
