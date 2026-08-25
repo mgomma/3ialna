@@ -1,0 +1,12 @@
+Default Azan recording source and license
+
+Source: Beautiful adhan.ogg
+Original URL: https://commons.wikimedia.org/wiki/File:Beautiful_adhan.ogg
+Direct media URL: https://upload.wikimedia.org/wikipedia/commons/b/b0/Beautiful_adhan.ogg
+Uploader: Adam-synagda
+License: Creative Commons CC0 1.0 Universal Public Domain Dedication
+License URL: https://creativecommons.org/publicdomain/zero/1.0/
+
+The bundled platform files are 28-second excerpts prepared from the CC0 source
+for compatibility with iOS local-notification sound limits. The app keeps the
+parent-recorded Azan override separate and never replaces it automatically.

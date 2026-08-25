@@ -38,6 +38,22 @@ void main() {
     expect(SettingsService(prefs).loadPrayerLockSettings().enabled, isFalse);
   });
 
+  test('persists the post-permission setup and Quick Settings completion flags',
+      () async {
+    final SettingsService settings =
+        SettingsService(await SharedPreferences.getInstance());
+
+    expect(settings.firstRunSetupComplete, isFalse);
+    expect(settings.quickSettingsPrompted, isFalse);
+    await settings.setFirstRunSetupComplete();
+    await settings.setQuickSettingsPrompted();
+
+    final SettingsService reloaded =
+        SettingsService(await SharedPreferences.getInstance());
+    expect(reloaded.firstRunSetupComplete, isTrue);
+    expect(reloaded.quickSettingsPrompted, isTrue);
+  });
+
   test('persists country profile and essential onboarding completion immediately',
       () async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();

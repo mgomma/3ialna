@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../../domain/models/app_info.dart';
+import '../../data/local/locale_controller.dart';
 
 /// Widget displaying an app card with icon, name, and control options.
 class AppCard extends StatelessWidget {
@@ -32,6 +33,8 @@ class AppCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final bool isArabic = LocaleController.instance.isArabic;
+    String text(String english, String arabic) => isArabic ? arabic : english;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -100,7 +103,7 @@ class AppCard extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: onSetCategory,
                   icon: const Icon(Icons.category_outlined),
-                  label: Text('Category: ${categoryLabel ?? 'Not assigned'}'),
+                  label: Text('${text('Category', 'الفئة')}: ${categoryLabel ?? text('Not assigned', 'غير مصنّف')}'),
                 ),
               ),
             ],
@@ -117,7 +120,7 @@ class AppCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Limit: ${timeLimitMinutes}m/day',
+                      text('Limit: ${timeLimitMinutes}m/day', 'الحد: ${timeLimitMinutes} دقيقة/اليوم'),
                       style: theme.textTheme.bodySmall,
                     ),
                   ],
@@ -133,7 +136,7 @@ class AppCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Used: ${currentUsageMinutes}m',
+                      text('Used: ${currentUsageMinutes}m', 'المستخدم: ${currentUsageMinutes} دقيقة'),
                       style: theme.textTheme.bodySmall,
                     ),
                   ],
@@ -162,7 +165,7 @@ class AppCard extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: onSetTimeLimit,
                   icon: const Icon(Icons.schedule),
-                  label: const Text('Set Time Limit'),
+                  label: Text(text('Set Time Limit', 'تعيين حد زمني')),
                 ),
               ),
             ],

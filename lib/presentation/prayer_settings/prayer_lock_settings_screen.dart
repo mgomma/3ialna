@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/local/settings_service.dart';
 import '../../data/local/locale_controller.dart';
 import '../../data/system/location_service.dart';
+import '../../data/system/prayer_time_service.dart';
 import '../../domain/models/prayer.dart';
 import '../../domain/models/prayer_lock_settings.dart';
 import '../../domain/services/prayer_calculation_method_policy.dart';
@@ -26,8 +27,10 @@ class PrayerLockSettingsScreen extends StatefulWidget {
 class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
   late SettingsService _settingsService;
   final LocationService _locationService = const LocationService();
+  final PrayerTimeService _prayerTimeService = const PrayerTimeService();
 
   PrayerLockSettings _settings = PrayerLockSettings.defaults();
+  Map<Prayer, DateTime> _prayerTimes = <Prayer, DateTime>{};
   bool _isLoading = false;
   bool _isSchedulingVoiceReminderTest = false;
   bool _isSchedulingAzanTest = false;
@@ -49,6 +52,26 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
     };
   }
 
+  String _formatPrayerTime(DateTime? time) {
+    if (time == null) return _text('Time unavailable', 'الوقت غير متاح');
+    final DateTime local = time.toLocal();
+    final int hour = local.hour;
+    final int displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+    final String period = _isArabic
+        ? (hour >= 12 ? 'م' : 'ص')
+        : (hour >= 12 ? 'PM' : 'AM');
+    return '$displayHour:${local.minute.toString().padLeft(2, '0')} $period';
+  }
+
+  void _refreshPrayerTimes() {
+    final Map<Prayer, DateTime>? calculated =
+        _prayerTimeService.calculatePrayerTimes(DateTime.now(), _settings);
+    if (!mounted) return;
+    setState(() {
+      _prayerTimes = calculated ?? <Prayer, DateTime>{};
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -62,6 +85,7 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
     setState(() {
       _settings = _settingsService.loadPrayerLockSettings();
     });
+    _refreshPrayerTimes();
 
     // Load location if not set, then use it for the automatic method default.
     if (_settings.latitude == null || _settings.longitude == null) {
@@ -81,6 +105,7 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
     setState(() {
       _settings = _settings.copyWith(calculationMethodName: method);
     });
+    _refreshPrayerTimes();
   }
 
   Future<void> _refreshLocation() async {
@@ -125,6 +150,7 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
         _isLoading = false;
       });
       _applyLocationDefault(latitude: coords.latitude, longitude: coords.longitude);
+      _refreshPrayerTimes();
     } else {
       setState(() {
         _locationError =
@@ -473,6 +499,7 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
     setState(() {
       _settings = _settings.copyWith(calculationMethodName: methodName);
     });
+    _refreshPrayerTimes();
   }
 
   Widget _buildCalculationMethodSection() {
@@ -539,7 +566,22 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
                 padding: const EdgeInsets.only(bottom: 16),
                 child: Row(
                   children: <Widget>[
-                    Expanded(child: Text(_prayerName(prayer))),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(_prayerName(prayer)),
+                          const SizedBox(height: 4),
+                          Text(
+                            _formatPrayerTime(_prayerTimes[prayer]),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
                     SizedBox(
                       width: 100,
                       child: TextField(

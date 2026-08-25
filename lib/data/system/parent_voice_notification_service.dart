@@ -48,6 +48,21 @@ class ParentVoiceNotificationService {
 
   Future<File?> getRecording() async {
     final File file = File(await _filePath);
+    if (!file.existsSync() && _recordingKey == prayerAzanRecordingKey) {
+      final String assetPath = Platform.isIOS
+          ? 'assets/audio/default_azan_ios.wav'
+          : 'assets/audio/default_azan_android.m4a';
+      try {
+        final ByteData data = await rootBundle.load(assetPath);
+        await file.writeAsBytes(
+          data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+          flush: true,
+        );
+      } catch (_) {
+        // A missing bundled asset must not prevent the parent from recording
+        // or using the rest of the prayer reminder flow.
+      }
+    }
     return file.existsSync() ? file : null;
   }
 

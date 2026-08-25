@@ -3,6 +3,7 @@ import '../../domain/models/app_info.dart';
 import '../../data/system/app_list_service.dart';
 import '../../data/local/parental_control_storage_service.dart';
 import '../../data/system/app_usage_service.dart';
+import '../../data/local/locale_controller.dart';
 import '../../domain/models/managed_app_category.dart';
 import '../widgets/app_card.dart';
 import '../widgets/time_limit_selector.dart';
@@ -31,6 +32,10 @@ class _AppManagementScreenState extends State<AppManagementScreen> {
   // A Manage Apps visit is intentionally focused on active blocks. Parents can
   // explicitly expand the list when they need to add a new blocked app.
   bool _showOnlyBlocked = true;
+
+  bool get _isArabic => LocaleController.instance.isArabic;
+
+  String _text(String english, String arabic) => _isArabic ? arabic : english;
 
   @override
   void initState() {
@@ -77,7 +82,7 @@ class _AppManagementScreenState extends State<AppManagementScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error loading apps: $e'),
+            content: Text(_text('Error loading apps: $e', 'تعذر تحميل التطبيقات: $e')),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -131,9 +136,9 @@ class _AppManagementScreenState extends State<AppManagementScreen> {
   }
 
   String _categoryLabel(ManagedAppCategory category) => switch (category) {
-        ManagedAppCategory.socialMedia => 'Social media (shared budget)',
-        ManagedAppCategory.games => 'Games (shared budget)',
-        ManagedAppCategory.unassigned => 'Not assigned',
+        ManagedAppCategory.socialMedia => _text('Social media (shared budget)', 'التواصل الاجتماعي (ميزانية مشتركة)'),
+        ManagedAppCategory.games => _text('Games (shared budget)', 'الألعاب (ميزانية مشتركة)'),
+        ManagedAppCategory.unassigned => _text('Not assigned', 'غير مصنّف'),
       };
 
   Future<void> _setCategory(AppInfo app) async {
@@ -168,7 +173,7 @@ class _AppManagementScreenState extends State<AppManagementScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('App Management'),
+        title: Text(_text('Manage Apps', 'إدارة التطبيقات')),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -185,7 +190,7 @@ class _AppManagementScreenState extends State<AppManagementScreen> {
               children: [
                 TextField(
                   decoration: InputDecoration(
-                    hintText: 'Search apps...',
+                    hintText: _text('Search apps...', 'ابحث في التطبيقات…'),
                     prefixIcon: const Icon(Icons.search),
                     suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
@@ -211,7 +216,9 @@ class _AppManagementScreenState extends State<AppManagementScreen> {
                 Row(
                   children: [
                     FilterChip(
-                      label: Text(_showOnlyBlocked ? 'Blocked apps only' : 'All installed apps'),
+                      label: Text(_showOnlyBlocked
+                          ? _text('Blocked apps only', 'التطبيقات المحظورة فقط')
+                          : _text('All installed apps', 'كل التطبيقات المثبتة')),
                       selected: _showOnlyBlocked,
                       onSelected: (selected) {
                         setState(() {
@@ -241,10 +248,10 @@ class _AppManagementScreenState extends State<AppManagementScreen> {
                             const SizedBox(height: 16),
                             Text(
                               _searchQuery.isNotEmpty
-                                  ? 'No apps found'
+                                  ? _text('No apps found', 'لم يتم العثور على تطبيقات')
                                   : _showOnlyBlocked
-                                      ? 'No blocked apps yet'
-                                      : 'No apps to display',
+                                      ? _text('No blocked apps yet', 'لا توجد تطبيقات محظورة بعد')
+                                      : _text('No apps to display', 'لا توجد تطبيقات للعرض'),
                               style: theme.textTheme.titleMedium?.copyWith(
                                 color: colorScheme.onSurfaceVariant,
                               ),

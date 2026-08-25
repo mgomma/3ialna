@@ -39,3 +39,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/audio/default_azan_ios.wav
+    - assets/audio/default_azan_android.m4a
+    - assets/audio/DEFAULT_AZAN_LICENSE.txt
