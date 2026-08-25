@@ -34,6 +34,7 @@ import '../../domain/models/prayer_lock_settings.dart';
 import '../../domain/models/social_auth_profile.dart';
 import '../../l10n/app_localizations.dart';
 import '../parental_control/parent_dashboard_screen.dart';
+import '../parental_control/age_safety_profiles_screen.dart';
 import '../parental_control/pin_auth_screen.dart';
 import '../onboarding/feature_walkthrough_screen.dart';
 import '../prayer_settings/prayer_lock_settings_screen.dart';
@@ -193,10 +194,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         MaterialPageRoute<void>(
           builder: (_) => FeatureWalkthroughScreen(
             onCompleted: _settings.setFeatureWalkthroughSeen,
+            onOpenProfileSetup: _openKidsManagementFromWalkthrough,
           ),
         ),
       );
     });
+  }
+
+  Future<void> _openKidsManagementFromWalkthrough() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const AgeSafetyProfilesScreen(
+          openChildManagerOnStart: true,
+        ),
+      ),
+    );
+    if (mounted) _loadSettings();
   }
 
   void _initializePrayerLockScheduler() {
@@ -1191,6 +1204,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             MaterialPageRoute<void>(
               builder: (_) => FeatureWalkthroughScreen(
                 onCompleted: _settings.setFeatureWalkthroughSeen,
+                onOpenProfileSetup: _openKidsManagementFromWalkthrough,
               ),
             ),
           ),

@@ -6,9 +6,11 @@ class FeatureWalkthroughScreen extends StatefulWidget {
   const FeatureWalkthroughScreen({
     super.key,
     required this.onCompleted,
+    this.onOpenProfileSetup,
   });
 
   final Future<void> Function() onCompleted;
+  final Future<void> Function()? onOpenProfileSetup;
 
   @override
   State<FeatureWalkthroughScreen> createState() =>
@@ -19,6 +21,9 @@ class _FeatureWalkthroughScreenState extends State<FeatureWalkthroughScreen> {
   final PageController _controller = PageController();
   int _page = 0;
   bool _finishing = false;
+  int _demoChildren = 1;
+  String _demoActiveUser = 'Noor';
+  bool _demoParentMode = false;
 
   bool get _ar => LocaleController.instance.isArabic;
 
@@ -28,40 +33,44 @@ class _FeatureWalkthroughScreenState extends State<FeatureWalkthroughScreen> {
       color: Colors.teal,
       title: _ar ? 'عائلتك أولاً' : 'Your family, first',
       body: _ar
-          ? 'أضف أطفالك، راجع تاريخ الميلاد، واختر إعدادات السلامة المناسبة. يتم اختيار الملف النشط بوضوح عند مشاركة الجهاز.'
-          : 'Add children, review birth dates, and choose suitable safety settings. The active child is always clear when the device is shared.',
+          ? 'يمكن لأسرة واحدة مشاركة جهاز واحد. لكل طفل ملف مستقل وحدود عمرية وسجل استخدام محلي خاص به.'
+          : 'One family can share one device. Every child keeps a separate profile, age-based limits, and local usage history.',
     ),
     _WalkthroughPage(
-      icon: Icons.shield_outlined,
+      icon: Icons.person_add_alt_1_outlined,
       color: Colors.indigo,
-      title: _ar ? 'الحماية والحدود' : 'Protection and limits',
+      title: _ar ? 'أضف الأطفال' : 'Add the children',
       body: _ar
-          ? 'فعّل المراقبة بعد منح الوصول المطلوب. استخدم حدود الفئات، المواقع المسموحة والمحظورة، وأوقات النوم والصلاة القابلة للتعديل.'
-          : 'Start monitoring after granting required access. Use category budgets, allowed and blocked sites, and editable sleep and prayer schedules.',
+          ? 'أضف اسم الطفل وتاريخ ميلاده، ثم ابدأ بالملف العمري المقترح. يمكنك تعديل إعدادات كل طفل لاحقًا.'
+          : 'Add a child’s name and birth date, then start with the recommended age profile. You can adjust every child’s settings later.',
     ),
     _WalkthroughPage(
-      icon: Icons.notifications_active_outlined,
+      icon: Icons.switch_account_outlined,
       color: Colors.deepOrange,
-      title: _ar ? 'تذكيرات بصوت الوالد' : 'Parent voice reminders',
+      title: _ar
+          ? 'اختر من يستخدم الجهاز الآن'
+          : 'Choose who is using it now',
       body: _ar
-          ? 'سجّل تذكيرات للمهام أو الصلاة. يصل الإشعار بأمان، ثم يفتح التطبيق لتشغيل التسجيل المحلي؛ لا يتم التشغيل تلقائياً في الخلفية.'
-          : 'Record task or prayer reminders. A safe notification opens the app to play the local recording; it does not autoplay in the background.',
+          ? 'عند تسليم الجهاز، اختر الطفل النشط. تبدأ ميزانية ذلك الطفل وحدها ويظل سجل كل طفل منفصلًا.'
+          : 'When handing over the device, choose the active child. Only that child’s budget applies and each history remains separate.',
     ),
     _WalkthroughPage(
-      icon: Icons.bar_chart_outlined,
+      icon: Icons.admin_panel_settings_outlined,
       color: Colors.purple,
-      title: _ar ? 'تقارير وخصوصية' : 'Reports and privacy',
+      title: _ar ? 'وضع الوالد محمي' : 'Parent mode is protected',
       body: _ar
-          ? 'راجع الاستخدام حسب التاريخ. تبقى التسجيلات والبيانات الحساسة على الجهاز، وتحتاج أي مشاركة بالبريد إلى مراجعتك وموافقتك الصريحة.'
-          : 'Review usage by date. Recordings and sensitive data stay on the device, and any email sharing requires your review and explicit consent.',
+          ? 'عند استلام الوالد للجهاز، يتطلب الوضع غير المقيد رمز PIN أو البصمة. لا تُخلط استخدامات الوالد بسجل الأطفال.'
+          : 'When a parent takes the device back, unrestricted mode requires PIN or biometrics. Parent activity is not mixed into child history.',
     ),
     _WalkthroughPage(
       icon: Icons.tune_outlined,
       color: Colors.blueGrey,
-      title: _ar ? 'أنت المتحكم' : 'You stay in control',
+      title: _ar
+          ? 'ابدأ إعداد الجهاز المشترك'
+          : 'Set up your shared device',
       body: _ar
-          ? 'يمكنك تعديل كل إعداد لاحقاً. من إعدادات الأطفال اطلب إضافة اختصار لوحة الإعدادات السريعة لتغيير الطفل النشط بشكل أسرع.'
-          : 'Every setting remains editable. From Kids management, request the Quick Settings shortcut for faster active-child switching.',
+          ? 'افتح إدارة الأطفال الآن لإضافة العائلة وتحديد الطفل النشط. تظل كل الحدود والسجلات قابلة للمراجعة والتعديل من الوالد.'
+          : 'Open Kids Management now to add your family and select the active child. Parents can review and adjust all limits and histories later.',
     ),
   ];
 
@@ -78,6 +87,75 @@ class _FeatureWalkthroughScreenState extends State<FeatureWalkthroughScreen> {
     if (mounted) Navigator.of(context).pop();
   }
 
+  Future<void> _openProfileSetup() async {
+    if (_finishing || widget.onOpenProfileSetup == null) return;
+    setState(() => _finishing = true);
+    await widget.onOpenProfileSetup!();
+    if (!mounted) return;
+    await widget.onCompleted();
+    if (mounted) Navigator.of(context).pop();
+  }
+
+  Widget _interactivePreview() {
+    if (_page == 1) {
+      return Column(
+        children: <Widget>[
+          Text(
+            _ar
+                ? 'ملفات في هذا المثال: $_demoChildren'
+                : 'Profiles in this example: $_demoChildren',
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            key: const Key('walkthrough-add-child'),
+            onPressed: () => setState(() => _demoChildren = 2),
+            icon: const Icon(Icons.add),
+            label: Text(_ar ? 'أضف طفلًا آخر' : 'Add another child'),
+          ),
+        ],
+      );
+    }
+    if (_page == 2) {
+      return Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 8,
+        children: <Widget>[
+          ChoiceChip(
+            label: const Text('Noor'),
+            selected: _demoActiveUser == 'Noor',
+            onSelected: (_) => setState(() => _demoActiveUser = 'Noor'),
+          ),
+          ChoiceChip(
+            key: const Key('walkthrough-switch-child'),
+            label: const Text('Maha'),
+            selected: _demoActiveUser == 'Maha',
+            onSelected: (_) => setState(() => _demoActiveUser = 'Maha'),
+          ),
+        ],
+      );
+    }
+    if (_page == 3) {
+      return FilledButton.icon(
+        key: const Key('walkthrough-parent-mode'),
+        onPressed: () => setState(() => _demoParentMode = true),
+        icon: Icon(_demoParentMode ? Icons.verified_user : Icons.lock_outline),
+        label: Text(_demoParentMode
+            ? (_ar ? 'تم التحقق في المثال' : 'Verified in this example')
+            : (_ar ? 'مثال: تحقق برمز PIN' : 'Example: verify with PIN')),
+      );
+    }
+    if (_page == _pages.length - 1 && widget.onOpenProfileSetup != null) {
+      return OutlinedButton.icon(
+        key: const Key('walkthrough-open-kids-management'),
+        onPressed: _finishing ? null : _openProfileSetup,
+        icon: const Icon(Icons.manage_accounts_outlined),
+        label: Text(_ar ? 'افتح إدارة الأطفال الآن' : 'Open Kids Management now'),
+      );
+    }
+    return const SizedBox.shrink();
+  }
+
   @override
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
@@ -85,7 +163,7 @@ class _FeatureWalkthroughScreenState extends State<FeatureWalkthroughScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_ar ? 'جولة تعريفية' : 'Feature tour'),
+        title: Text(_ar ? 'دليل الجهاز المشترك' : 'Shared-device guide'),
         actions: <Widget>[
           TextButton(
             onPressed: _finishing ? null : _finish,
@@ -128,6 +206,8 @@ class _FeatureWalkthroughScreenState extends State<FeatureWalkthroughScreen> {
                               style: Theme.of(context).textTheme.bodyLarge,
                               textAlign: TextAlign.center,
                             ),
+                            const SizedBox(height: 24),
+                            _interactivePreview(),
                           ],
                         ),
                       ),
@@ -172,7 +252,7 @@ class _FeatureWalkthroughScreenState extends State<FeatureWalkthroughScreen> {
                   icon: Icon(isLast ? Icons.check : Icons.arrow_forward),
                   label: Text(
                     isLast
-                        ? (_ar ? 'ابدأ استخدام عيالنا' : 'Start using 3ialna')
+                        ? (_ar ? 'إنهاء الدليل' : 'Finish guide')
                         : (_ar ? 'التالي' : 'Next'),
                   ),
                 ),
