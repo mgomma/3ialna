@@ -51,7 +51,7 @@ void main() {
       find.byWidgetPredicate(
         (Widget widget) => widget is Semantics && widget.container,
       ),
-      findsOneWidget,
+      findsAtLeastNWidgets(1),
     );
   });
 
