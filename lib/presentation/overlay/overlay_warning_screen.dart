@@ -50,6 +50,7 @@ class _OverlayWarningScreenState extends State<OverlayWarningScreen> {
   int usedMinutes = 0;
   int limitMinutes = 0;
   String? packageName;
+  bool _requestPending = false;
   final AppBlockingService _blockingService = AppBlockingService();
   final AppBlockingChannel _blockingChannel = AppBlockingChannel();
   final AccessibilityServiceHelper _accessibilityHelper = AccessibilityServiceHelper();
@@ -59,6 +60,7 @@ class _OverlayWarningScreenState extends State<OverlayWarningScreen> {
   void initState() {
     super.initState();
     _readOverlayContent();
+    _loadPendingRequest();
     _checkAccessibilityServiceOnInit();
   }
 
@@ -191,11 +193,32 @@ class _OverlayWarningScreenState extends State<OverlayWarningScreen> {
     }
   }
 
-  Future<void> _requestMoreTime() async {
+  Future<void> _loadPendingRequest() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String childId = prefs.getString('flutter.active_child_id') ?? 'default';
-    await _rewardService.createRequest(childId: childId, minutes: 5, packageName: packageName ?? '');
+    final List<ChildExtraTimeRequest> requests = await _rewardService.loadRequests();
+    final bool pending = requests.any((ChildExtraTimeRequest request) => request.status == 'pending' && request.childId == childId && request.packageName == (packageName ?? ''));
+    if (mounted) setState(() => _requestPending = pending);
+  }
+
+  Future<void> _requestMoreTime() async {
+    if (_requestPending) return;
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String childId = prefs.getString('flutter.active_child_id') ?? 'default';
+    final List<int> durations = await _rewardService.loadRequestDurations();
+    final int? minutes = durations.length == 1
+        ? durations.first
+        : await showDialog<int>(
+            context: context,
+            builder: (BuildContext context) => SimpleDialog(
+              title: const Text('Request extra time'),
+              children: durations.map((int value) => SimpleDialogOption(onPressed: () => Navigator.of(context).pop(value), child: Text('$value minutes'))).toList(),
+            ),
+          );
+    if (minutes == null) return;
+    await _rewardService.createRequest(childId: childId, minutes: minutes, packageName: packageName ?? '');
     if (mounted) {
+      setState(() => _requestPending = true);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Request sent to parent.')));
     }
   }
@@ -335,8 +358,8 @@ class _OverlayWarningScreenState extends State<OverlayWarningScreen> {
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
-                          onPressed: _requestMoreTime,
-                          child: const Text('Request 5 Minutes', style: TextStyle(fontWeight: FontWeight.bold)),
+                          onPressed: _requestPending ? null : _requestMoreTime,
+                          child: Text(_requestPending ? 'Request Pending' : 'Request Extra Time', style: const TextStyle(fontWeight: FontWeight.bold)),
                         ),
                       ),
                       const SizedBox(height: 8),

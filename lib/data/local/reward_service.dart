@@ -75,6 +75,7 @@ class RewardService {
   static const String _rewardsKey = 'reward_options_v1';
   static const String _tokensKey = 'flex_token_balances_v1';
   static const String _requestsKey = 'child_extra_time_requests_v1';
+  static const String _requestDurationsKey = 'extra_time_request_durations_v1';
   static const int _schemaVersion = 1;
 
   // SharedPreferences has no compare-and-swap operation. This in-process queue
@@ -144,6 +145,32 @@ class RewardService {
       requests.add(request);
       await _writeRequests(prefs, requests);
       return request;
+    });
+  }
+
+  Future<List<int>> loadRequestDurations() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final List<int> values = (prefs.getStringList(_requestDurationsKey) ?? <String>[])
+        .map(int.tryParse)
+        .whereType<int>()
+        .where((int value) => value >= 1 && value <= 30)
+        .toSet()
+        .toList()
+      ..sort();
+    return values.isEmpty ? <int>[5] : values;
+  }
+
+  Future<List<int>> saveRequestDurations(List<int> durations) async {
+    return _serialized<List<int>>(() async {
+      final List<int> normalized = durations
+          .where((int value) => value >= 1 && value <= 30)
+          .toSet()
+          .toList()
+        ..sort();
+      final List<int> safe = normalized.isEmpty ? <int>[5] : normalized;
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_requestDurationsKey, safe.map((int value) => value.toString()).toList());
+      return safe;
     });
   }
 

@@ -59,6 +59,27 @@ void main() {
     expect((await service.loadTokens('child-1')).available, 0);
   });
 
+  test('normalizes configured request durations and falls back to five minutes', () async {
+    const RewardService service = RewardService();
+
+    expect(await service.loadRequestDurations(), <int>[5]);
+    expect(await service.saveRequestDurations(<int>[30, 5, 5, 0, 31]), <int>[5, 30]);
+    expect(await service.loadRequestDurations(), <int>[5, 30]);
+    expect(await service.saveRequestDurations(<int>[]), <int>[5]);
+  });
+
+  test('pending request count excludes approved and rejected requests', () async {
+    const RewardService service = RewardService();
+    await service.createRequest(childId: 'child-1', minutes: 5, packageName: 'a');
+    final ChildExtraTimeRequest approved = await service.createRequest(childId: 'child-1', minutes: 10, packageName: 'b');
+    final ChildExtraTimeRequest rejected = await service.createRequest(childId: 'child-1', minutes: 15, packageName: 'c');
+    await service.issueToken('child-1');
+    await service.approveRequest(approved.id);
+    await service.updateRequestStatus(rejected.id, 'rejected');
+
+    expect((await service.loadRequests()).where((ChildExtraTimeRequest item) => item.status == 'pending').length, 1);
+  });
+
   test('versioned request storage preserves only local-safe request fields', () async {
     const RewardService service = RewardService();
     await service.createRequest(childId: 'child-1', minutes: 5, packageName: 'com.example.game');

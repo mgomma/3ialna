@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../data/local/age_safety_profile_service.dart';
 import '../../data/local/locale_controller.dart';
 import '../../data/local/parental_control_storage_service.dart';
+import '../../data/local/reward_service.dart';
 import '../../data/local/settings_service.dart';
 import '../../data/system/accessibility_service_helper.dart';
 import '../../data/system/kiosk_service.dart';
@@ -50,6 +51,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
   late SettingsService _settings;
   int _blockedAppsCount = 0;
   int _appsWithTimeLimits = 0;
+  int _pendingRequestCount = 0;
   List<ChildProfile> _children = <ChildProfile>[];
   ChildProfile? _activeChild;
   bool _isParentModeActive = false;
@@ -139,6 +141,8 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
     final timeLimits = await _storage.getTimeLimits();
     final AgeSafetyProfileService profileService = AgeSafetyProfileService(prefs);
     final List<ChildProfile> children = profileService.loadChildren();
+    final RewardService rewardService = const RewardService();
+    final List<ChildExtraTimeRequest> requests = await rewardService.loadRequests();
     final ChildProfile? activeChild = profileService.activeChild();
     final bool isParentModeActive = profileService.isParentModeActive();
 
@@ -150,6 +154,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
       _isStrictMode = _settings.isStrictMode;
       _blockedAppsCount = blockedApps.length;
       _appsWithTimeLimits = timeLimits.length;
+      _pendingRequestCount = requests.where((ChildExtraTimeRequest item) => item.status == 'pending').length;
       _children = children;
       _activeChild = activeChild;
       _isParentModeActive = isParentModeActive;
@@ -487,7 +492,11 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                     icon: Icons.card_giftcard_outlined,
                     label: _isArabic ? 'المكافآت والتوكنات' : 'Rewards and tokens',
                     color: colorScheme.tertiary,
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const RewardCenterScreen())),
+                    badge: _pendingRequestCount,
+                    onTap: () async {
+                      await Navigator.of(context).push(MaterialPageRoute(builder: (context) => const RewardCenterScreen()));
+                      if (mounted) await _loadSettings();
+                    },
                   ),
                   _ActionCard(
                     icon: Icons.apps,
@@ -611,8 +620,9 @@ class _ActionCard extends StatelessWidget {
   final String label;
   final Color color;
   final VoidCallback? onTap;
+  final int badge;
 
-  const _ActionCard({required this.icon, required this.label, required this.color, required this.onTap});
+  const _ActionCard({required this.icon, required this.label, required this.color, required this.onTap, this.badge = 0});
 
   @override
   Widget build(BuildContext context) {
@@ -630,6 +640,13 @@ class _ActionCard extends StatelessWidget {
               Expanded(
                 child: Text(label, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
               ),
+              if (badge > 0)
+                Container(
+                  margin: const EdgeInsetsDirectional.only(end: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  decoration: BoxDecoration(color: theme.colorScheme.error, borderRadius: BorderRadius.circular(10)),
+                  child: Text('$badge', style: TextStyle(color: theme.colorScheme.onError, fontWeight: FontWeight.bold, fontSize: 12)),
+                ),
               Icon(Icons.chevron_right, color: theme.colorScheme.onSurfaceVariant),
             ],
           ),

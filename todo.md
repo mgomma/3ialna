@@ -360,3 +360,10 @@ Signed iOS workflow attempt #2 was rerun after the owner reported corrected secr
 - [ ] Add repository migration, corruption, concurrency, and privacy tests.
 - [ ] Update landing page in Arabic and English with the child-request and parent-approval journey.
 - [ ] Validate, checkpoint website, and push app changes.
+
+## Request inbox and configurable durations
+- [ ] Add parent-configurable request duration choices and persist them locally.
+- [ ] Use the configured choices in the child blocked-app request flow.
+- [ ] Add a pending-request count badge and parent inbox entry.
+- [ ] Add Android-focused regression coverage and physical-device steps for concurrency and duplicate approval.
+- [ ] Run CI, push the implementation, and report any device-only validation limits.
