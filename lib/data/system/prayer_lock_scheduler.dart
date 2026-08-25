@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:developer' as developer;
+import 'dart:io';
 
 import '../../data/local/settings_service.dart';
 import '../../domain/models/overlay_data.dart';
@@ -77,6 +78,9 @@ class PrayerLockScheduler {
       await ParentVoiceNotificationService(
         recordingKey: ParentVoiceNotificationService.prayerReminderRecordingKey,
       ).cancelPrayerBackgroundPlayback();
+      await ParentVoiceNotificationService(
+        recordingKey: ParentVoiceNotificationService.prayerAzanRecordingKey,
+      ).cancelPrayerAzanBackgroundPlayback();
     }
     await _releasePrayerOverlay();
     await IosScreenTimeSafeguardService().clearPrayerShields();
@@ -119,7 +123,21 @@ class PrayerLockScheduler {
         ParentVoiceNotificationService(
       recordingKey: ParentVoiceNotificationService.prayerReminderRecordingKey,
     );
+    final ParentVoiceNotificationService azanVoiceService =
+        ParentVoiceNotificationService(
+      recordingKey: ParentVoiceNotificationService.prayerAzanRecordingKey,
+    );
     await prayerVoiceService.cancelPrayerBackgroundPlayback();
+    await azanVoiceService.cancelPrayerAzanBackgroundPlayback();
+
+    // iOS accepts no more than 64 pending notifications. When both local
+    // prayer-note and Azan schedules are enabled, 6 days × 5 prayers keeps
+    // the combined request count at 60 instead of scheduling 70 entries.
+    final int maximumAudioEvents = Platform.isIOS &&
+            settings.voiceNotificationsEnabled &&
+            settings.automaticAzanEnabled
+        ? 30
+        : 35;
     bool automaticVoiceScheduled = false;
     if (settings.voiceNotificationsEnabled) {
       automaticVoiceScheduled = await prayerVoiceService
@@ -128,10 +146,22 @@ class PrayerLockScheduler {
           prayerTimeService: _prayerTimeService,
           settings: settings,
           now: now,
+          maxItems: maximumAudioEvents,
+        ),
+      );
+    }
+    if (settings.automaticAzanEnabled) {
+      await azanVoiceService.schedulePrayerAzanBackgroundPlayback(
+        PrayerVoiceReminderSchedule.upcomingPrayerStartTimes(
+          prayerTimeService: _prayerTimeService,
+          settings: settings,
+          now: now,
+          maxItems: maximumAudioEvents,
         ),
       );
     }
     await prayerVoiceService.dispose();
+    await azanVoiceService.dispose();
 
     // First, check if we're currently in a lock period and save it immediately
     bool foundActiveLock = false;

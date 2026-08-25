@@ -15,6 +15,7 @@ void main() {
       PrayerLockSettings.defaults().copyWith(
         calculationMethodName: 'isna',
         voiceNotificationsEnabled: false,
+        automaticAzanEnabled: true,
       ),
     );
 
@@ -24,6 +25,7 @@ void main() {
     final PrayerLockSettings loaded = reloaded.loadPrayerLockSettings();
     expect(loaded.calculationMethodName, 'isna');
     expect(loaded.voiceNotificationsEnabled, isFalse);
+    expect(loaded.automaticAzanEnabled, isTrue);
   });
 
   test('releases only a prayer-owned overlay when its lock expires', () async {

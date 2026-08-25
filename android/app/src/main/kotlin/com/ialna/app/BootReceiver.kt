@@ -26,6 +26,7 @@ class BootReceiver : BroadcastReceiver() {
             }
             VoicePlaybackScheduler.reschedule(context)
             VoicePlaybackScheduler.reschedulePrayer(context)
+            VoicePlaybackScheduler.reschedulePrayerAzan(context)
         }
     }
 

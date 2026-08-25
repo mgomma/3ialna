@@ -38,6 +38,7 @@ class PrayerVoiceReminderSchedule {
     required PrayerTimeService prayerTimeService,
     required PrayerLockSettings settings,
     required DateTime now,
+    int maxItems = 35,
   }) {
     final List<DateTime> reminders = <DateTime>[];
     final DateTime firstDay = DateTime(now.year, now.month, now.day);
@@ -55,6 +56,31 @@ class PrayerVoiceReminderSchedule {
       }
     }
     reminders.sort();
-    return reminders;
+    return reminders.take(maxItems).toList(growable: false);
+  }
+
+  /// Returns future calculated prayer starts for automatic Azan playback.
+  /// Unlike [upcomingTimes], no pre-prayer offset is applied.
+  static List<DateTime> upcomingPrayerStartTimes({
+    required PrayerTimeService prayerTimeService,
+    required PrayerLockSettings settings,
+    required DateTime now,
+    int maxItems = 35,
+  }) {
+    final List<DateTime> starts = <DateTime>[];
+    final DateTime firstDay = DateTime(now.year, now.month, now.day);
+    for (int dayOffset = 0; dayOffset < scheduleDays; dayOffset++) {
+      final Map<Prayer, DateTime>? dayPrayerTimes =
+          prayerTimeService.calculatePrayerTimes(
+        firstDay.add(Duration(days: dayOffset)),
+        settings,
+      );
+      if (dayPrayerTimes == null) continue;
+      starts.addAll(
+        dayPrayerTimes.values.where((DateTime prayerTime) => prayerTime.isAfter(now)),
+      );
+    }
+    starts.sort();
+    return starts.take(maxItems).toList(growable: false);
   }
 }

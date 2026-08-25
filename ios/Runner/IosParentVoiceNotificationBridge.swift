@@ -12,7 +12,9 @@ final class IosParentVoiceNotificationBridge {
   private let notificationCenter = UNUserNotificationCenter.current()
   private let requestIdentifier = "3ialna.parent.voice"
   private let prayerRequestPrefix = "3ialna.prayer.voice."
-  private let soundName = "parent_voice_notification.wav"
+  private let prayerAzanRequestPrefix = "3ialna.prayer.azan."
+  private let prayerSoundName = "prayer_reminder_voice.wav"
+  private let prayerAzanSoundName = "prayer_azan_voice.wav"
   private let maximumNotificationSoundDuration: TimeInterval = 29
 
   func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -46,7 +48,34 @@ final class IosParentVoiceNotificationBridge {
         .map { Date(timeIntervalSince1970: $0.doubleValue / 1000) }
         .filter { $0.timeIntervalSinceNow > 0 }
         .sorted()
-      schedulePrayerReminders(sourcePath: sourcePath, at: dates, result: result)
+      schedulePrayerReminders(
+        sourcePath: sourcePath,
+        at: dates,
+        requestPrefix: prayerRequestPrefix,
+        soundName: prayerSoundName,
+        result: result
+      )
+
+    case "schedulePrayerAzanPlayback":
+      guard
+        let arguments = call.arguments as? [String: Any],
+        let sourcePath = arguments["path"] as? String,
+        let values = arguments["atMillisList"] as? [NSNumber]
+      else {
+        result(FlutterError(code: "INVALID_ARGUMENT", message: "Azan path and prayer start times are required.", details: nil))
+        return
+      }
+      let dates = values
+        .map { Date(timeIntervalSince1970: $0.doubleValue / 1000) }
+        .filter { $0.timeIntervalSinceNow > 0 }
+        .sorted()
+      schedulePrayerReminders(
+        sourcePath: sourcePath,
+        at: dates,
+        requestPrefix: prayerAzanRequestPrefix,
+        soundName: prayerAzanSoundName,
+        result: result
+      )
 
     case "cancelVoicePlayback":
       notificationCenter.removePendingNotificationRequests(withIdentifiers: [requestIdentifier])
@@ -54,6 +83,10 @@ final class IosParentVoiceNotificationBridge {
 
     case "cancelPrayerVoicePlayback":
       notificationCenter.removePendingNotificationRequests(withIdentifiers: prayerRequestIdentifiers())
+      result(true)
+
+    case "cancelPrayerAzanPlayback":
+      notificationCenter.removePendingNotificationRequests(withIdentifiers: prayerAzanRequestIdentifiers())
       result(true)
 
     case "isVoicePlaybackScheduled":
@@ -110,6 +143,8 @@ final class IosParentVoiceNotificationBridge {
   private func schedulePrayerReminders(
     sourcePath: String,
     at dates: [Date],
+    requestPrefix: String,
+    soundName: String,
     result: @escaping FlutterResult
   ) {
     guard !dates.isEmpty else {
@@ -118,8 +153,8 @@ final class IosParentVoiceNotificationBridge {
     }
 
     do {
-      let soundURL = try copyToNotificationSounds(sourcePath: sourcePath)
-      notificationCenter.removePendingNotificationRequests(withIdentifiers: prayerRequestIdentifiers())
+      let soundURL = try copyToNotificationSounds(sourcePath: sourcePath, soundName: soundName)
+      notificationCenter.removePendingNotificationRequests(withIdentifiers: prayerRequestIdentifiers(prefix: requestPrefix))
       let group = DispatchGroup()
       var schedulingError: Error?
       for (index, date) in dates.prefix(35).enumerated() {
@@ -130,7 +165,7 @@ final class IosParentVoiceNotificationBridge {
         )
         let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
         let request = UNNotificationRequest(
-          identifier: "\(prayerRequestPrefix)\(index)",
+          identifier: "\(requestPrefix)\(index)",
           content: content,
           trigger: trigger
         )
@@ -164,10 +199,21 @@ final class IosParentVoiceNotificationBridge {
   }
 
   private func prayerRequestIdentifiers() -> [String] {
-    (0..<35).map { "\(prayerRequestPrefix)\($0)" }
+    prayerRequestIdentifiers(prefix: prayerRequestPrefix)
   }
 
-  private func copyToNotificationSounds(sourcePath: String) throws -> URL {
+  private func prayerAzanRequestIdentifiers() -> [String] {
+    prayerRequestIdentifiers(prefix: prayerAzanRequestPrefix)
+  }
+
+  private func prayerRequestIdentifiers(prefix: String) -> [String] {
+    (0..<35).map { "\(prefix)\($0)" }
+  }
+
+  private func copyToNotificationSounds(
+    sourcePath: String,
+    soundName: String = "parent_voice_notification.wav"
+  ) throws -> URL {
     let fileManager = FileManager.default
     let sourceURL = URL(fileURLWithPath: sourcePath)
     guard fileManager.fileExists(atPath: sourceURL.path) else {

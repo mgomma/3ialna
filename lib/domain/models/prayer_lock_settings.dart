@@ -9,6 +9,7 @@ class PrayerLockSettings {
     required this.calculationMethodName,
     required this.notificationMessages,
     this.voiceNotificationsEnabled = true,
+    this.automaticAzanEnabled = false,
     this.latitude,
     this.longitude,
   });
@@ -31,6 +32,11 @@ class PrayerLockSettings {
 
   /// Whether the written prayer message should also be spoken aloud.
   final bool voiceNotificationsEnabled;
+
+  /// Whether a separately recorded, on-device Azan should play at the
+  /// calculated start of each enabled prayer time. This remains opt-in so an
+  /// existing parent reminder never starts playing automatically unexpectedly.
+  final bool automaticAzanEnabled;
 
   /// Latitude coordinate for prayer time calculations.
   final double? latitude;
@@ -59,6 +65,7 @@ class PrayerLockSettings {
     String? calculationMethodName,
     Map<Prayer, String>? notificationMessages,
     bool? voiceNotificationsEnabled,
+    bool? automaticAzanEnabled,
     double? latitude,
     double? longitude,
   }) {
@@ -73,6 +80,8 @@ class PrayerLockSettings {
           notificationMessages ?? this.notificationMessages,
       voiceNotificationsEnabled:
           voiceNotificationsEnabled ?? this.voiceNotificationsEnabled,
+      automaticAzanEnabled:
+          automaticAzanEnabled ?? this.automaticAzanEnabled,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
     );

@@ -18,6 +18,11 @@ object VoicePlaybackScheduler {
     private const val PRAYER_REQUEST_CODE_BASE = 3300
     private const val MAX_PRAYER_ALARMS = 35
 
+    private const val PRAYER_AZAN_PREFS = "3ialna_prayer_azan_playback"
+    private const val PRAYER_AZAN_KEY_PATH = "path"
+    private const val PRAYER_AZAN_KEY_TIMES = "times"
+    private const val PRAYER_AZAN_REQUEST_CODE_BASE = 3400
+
     fun schedule(context: Context, path: String, atMillis: Long): Boolean {
         val alarmManager = context.getSystemService(AlarmManager::class.java)
         if (!canScheduleExactAlarms(alarmManager)) return false
@@ -34,6 +39,38 @@ object VoicePlaybackScheduler {
     }
 
     fun schedulePrayer(context: Context, path: String, atMillisList: List<Long>): Boolean {
+        return schedulePrayerGroup(
+            context,
+            path,
+            atMillisList,
+            PRAYER_PREFS,
+            PRAYER_KEY_PATH,
+            PRAYER_KEY_TIMES,
+            PRAYER_REQUEST_CODE_BASE,
+        )
+    }
+
+    fun schedulePrayerAzan(context: Context, path: String, atMillisList: List<Long>): Boolean {
+        return schedulePrayerGroup(
+            context,
+            path,
+            atMillisList,
+            PRAYER_AZAN_PREFS,
+            PRAYER_AZAN_KEY_PATH,
+            PRAYER_AZAN_KEY_TIMES,
+            PRAYER_AZAN_REQUEST_CODE_BASE,
+        )
+    }
+
+    private fun schedulePrayerGroup(
+        context: Context,
+        path: String,
+        atMillisList: List<Long>,
+        preferencesName: String,
+        pathKey: String,
+        timesKey: String,
+        requestCodeBase: Int,
+    ): Boolean {
         val alarmManager = context.getSystemService(AlarmManager::class.java)
         val times = atMillisList
             .filter { it > System.currentTimeMillis() }
@@ -42,17 +79,17 @@ object VoicePlaybackScheduler {
             .take(MAX_PRAYER_ALARMS)
         if (times.isEmpty()) return false
 
-        cancelPrayer(context)
-        context.getSharedPreferences(PRAYER_PREFS, Context.MODE_PRIVATE).edit()
-            .putString(PRAYER_KEY_PATH, path)
-            .putStringSet(PRAYER_KEY_TIMES, times.map { it.toString() }.toSet())
+        cancelPrayerGroup(context, preferencesName, requestCodeBase)
+        context.getSharedPreferences(preferencesName, Context.MODE_PRIVATE).edit()
+            .putString(pathKey, path)
+            .putStringSet(timesKey, times.map { it.toString() }.toSet())
             .apply()
         if (!canScheduleExactAlarms(alarmManager)) return false
         times.forEachIndexed { index, atMillis ->
             alarmManager.setExactAndAllowWhileIdle(
                 AlarmManager.RTC_WAKEUP,
                 atMillis,
-                scheduledPendingIntent(context, PRAYER_REQUEST_CODE_BASE + index, path),
+                scheduledPendingIntent(context, requestCodeBase + index, path),
             )
         }
         return true
@@ -65,12 +102,24 @@ object VoicePlaybackScheduler {
     }
 
     fun cancelPrayer(context: Context) {
+        cancelPrayerGroup(context, PRAYER_PREFS, PRAYER_REQUEST_CODE_BASE)
+    }
+
+    fun cancelPrayerAzan(context: Context) {
+        cancelPrayerGroup(context, PRAYER_AZAN_PREFS, PRAYER_AZAN_REQUEST_CODE_BASE)
+    }
+
+    private fun cancelPrayerGroup(
+        context: Context,
+        preferencesName: String,
+        requestCodeBase: Int,
+    ) {
         val alarmManager = context.getSystemService(AlarmManager::class.java)
         repeat(MAX_PRAYER_ALARMS) { index ->
-            existingPendingIntent(context, PRAYER_REQUEST_CODE_BASE + index)
+            existingPendingIntent(context, requestCodeBase + index)
                 ?.let(alarmManager::cancel)
         }
-        context.getSharedPreferences(PRAYER_PREFS, Context.MODE_PRIVATE).edit().clear().apply()
+        context.getSharedPreferences(preferencesName, Context.MODE_PRIVATE).edit().clear().apply()
     }
 
     fun isScheduled(context: Context): Boolean {
@@ -87,13 +136,49 @@ object VoicePlaybackScheduler {
     }
 
     fun reschedulePrayer(context: Context) {
-        val prefs = context.getSharedPreferences(PRAYER_PREFS, Context.MODE_PRIVATE)
-        val path = prefs.getString(PRAYER_KEY_PATH, null) ?: return
-        val times = prefs.getStringSet(PRAYER_KEY_TIMES, emptySet())
+        reschedulePrayerGroup(
+            context,
+            PRAYER_PREFS,
+            PRAYER_KEY_PATH,
+            PRAYER_KEY_TIMES,
+            PRAYER_REQUEST_CODE_BASE,
+        )
+    }
+
+    fun reschedulePrayerAzan(context: Context) {
+        reschedulePrayerGroup(
+            context,
+            PRAYER_AZAN_PREFS,
+            PRAYER_AZAN_KEY_PATH,
+            PRAYER_AZAN_KEY_TIMES,
+            PRAYER_AZAN_REQUEST_CODE_BASE,
+        )
+    }
+
+    private fun reschedulePrayerGroup(
+        context: Context,
+        preferencesName: String,
+        pathKey: String,
+        timesKey: String,
+        requestCodeBase: Int,
+    ) {
+        val prefs = context.getSharedPreferences(preferencesName, Context.MODE_PRIVATE)
+        val path = prefs.getString(pathKey, null) ?: return
+        val times = prefs.getStringSet(timesKey, emptySet())
             .orEmpty()
             .mapNotNull { it.toLongOrNull() }
             .filter { it > System.currentTimeMillis() }
-        if (times.isNotEmpty()) schedulePrayer(context, path, times)
+        if (times.isNotEmpty()) {
+            schedulePrayerGroup(
+                context,
+                path,
+                times,
+                preferencesName,
+                pathKey,
+                timesKey,
+                requestCodeBase,
+            )
+        }
     }
 
     fun canScheduleExactAlarms(context: Context): Boolean =

@@ -26,6 +26,36 @@ void main() {
     }
   });
 
+  test('builds automatic Azan times at prayer start, not two minutes before',
+      () {
+    final DateTime now = DateTime(2026, 8, 24, 12);
+    final PrayerLockSettings settings = PrayerLockSettings.defaults().copyWith(
+      latitude: 21.3891,
+      longitude: 39.8579,
+    );
+    final PrayerTimeService prayerTimeService = const PrayerTimeService();
+
+    final List<DateTime> prePrayerReminders =
+        PrayerVoiceReminderSchedule.upcomingTimes(
+      prayerTimeService: prayerTimeService,
+      settings: settings,
+      now: now,
+    );
+    final List<DateTime> azanStarts =
+        PrayerVoiceReminderSchedule.upcomingPrayerStartTimes(
+      prayerTimeService: prayerTimeService,
+      settings: settings,
+      now: now,
+    );
+
+    expect(azanStarts, isNotEmpty);
+    expect(azanStarts.every((DateTime time) => time.isAfter(now)), isTrue);
+    expect(
+      azanStarts,
+      contains(prePrayerReminders.first.add(const Duration(minutes: 2))),
+    );
+  });
+
   test('rebuilds only future reminders when restoring after a device reboot',
       () {
     final PrayerLockSettings settings = PrayerLockSettings.defaults().copyWith(

@@ -352,12 +352,26 @@ class MainActivity : FlutterActivity() {
                         result.success(VoicePlaybackScheduler.schedulePrayer(this, path, times))
                     }
                 }
+                "schedulePrayerAzanPlayback" -> {
+                    val path = call.argument<String>("path")
+                    val times = (call.argument<List<Number>>("atMillisList") ?: emptyList())
+                        .map { it.toLong() }
+                    if (path.isNullOrBlank() || times.isEmpty()) {
+                        result.error("INVALID_ARGUMENT", "An Azan path and prayer start times are required", null)
+                    } else {
+                        result.success(VoicePlaybackScheduler.schedulePrayerAzan(this, path, times))
+                    }
+                }
                 "cancelVoicePlayback" -> {
                     VoicePlaybackScheduler.cancel(this)
                     result.success(true)
                 }
                 "cancelPrayerVoicePlayback" -> {
                     VoicePlaybackScheduler.cancelPrayer(this)
+                    result.success(true)
+                }
+                "cancelPrayerAzanPlayback" -> {
+                    VoicePlaybackScheduler.cancelPrayerAzan(this)
                     result.success(true)
                 }
                 "isVoicePlaybackScheduled" -> {

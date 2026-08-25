@@ -15,6 +15,7 @@ class ParentVoiceNotificationService {
 
   static const String defaultRecordingKey = 'parent_voice_notification';
   static const String prayerReminderRecordingKey = 'prayer_reminder_voice';
+  static const String prayerAzanRecordingKey = 'prayer_azan_voice';
 
   static String taskRecordingKey(String taskId) => 'task_reminder_$taskId';
 
@@ -97,6 +98,33 @@ class ParentVoiceNotificationService {
 
   Future<void> cancelPrayerBackgroundPlayback() =>
       _backgroundChannel.invokeMethod<void>('cancelPrayerVoicePlayback');
+
+  /// Schedules a separate parent-selected Azan recording at the calculated
+  /// start of each prayer. It does not replace the optional pre-prayer note.
+  Future<bool> schedulePrayerAzanBackgroundPlayback(
+    Iterable<DateTime> scheduledTimes,
+  ) async {
+    final File? file = await getRecording();
+    final List<int> times = scheduledTimes
+        .where((DateTime value) => value.isAfter(DateTime.now()))
+        .map((DateTime value) => value.millisecondsSinceEpoch)
+        .toSet()
+        .toList()
+      ..sort();
+    if (file == null || times.isEmpty) return false;
+
+    return await _backgroundChannel.invokeMethod<bool>(
+          'schedulePrayerAzanPlayback',
+          <String, Object>{
+            'path': file.path,
+            'atMillisList': times,
+          },
+        ) ??
+        false;
+  }
+
+  Future<void> cancelPrayerAzanBackgroundPlayback() =>
+      _backgroundChannel.invokeMethod<void>('cancelPrayerAzanPlayback');
 
   Future<bool> isBackgroundPlaybackScheduled() async {
     return await _backgroundChannel.invokeMethod<bool>('isVoicePlaybackScheduled') ?? false;

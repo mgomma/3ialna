@@ -30,6 +30,7 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
   PrayerLockSettings _settings = PrayerLockSettings.defaults();
   bool _isLoading = false;
   bool _isSchedulingVoiceReminderTest = false;
+  bool _isSchedulingAzanTest = false;
   String? _locationError;
   Future<void>? _pendingMethodWrite;
 
@@ -273,6 +274,92 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
     } finally {
       await voiceService.dispose();
       if (mounted) setState(() => _isSchedulingVoiceReminderTest = false);
+    }
+  }
+
+  Future<void> _scheduleAutomaticAzanVerification() async {
+    if (!_settings.automaticAzanEnabled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_text(
+            'Enable automatic Azan before running the test.',
+            'فعّل الأذان التلقائي قبل تشغيل الاختبار.',
+          )),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isSchedulingAzanTest = true);
+    final ParentVoiceNotificationService voiceService =
+        ParentVoiceNotificationService(
+      recordingKey: ParentVoiceNotificationService.prayerAzanRecordingKey,
+    );
+    try {
+      final bool hasRecording = await voiceService.getRecording() != null;
+      bool platformPermissionGranted = true;
+      if (Platform.isAndroid) {
+        platformPermissionGranted = await voiceService.canScheduleExactAlarms();
+      } else if (Platform.isIOS) {
+        platformPermissionGranted =
+            await voiceService.requestVoiceNotificationPermission();
+      }
+
+      if (!PrayerVoiceReminderVerification.canSchedule(
+        hasRecording: hasRecording,
+        platformPermissionGranted: platformPermissionGranted,
+      )) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_text(
+              hasRecording
+                  ? 'Allow the required reminder permission, then try the Azan test again.'
+                  : 'Record a short local Azan before running the test.',
+              hasRecording
+                  ? 'اسمح بإذن التذكير المطلوب ثم أعد اختبار الأذان.'
+                  : 'سجّل أذانًا محليًا قصيرًا قبل تشغيل الاختبار.',
+            )),
+          ),
+        );
+        return;
+      }
+
+      final bool scheduled = await voiceService.scheduleBackgroundPlayback(
+        PrayerVoiceReminderVerification.scheduledAt(DateTime.now()),
+      );
+      if (!mounted) return;
+      if (!scheduled) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_text(
+              '3ialna could not schedule the Azan test. Review reminder permissions and try again.',
+              'تعذر على عيالنا جدولة اختبار الأذان. راجع أذونات التذكير ثم حاول مرة أخرى.',
+            )),
+          ),
+        );
+        return;
+      }
+
+      await showDialog<void>(
+        context: context,
+        builder: (BuildContext dialogContext) => AlertDialog(
+          title: Text(_text('One-minute Azan test scheduled', 'تمت جدولة اختبار الأذان لمدة دقيقة واحدة')),
+          content: Text(_text(
+            'Lock the phone now. The local Azan recording should play in about one minute without keeping 3ialna open.',
+            'اقفل الهاتف الآن. ينبغي أن يعمل تسجيل الأذان المحلي خلال نحو دقيقة واحدة دون إبقاء عيالنا مفتوحًا.',
+          )),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(_text('Done', 'حسنًا')),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      await voiceService.dispose();
+      if (mounted) setState(() => _isSchedulingAzanTest = false);
     }
   }
 
@@ -535,6 +622,17 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
                 });
               },
             ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(_text('Automatic Azan at prayer time', 'أذان تلقائي عند دخول وقت الصلاة')),
+              subtitle: Text(_text('Use a separate local recording at the calculated start of each prayer. This optional setting does not replace the two-minute parent reminder.', 'استخدم تسجيلًا محليًا منفصلًا عند بداية وقت كل صلاة المحسوب. هذا الخيار لا يستبدل تذكير الوالد قبل الصلاة بدقيقتين.')),
+              value: _settings.automaticAzanEnabled,
+              onChanged: (bool value) {
+                setState(() {
+                  _settings = _settings.copyWith(automaticAzanEnabled: value);
+                });
+              },
+            ),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.mic_none_outlined),
@@ -553,7 +651,26 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
                 );
               },
             ),
-            if (_settings.voiceNotificationsEnabled)
+            if (_settings.automaticAzanEnabled)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.volume_up_outlined),
+                title: Text(_text('Automatic Azan recording', 'تسجيل الأذان التلقائي')),
+                subtitle: Text(_text('Record a short Azan locally. Android plays it at the prayer start; iPhone delivers it as a notification sound shorter than 29 seconds.', 'سجّل أذانًا قصيرًا محليًا. يشغّله Android عند دخول وقت الصلاة، ويقدّمه iPhone كصوت إشعار أقصر من 29 ثانية.')),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => VoiceReminderRecordingScreen(
+                        recordingKey: ParentVoiceNotificationService.prayerAzanRecordingKey,
+                        title: _text('Automatic Azan recording', 'تسجيل الأذان التلقائي'),
+                        description: _text('Record a short local Azan. When enabled, it is scheduled at the calculated start of every prayer.', 'سجّل أذانًا محليًا قصيرًا. عند تفعيله، يُجدول عند بداية وقت كل صلاة.'),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            if (_settings.voiceNotificationsEnabled || _settings.automaticAzanEnabled)
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.alarm_on_outlined),
@@ -562,7 +679,7 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
                 trailing: const Icon(Icons.open_in_new),
                 onTap: _requestBackgroundPrayerVoiceAccess,
               ),
-            if (_settings.voiceNotificationsEnabled && Platform.isAndroid)
+            if ((_settings.voiceNotificationsEnabled || _settings.automaticAzanEnabled) && Platform.isAndroid)
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.battery_saver_outlined),
@@ -600,8 +717,25 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
                     ? null
                     : _scheduleVoiceReminderVerification,
               ),
+            if (_settings.automaticAzanEnabled)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: _isSchedulingAzanTest
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.volume_up_outlined),
+                title: Text(_text('Test a one-minute automatic Azan', 'اختبر أذانًا تلقائيًا لمدة دقيقة واحدة')),
+                subtitle: Text(_text('Schedule a safe local Azan test, lock the phone, and confirm it plays without keeping 3ialna open.', 'جدولة اختبار أذان محلي آمن، ثم اقفل الهاتف وتأكد من تشغيله دون إبقاء عيالنا مفتوحًا.')),
+                trailing: const Icon(Icons.play_circle_outline),
+                onTap: _isSchedulingAzanTest
+                    ? null
+                    : _scheduleAutomaticAzanVerification,
+              ),
             const SizedBox(height: 8),
-            Text(_text('The next seven days are scheduled locally and refreshed when 3ialna opens. Android uses an exact reminder alarm; iPhone uses a notification sound shorter than 29 seconds.', 'تُجدول الأيام السبعة القادمة محليًا وتُحدّث عند فتح عيالنا. يستخدم Android منبّهًا دقيقًا، ويستخدم iPhone صوت إشعار أقصر من 29 ثانية.'), style: const TextStyle(color: Colors.grey)),
+            Text(_text('The next seven days are scheduled locally and refreshed when 3ialna opens. Android uses an exact reminder alarm; iPhone uses notification sounds shorter than 29 seconds. When both prayer audio options are enabled on iPhone, 30 events each are scheduled to stay within the system pending-notification limit.', 'تُجدول الأيام السبعة القادمة محليًا وتُحدّث عند فتح عيالنا. يستخدم Android منبّهًا دقيقًا، ويستخدم iPhone أصوات إشعار أقصر من 29 ثانية. عند تفعيل خياري صوت الصلاة معًا على iPhone، يُجدول 30 موعدًا لكل منهما للبقاء ضمن حد الإشعارات المعلّقة في النظام.'), style: const TextStyle(color: Colors.grey)),
             const SizedBox(height: 16),
             ...Prayer.values.map(
               (Prayer prayer) => Padding(

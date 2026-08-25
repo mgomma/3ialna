@@ -130,6 +130,7 @@ class SettingsService {
       'calculationMethod': settings.calculationMethodName,
       'notificationMessages': settings.notificationMessages.map((Prayer key, String value) => MapEntry(key.name, value)),
       'voiceNotificationsEnabled': settings.voiceNotificationsEnabled,
+      'automaticAzanEnabled': settings.automaticAzanEnabled,
       if (settings.latitude != null) 'latitude': settings.latitude,
       if (settings.longitude != null) 'longitude': settings.longitude,
     };
@@ -189,6 +190,7 @@ class SettingsService {
             'makkah',
         notificationMessages: notificationMessages.isEmpty ? PrayerLockSettings.defaults().notificationMessages : notificationMessages,
         voiceNotificationsEnabled: json['voiceNotificationsEnabled'] as bool? ?? true,
+        automaticAzanEnabled: json['automaticAzanEnabled'] as bool? ?? false,
         latitude: json['latitude'] as double?,
         longitude: json['longitude'] as double?,
       );
