@@ -173,6 +173,10 @@ class MonitorForegroundService : Service() {
     private fun checkUsageAndMaybeBlock() {
         val prefs = getSharedPreferences(FLUTTER_PREFS, Context.MODE_PRIVATE)
         if (!prefs.getBoolean("${PFX}$_PREF_IS_MONITORING", false)) return
+        if (isParentModeActive(prefs)) {
+            releaseParentModeRestrictions(prefs)
+            return
+        }
 
         val socialLimit = readIntPreference(prefs, _PREF_ACTIVE_SOCIAL_LIMIT, 0)
         val gamesLimit = readIntPreference(prefs, _PREF_ACTIVE_GAMES_LIMIT, 0)
@@ -399,6 +403,38 @@ class MonitorForegroundService : Service() {
         return prefs.getBoolean("$PFX$_PREF_IS_MONITORING", false)
     }
 
+    private fun isParentModeActive(prefs: android.content.SharedPreferences): Boolean {
+        return prefs.getBoolean("${PFX}$_PREF_PARENT_MODE_ACTIVE", false)
+    }
+
+    private fun releaseParentModeRestrictions(prefs: android.content.SharedPreferences) {
+        val overlayName = prefs.getString("${PFX}overlay_app_name", "") ?: ""
+        val wasDeviceLocked = prefs.getBoolean("${PFX}is_device_locked", false)
+        if (overlayName.isEmpty() && !wasDeviceLocked) return
+        if (overlayName.isNotEmpty()) {
+            try {
+                stopService(Intent(this, OverlayService::class.java).apply {
+                    action = "CLOSE_OVERLAY"
+                })
+            } catch (error: Exception) {
+                Log.w(TAG, "Could not close child restriction overlay for Parent mode", error)
+            }
+        }
+        prefs.edit()
+            .remove("${PFX}overlay_app_name")
+            .remove("${PFX}overlay_used_minutes")
+            .remove("${PFX}overlay_limit_minutes")
+            .remove("${PFX}overlay_package_name")
+            .putBoolean("${PFX}is_device_locked", false)
+            .apply()
+        if (wasDeviceLocked && prefs.getBoolean("${PFX}is_strict_mode", false)) {
+            startActivity(Intent(this, MainActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                putExtra(MainActivity.EXTRA_RELEASE_PARENT_MODE, true)
+            })
+        }
+    }
+
     /**
      * Shows a toast message for debugging.
      */
@@ -415,6 +451,10 @@ class MonitorForegroundService : Service() {
 
     private fun checkPrayerLocksAndMaybeBlock() {
         val prefs = getSharedPreferences(FLUTTER_PREFS, Context.MODE_PRIVATE)
+        if (isParentModeActive(prefs)) {
+            releaseParentModeRestrictions(prefs)
+            return
+        }
         if (!prefs.getBoolean("${PFX}$_PREF_ACTIVE_PRAYER_ENABLED", true)) {
             releasePrayerOverlayIfOwned(prefs)
             return
@@ -583,6 +623,10 @@ class MonitorForegroundService : Service() {
     /** Applies the active child's parent-configured overnight device lock. */
     private fun checkSleepLockAndMaybeBlock() {
         val prefs = getSharedPreferences(FLUTTER_PREFS, Context.MODE_PRIVATE)
+        if (isParentModeActive(prefs)) {
+            releaseParentModeRestrictions(prefs)
+            return
+        }
         if (!prefs.getBoolean("${PFX}$_PREF_ACTIVE_SLEEP_ENABLED", true)) return
         val start = readIntPreference(prefs, _PREF_ACTIVE_SLEEP_START, 0)
         val end = readIntPreference(prefs, _PREF_ACTIVE_SLEEP_END, 0)
@@ -620,6 +664,10 @@ class MonitorForegroundService : Service() {
      */
     private fun checkParentalControls() {
         val prefs = getSharedPreferences(FLUTTER_PREFS, Context.MODE_PRIVATE)
+        if (isParentModeActive(prefs)) {
+            releaseParentModeRestrictions(prefs)
+            return
+        }
         
         // Check if schedule is active
         val scheduleJson = prefs.getString("${PFX}$_PREF_SCHEDULE", null)
@@ -1039,6 +1087,7 @@ class MonitorForegroundService : Service() {
         private const val _PREF_ACTIVE_SLEEP_START = "active_sleep_lock_start_minutes"
         private const val _PREF_ACTIVE_SLEEP_END = "active_sleep_lock_end_minutes"
         private const val _PREF_APP_CATEGORIES = "parental_control_app_categories"
+        private const val _PREF_PARENT_MODE_ACTIVE = "parental_control_parent_mode_active"
         private const val _PREF_CHILD_USAGE_DAY = "child_category_usage_day"
         private const val _PREF_CHILD_CATEGORY_USAGE = "child_category_usage"
         private const val _PREF_CHILD_LAST_TOTALS = "child_category_last_device_totals"

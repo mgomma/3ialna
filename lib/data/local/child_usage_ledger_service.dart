@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../system/app_usage_service.dart';
@@ -74,6 +76,7 @@ class ChildUsageLedgerService {
 
   static const String _entriesKey = 'child_usage_ledger_entries_v1';
   static const String _baselineKey = 'child_usage_ledger_baseline_v1';
+  static const String _archiveFileName = '3ialna_child_usage_history_v1.json';
 
   Future<ChildUsageLedgerEntry> captureActiveChildUsage({
     required String childId,
@@ -97,7 +100,7 @@ class ChildUsageLedgerService {
     final DateTime observed = observedAt ?? DateTime.now();
     final String day = _dayKey(observed);
     final _UsageBaseline baseline = _readBaseline(preferences);
-    final List<ChildUsageLedgerEntry> entries = _readEntries(preferences);
+    final List<ChildUsageLedgerEntry> entries = await _loadEntries(preferences);
     final bool isNewDay = baseline.day != day;
 
     if (isNewDay) {
@@ -164,7 +167,7 @@ class ChildUsageLedgerService {
     final String lastDay = _dayKey(end);
     int totalMinutes = 0;
     final Map<String, int> appUsage = <String, int>{};
-    for (final ChildUsageLedgerEntry entry in _readEntries(preferences)) {
+    for (final ChildUsageLedgerEntry entry in await _loadEntries(preferences)) {
       if (entry.day.compareTo(firstDay) < 0 || entry.day.compareTo(lastDay) > 0) {
         continue;
       }
@@ -182,11 +185,52 @@ class ChildUsageLedgerService {
 
   Future<List<ChildUsageLedgerEntry>> loadEntries() async {
     final SharedPreferences preferences = await SharedPreferences.getInstance();
+    return _loadEntries(preferences);
+  }
+
+  /// Removes only the selected child’s local history. Parent-facing UI must
+  /// require parent authentication before calling this destructive operation.
+  Future<void> deleteHistoryForChild(String childId) async {
+    final SharedPreferences preferences = await SharedPreferences.getInstance();
+    final List<ChildUsageLedgerEntry> remaining =
+        (await _loadEntries(preferences))
+            .where((ChildUsageLedgerEntry entry) => entry.childId != childId)
+            .toList(growable: false);
+    await _save(preferences, remaining, _readBaseline(preferences));
+  }
+
+  /// Returns the private application-document archive path when the platform
+  /// exposes one. The archive is never attached to diagnostics or config packs.
+  Future<String?> archivePath() async {
+    try {
+      return (await _archiveFile()).path;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<List<ChildUsageLedgerEntry>> _loadEntries(
+    SharedPreferences preferences,
+  ) async {
+    try {
+      final File archive = await _archiveFile();
+      if (await archive.exists()) {
+        final List<ChildUsageLedgerEntry> entries =
+            _decodeEntries(await archive.readAsString());
+        if (entries.isNotEmpty) return entries;
+      }
+    } catch (_) {
+      // Preference cache remains the compatible local fallback in tests and
+      // on any device where the document directory is temporarily unavailable.
+    }
     return _readEntries(preferences);
   }
 
   List<ChildUsageLedgerEntry> _readEntries(SharedPreferences preferences) {
-    final String raw = preferences.getString(_entriesKey) ?? '[]';
+    return _decodeEntries(preferences.getString(_entriesKey) ?? '[]');
+  }
+
+  List<ChildUsageLedgerEntry> _decodeEntries(String raw) {
     try {
       return (jsonDecode(raw) as List<dynamic>)
           .whereType<Map<String, dynamic>>()
@@ -222,6 +266,20 @@ class ChildUsageLedgerService {
       jsonEncode(entries.map((ChildUsageLedgerEntry entry) => entry.toJson()).toList()),
     );
     await preferences.setString(_baselineKey, jsonEncode(baseline.toJson()));
+    try {
+      final File archive = await _archiveFile();
+      await archive.writeAsString(
+        jsonEncode(entries.map((ChildUsageLedgerEntry entry) => entry.toJson()).toList()),
+        flush: true,
+      );
+    } catch (_) {
+      // SharedPreferences retains the on-device fallback if file I/O fails.
+    }
+  }
+
+  Future<File> _archiveFile() async {
+    final Directory directory = await getApplicationDocumentsDirectory();
+    return File('${directory.path}${Platform.pathSeparator}$_archiveFileName');
   }
 
   ChildUsageLedgerEntry _findOrEmpty(

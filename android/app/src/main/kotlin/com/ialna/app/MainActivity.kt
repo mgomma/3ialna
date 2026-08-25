@@ -524,8 +524,9 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun handleLockIntent(intent: Intent) {
-        if (intent.getBooleanExtra(EXTRA_RELEASE_PRAYER_LOCK, false)) {
-            Log.i(TAG, "Received prayer lock release, stopping Kiosk Mode")
+        if (intent.getBooleanExtra(EXTRA_RELEASE_PRAYER_LOCK, false) ||
+            intent.getBooleanExtra(EXTRA_RELEASE_PARENT_MODE, false)) {
+            Log.i(TAG, "Received restriction release, stopping Kiosk Mode")
             KioskModeHelper.stopKioskMode(this)
             flutterEngine?.dartExecutor?.binaryMessenger?.let { messenger ->
                 MethodChannel(messenger, kioskChannel).invokeMethod("onDeviceUnlocked", null)
@@ -784,5 +785,7 @@ class MainActivity : FlutterActivity() {
             "com.ialna.app.EXTRA_OPEN_CHILD_SELECTOR"
         const val EXTRA_RELEASE_PRAYER_LOCK =
             "com.ialna.app.EXTRA_RELEASE_PRAYER_LOCK"
+        const val EXTRA_RELEASE_PARENT_MODE =
+            "com.ialna.app.EXTRA_RELEASE_PARENT_MODE"
     }
 }

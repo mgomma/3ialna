@@ -39,6 +39,17 @@ void main() {
     );
   });
 
+  testWidgets('parent report exposes per-child history deletion only for a child filter',
+      (WidgetTester tester) async {
+    await addDefinedChild();
+    await tester.pumpWidget(
+      const MaterialApp(home: ParentUsageReportScreen()),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('delete-child-history')), findsOneWidget);
+  });
+
   testWidgets('expert contact directs parents to define a child before showing the form',
       (WidgetTester tester) async {
     await tester.pumpWidget(

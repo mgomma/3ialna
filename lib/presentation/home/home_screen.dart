@@ -20,6 +20,7 @@ import '../../data/system/social_auth_service.dart';
 import '../../data/system/kiosk_service.dart';
 import '../../data/system/notification_service.dart';
 import '../../data/system/overlay_service.dart';
+import '../../data/system/pin_auth_service.dart';
 import '../../data/system/prayer_lock_scheduler.dart';
 import '../../data/system/prayer_time_service.dart';
 import '../../domain/models/daily_usage_report.dart';
@@ -92,6 +93,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final SocialAuthService _socialAuthService = SocialAuthService();
   LocalUserProfile? _profile;
   ChildProfile? _activeChild;
+  bool _isParentMode = false;
   bool _essentialPermissionGuideInProgress = false;
   bool _homeSettingsInitialized = false;
 
@@ -228,6 +230,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _captureOutgoingChildUsage() async {
+    if (_childProfiles.isParentModeActive()) return;
     final ChildProfile? active = _childProfiles.activeChild();
     if (active == null) return;
     await _childUsageLedger.captureActiveChildUsage(childId: active.id);
@@ -277,27 +280,32 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _showActiveChildPicker() async {
     if (!mounted || !_homeSettingsInitialized) return;
     final List<ChildProfile> children = _childProfiles.loadChildren();
-    if (children.length <= 1) {
-      final String childName = children.isEmpty
-          ? (_isArabic ? 'الطفل الافتراضي' : 'the default child')
-          : children.first.name;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_isArabic
-              ? '$childName هو الطفل المحدد تلقائيًا لهذا الجهاز.'
-              : '$childName is automatically selected for this device.'),
-        ),
-      );
-      return;
-    }
     final String? selectedId = await showDialog<String>(
       context: context,
       builder: (BuildContext dialogContext) => SimpleDialog(
         title: Text(_isArabic
             ? 'من يستخدم الجهاز الآن؟'
             : 'Who is using the device now?'),
-        children: children
-            .map(
+        children: <Widget>[
+          SimpleDialogOption(
+            key: const Key('active-profile-parent-option'),
+            onPressed: () => Navigator.of(dialogContext).pop('__parent__'),
+            child: Row(
+              children: <Widget>[
+                const Icon(Icons.admin_panel_settings_outlined),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _isArabic
+                        ? 'الوالد — بدون حدود أو قيود'
+                        : 'Parent — no limits or restrictions',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(),
+          ...children.map(
               (ChildProfile child) => SimpleDialogOption(
                 onPressed: () => Navigator.of(dialogContext).pop(child.id),
                 child: Text(
@@ -305,17 +313,47 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   '${_isArabic ? 'سنة' : 'years'}',
                 ),
               ),
-            )
-            .toList(growable: false),
+            ),
+        ],
       ),
     );
     if (selectedId == null || !mounted) return;
+    if (selectedId == '__parent__') {
+      await _activateParentMode();
+      return;
+    }
     await _captureOutgoingChildUsage();
     await _childProfiles.setActiveChild(selectedId);
     await ChildShortcutService.sync(_childProfiles.loadChildren());
     if (!mounted) return;
     _loadSettings();
     _loadPrayerSettings();
+  }
+
+  Future<void> _activateParentMode() async {
+    final bool hasPin = await PinAuthService().hasPin();
+    if (!mounted) return;
+    final bool? authenticated = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (BuildContext routeContext) => PinAuthScreen(
+          isSetupMode: !hasPin,
+          onAuthenticated: () => Navigator.of(routeContext).pop(true),
+        ),
+      ),
+    );
+    if (authenticated != true || !mounted) return;
+    await _captureOutgoingChildUsage();
+    await _childProfiles.setParentModeActive(true);
+    if (!mounted) return;
+    _loadSettings();
+    _loadPrayerSettings();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_isArabic
+            ? 'تم تفعيل وضع الوالد. لا تُطبّق حدود الأطفال أو قيودهم.'
+            : 'Parent mode is active. Child limits and restrictions are paused.'),
+      ),
+    );
   }
 
   Future<void> _requestQuickSettingsTile() async {
@@ -344,12 +382,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   /// Loads active-child limits and device monitoring state.
   void _loadSettings() {
     final ChildProfile? active = _childProfiles.activeChild();
+    final bool parentMode = _childProfiles.isParentModeActive();
     setState(() {
       _activeChild = active;
-      timeLimitMinutes =
-          active?.preset.dailyLimitMinutes ?? _settings.timeLimitMinutes;
+      _isParentMode = parentMode;
+      timeLimitMinutes = parentMode
+          ? 0
+          : active?.preset.dailyLimitMinutes ?? _settings.timeLimitMinutes;
       isMonitoring = _settings.isMonitoring;
-      _isDeviceLocked = _settings.isDeviceLocked;
+      _isDeviceLocked = parentMode ? false : _settings.isDeviceLocked;
       if (_isDeviceLocked) {
         _lastOverlayData = _settings.loadOverlayData();
       }
@@ -858,6 +899,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   /// Fetches app usage for today and updates state.
   Future<void> _checkAppUsage() async {
+    if (_childProfiles.isParentModeActive()) {
+      if (mounted) {
+        setState(() {
+          _isParentMode = true;
+          totalUsageMinutes = 0;
+          usageDataMinutes = <String, int>{};
+        });
+      }
+      return;
+    }
     final ChildProfile? active = _childProfiles.activeChild();
     if (active == null) return;
     await _childUsageLedger.captureActiveChildUsage(childId: active.id);
@@ -1009,6 +1060,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   /// Adjusts the time limit in 5-minute increments.
   Future<void> _adjustTimeLimit(int delta) async {
+    if (_isParentMode) return;
     final int newLimit = (timeLimitMinutes + delta).clamp(5, 24 * 60);
     if (newLimit == timeLimitMinutes) {
       return;
@@ -1352,15 +1404,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   Text(context.l10n.dailyTimeLimit, style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 8),
                   Text(
-                    '$timeLimitMinutes '
-                    '${context.l10n.minutesSuffix}',
+                    _isParentMode
+                        ? (_isArabic ? 'وضع الوالد' : 'Parent mode')
+                        : '$timeLimitMinutes ${context.l10n.minutesSuffix}',
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${_activeChild?.name ?? (_isArabic ? 'الطفل النشط' : 'Active child')}: '
-                    '${_isArabic ? 'استخدم اليوم' : 'Used today'} $totalUsageMinutes '
-                    '${context.l10n.minutesSuffix}',
+                    _isParentMode
+                        ? (_isArabic
+                            ? 'لا توجد حدود زمنية أو قيود للأطفال.'
+                            : 'No child time limits or restrictions apply.')
+                        : '${_activeChild?.name ?? (_isArabic ? 'الطفل النشط' : 'Active child')}: '
+                            '${_isArabic ? 'استخدم اليوم' : 'Used today'} $totalUsageMinutes '
+                            '${context.l10n.minutesSuffix}',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
@@ -1368,8 +1425,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
             Row(
               children: <Widget>[
-                IconButton(icon: const Icon(Icons.remove), onPressed: () => _adjustTimeLimit(-5)),
-                IconButton(icon: const Icon(Icons.add), onPressed: () => _adjustTimeLimit(5)),
+                if (!_isParentMode) ...<Widget>[
+                  IconButton(icon: const Icon(Icons.remove), onPressed: () => _adjustTimeLimit(-5)),
+                  IconButton(icon: const Icon(Icons.add), onPressed: () => _adjustTimeLimit(5)),
+                ],
               ],
             ),
           ],

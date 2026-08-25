@@ -6,7 +6,9 @@ import '../../data/local/age_safety_profile_service.dart';
 import '../../data/local/child_usage_ledger_service.dart';
 import '../../data/local/locale_controller.dart';
 import '../../data/system/app_usage_service.dart';
+import '../../data/system/pin_auth_service.dart';
 import '../../domain/models/child_profile.dart';
+import '../parental_control/pin_auth_screen.dart';
 
 enum _ReportRange { today, sevenDays, custom }
 
@@ -114,6 +116,62 @@ class _ParentUsageReportScreenState extends State<ParentUsageReportScreen> {
     await _load();
   }
 
+  Future<void> _deleteSelectedChildHistory() async {
+    final ChildProfile? child = _selectedChild;
+    if (child == null) return;
+    if (!await PinAuthService().hasPin()) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_ar
+              ? 'عيّن رمز PIN للوالد أولًا قبل حذف السجل.'
+              : 'Set a parent PIN before deleting history.'),
+        ),
+      );
+      return;
+    }
+    if (!mounted) return;
+    final bool? authenticated = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (BuildContext routeContext) => PinAuthScreen(
+          onAuthenticated: () => Navigator.of(routeContext).pop(true),
+        ),
+      ),
+    );
+    if (authenticated != true || !mounted) return;
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) => AlertDialog(
+        title: Text(_ar ? 'حذف سجل ${child.name}؟' : 'Delete ${child.name} history?'),
+        content: Text(_ar
+            ? 'سيُحذف سجل الاستخدام المحلي لهذا الطفل فقط ولا يمكن التراجع عن ذلك.'
+            : 'Only this child’s local usage history will be deleted. This cannot be undone.'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(_ar ? 'إلغاء' : 'Cancel'),
+          ),
+          FilledButton(
+            key: const Key('confirm-delete-child-history'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(_ar ? 'حذف السجل' : 'Delete history'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await _usageLedger.deleteHistoryForChild(child.id);
+    await _load();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_ar
+            ? 'تم حذف سجل ${child.name} من هذا الجهاز.'
+            : '${child.name} history was deleted from this device.'),
+      ),
+    );
+  }
+
   String _duration(int totalMinutes) {
     final int hours = totalMinutes ~/ 60;
     final int minutes = totalMinutes % 60;
@@ -159,6 +217,13 @@ class _ParentUsageReportScreenState extends State<ParentUsageReportScreen> {
                   : 'This report shows locally attributed usage after a child is selected on this device. Android does not identify people automatically, and 3ialna does not send this attribution.',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
+            const SizedBox(height: 8),
+            Text(
+              _ar
+                  ? 'يُحفظ السجل محليًا في أرشيف عيالنا على الجهاز ويستمر عند تحديث التطبيق. بعد إزالة التطبيق وإعادة تثبيته، يعتمد الاسترداد على النسخ الاحتياطي أو الاستعادة التي يفعّلها نظام الجهاز.'
+                  : 'History is stored locally in a 3ialna device archive and survives app updates. After uninstalling and reinstalling, recovery depends on the device backup or restore chosen by the parent.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               key: const Key('parent-report-child-filter'),
@@ -185,6 +250,18 @@ class _ParentUsageReportScreenState extends State<ParentUsageReportScreen> {
                 _load();
               },
             ),
+            if (_selectedChild != null) ...<Widget>[
+              const SizedBox(height: 10),
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: OutlinedButton.icon(
+                  key: const Key('delete-child-history'),
+                  onPressed: _deleteSelectedChildHistory,
+                  icon: const Icon(Icons.delete_outline),
+                  label: Text(_ar ? 'حذف سجل هذا الطفل' : 'Delete this child’s history'),
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             Wrap(
               spacing: 8,

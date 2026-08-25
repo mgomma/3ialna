@@ -67,6 +67,9 @@ class AppBlockingAccessibilityService : AccessibilityService() {
      * Checks if an app is currently blocked.
      */
     private fun isAppBlocked(packageName: String): Boolean {
+        if (prefs.getBoolean("${PFX}parental_control_parent_mode_active", false)) {
+            return false
+        }
         val blockedAppsJson = prefs.getString("${PFX}blocked_apps_with_timestamps", null)
         if (blockedAppsJson == null || blockedAppsJson == "{}") return false
 

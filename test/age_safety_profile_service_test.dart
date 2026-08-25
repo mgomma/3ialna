@@ -125,6 +125,30 @@ void main() {
     expect(service.load().dailyLimitMinutes, 35);
   });
 
+  test('activates Parent mode explicitly and re-enables child limits when selected',
+      () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final AgeSafetyProfileService service = AgeSafetyProfileService(prefs);
+
+    await service.ensureDefaultChild();
+    final ChildProfile child = service.activeChild()!;
+    expect(service.isParentModeActive(), isFalse);
+
+    await service.setParentModeActive(true);
+    expect(service.isParentModeActive(), isTrue);
+    expect(prefs.getString('active_child_id'), 'parent');
+    expect(prefs.getBool('active_prayer_lock_enabled'), isFalse);
+
+    await service.setActiveChild(child.id);
+    expect(service.isParentModeActive(), isFalse);
+    expect(prefs.getString('active_child_id'), child.id);
+    expect(
+      prefs.getInt('active_social_media_limit_minutes'),
+      child.preset.socialMediaLimitMinutes,
+    );
+  });
+
   test('migrates a legacy profile as a protected parent selection', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{
       'age_safety_profile_config':

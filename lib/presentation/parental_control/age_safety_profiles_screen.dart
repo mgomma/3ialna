@@ -5,8 +5,10 @@ import '../../data/local/age_safety_profile_service.dart';
 import '../../data/local/child_usage_ledger_service.dart';
 import '../../data/local/locale_controller.dart';
 import '../../data/system/child_shortcut_service.dart';
+import '../../data/system/pin_auth_service.dart';
 import '../../domain/models/age_safety_profile.dart';
 import '../../domain/models/child_profile.dart';
+import 'pin_auth_screen.dart';
 import 'widgets/children_management_list.dart';
 
 class AgeSafetyProfilesScreen extends StatefulWidget {
@@ -23,6 +25,7 @@ class _AgeSafetyProfilesScreenState extends State<AgeSafetyProfilesScreen> {
   AgeSafetyProfilePreset? _preset;
   List<ChildProfile> _children = <ChildProfile>[];
   ChildProfile? _active;
+  bool _isParentMode = false;
   bool _loading = true;
   bool _openedChildManager = false;
 
@@ -43,6 +46,7 @@ class _AgeSafetyProfilesScreenState extends State<AgeSafetyProfilesScreen> {
       _service = service;
       _children = service.loadChildren();
       _active = service.activeChild();
+      _isParentMode = service.isParentModeActive();
       _preset = service.load();
       _loading = false;
     });
@@ -69,6 +73,27 @@ class _AgeSafetyProfilesScreenState extends State<AgeSafetyProfilesScreen> {
           .captureActiveChildUsage(childId: outgoing.id);
     }
     await _service!.setActiveChild(childId);
+    await _load();
+  }
+
+  Future<void> _activateParentMode() async {
+    final bool hasPin = await PinAuthService().hasPin();
+    if (!mounted) return;
+    final bool? authenticated = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (BuildContext routeContext) => PinAuthScreen(
+          isSetupMode: !hasPin,
+          onAuthenticated: () => Navigator.of(routeContext).pop(true),
+        ),
+      ),
+    );
+    if (authenticated != true || !mounted) return;
+    final ChildProfile? outgoing = _service!.activeChild();
+    if (outgoing != null && !_service!.isParentModeActive()) {
+      await const ChildUsageLedgerService()
+          .captureActiveChildUsage(childId: outgoing.id);
+    }
+    await _service!.setParentModeActive(true);
     await _load();
   }
 
@@ -184,13 +209,38 @@ class _AgeSafetyProfilesScreenState extends State<AgeSafetyProfilesScreen> {
         Text(_ar ? 'عرّف الأطفال الذين يستخدمون الجهاز واختر الطفل النشط. الإعدادات التالية تخص الطفل المختار فقط.' : 'Define the children who use this device and choose the active child. The settings below apply only to the selected child.'),
         const SizedBox(height: 14),
         DropdownButtonFormField<String>(
-          key: ValueKey<String>(_active!.id),
-          initialValue: _active!.id,
-          decoration: InputDecoration(labelText: _ar ? 'الطفل المستخدم للجهاز الآن' : 'Child using this device now'),
-          items: _children.map((ChildProfile child) => DropdownMenuItem<String>(value: child.id, child: Text(child.name))).toList(growable: false),
-          onChanged: _setActive,
+          key: ValueKey<String>(_isParentMode ? '__parent__' : _active!.id),
+          initialValue: _isParentMode ? '__parent__' : _active!.id,
+          decoration: InputDecoration(labelText: _ar ? 'من يستخدم الجهاز الآن' : 'Who is using this device now?'),
+          items: <DropdownMenuItem<String>>[
+            DropdownMenuItem<String>(
+              value: '__parent__',
+              child: Text(_ar ? 'الوالد — بدون قيود' : 'Parent — no restrictions'),
+            ),
+            ..._children.map(
+              (ChildProfile child) => DropdownMenuItem<String>(
+                value: child.id,
+                child: Text(child.name),
+              ),
+            ),
+          ],
+          onChanged: (String? value) {
+            if (value == '__parent__') {
+              _activateParentMode();
+            } else {
+              _setActive(value);
+            }
+          },
         ),
         Align(alignment: AlignmentDirectional.centerStart, child: TextButton.icon(icon: const Icon(Icons.manage_accounts_outlined), label: Text(_ar ? 'إدارة الأطفال' : 'Manage children'), onPressed: _manageChildren)),
+        if (_isParentMode)
+          ListTile(
+            leading: const Icon(Icons.admin_panel_settings_outlined),
+            title: Text(_ar ? 'وضع الوالد مفعّل' : 'Parent mode is active'),
+            subtitle: Text(_ar
+                ? 'لا تُطبّق الحدود الزمنية أو قيود التطبيقات أو قيود النوم والصلاة على استخدام الوالد. اختر طفلًا لإعادة الحماية المناسبة لملفه.'
+                : 'Time limits, app limits, sleep, and prayer restrictions are paused for parent use. Select a child to restore that child’s safeguards.'),
+          ),
         const Divider(height: 32),
         Text(_ar ? 'ملف ${_active!.name}' : '${_active!.name}\'s profile', style: Theme.of(context).textTheme.titleLarge),
         Text(

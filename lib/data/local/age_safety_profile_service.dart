@@ -16,6 +16,8 @@ class AgeSafetyProfileService {
   static const String _key = 'age_safety_profile_config';
   static const String _childrenKey = 'parental_control_children';
   static const String _activeChildKey = 'parental_control_active_child_id';
+  static const String _parentModeActiveKey =
+      'parental_control_parent_mode_active';
   static const String _runtimeActiveChildKey = 'active_child_id';
   static const String _runtimeSocialLimitKey = 'active_social_media_limit_minutes';
   static const String _runtimeGamesLimitKey = 'active_games_limit_minutes';
@@ -49,6 +51,10 @@ class AgeSafetyProfileService {
       orElse: () => children.first,
     );
   }
+
+  /// Parent mode is separate from a child profile. The UI may enable it only
+  /// after a parent PIN or biometric verification succeeds.
+  bool isParentModeActive() => _prefs.getBool(_parentModeActiveKey) ?? false;
 
   Future<void> ensureDefaultChild() async {
     if (loadChildren().isNotEmpty) {
@@ -208,7 +214,16 @@ class AgeSafetyProfileService {
   Future<void> setActiveChild(String childId) async {
     final List<ChildProfile> children = loadChildren();
     if (!children.any((ChildProfile child) => child.id == childId)) return;
+    await _prefs.setBool(_parentModeActiveKey, false);
     await _saveChildren(children, activeId: childId);
+  }
+
+  /// Called only after the caller has completed PIN or biometric verification.
+  Future<void> setParentModeActive(bool active) async {
+    await ensureDefaultChild();
+    await _prefs.setBool(_parentModeActiveKey, active);
+    await _syncRuntime(activeChild());
+    changes.value += 1;
   }
 
   Future<void> removeChild(String childId) async {
@@ -229,6 +244,29 @@ class AgeSafetyProfileService {
 
   Future<void> _syncRuntime(ChildProfile? child) async {
     if (child == null) return;
+    if (isParentModeActive()) {
+      await _prefs.setString(_runtimeActiveChildKey, 'parent');
+      await _prefs.setInt(_runtimeSocialLimitKey, 0);
+      await _prefs.setInt(_runtimeGamesLimitKey, 0);
+      await _prefs.setBool(_runtimePrayerLockEnabledKey, false);
+      await _prefs.setInt(_runtimePrayerLockMinutesKey, 0);
+      await _prefs.setBool(_runtimeSleepLockEnabledKey, false);
+      await _prefs.setInt(_runtimeSleepLockStartKey, 0);
+      await _prefs.setInt(_runtimeSleepLockEndKey, 0);
+      if (Platform.isIOS) {
+        try {
+          await IosScreenTimeSafeguardService().syncSleepShield(
+            enabled: false,
+            startMinutes: 0,
+            endMinutes: 0,
+          );
+          await IosScreenTimeSafeguardService().clearPrayerShields();
+        } catch (_) {
+          // The platform bridge reports authorization/setup separately.
+        }
+      }
+      return;
+    }
     await _prefs.setString(_runtimeActiveChildKey, child.id);
     await _prefs.setInt(_runtimeSocialLimitKey, child.preset.socialMediaLimitMinutes);
     await _prefs.setInt(_runtimeGamesLimitKey, child.preset.gamesLimitMinutes);

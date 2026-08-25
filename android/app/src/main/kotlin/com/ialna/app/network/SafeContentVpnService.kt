@@ -333,6 +333,15 @@ class SafeContentVpnService : VpnService() {
 
         companion object {
             fun fromPreferences(preferences: android.content.SharedPreferences): PolicySnapshot {
+                if (preferences.getBoolean("flutter.parental_control_parent_mode_active", false)) {
+                    return PolicySnapshot(
+                        enabled = false,
+                        blockedCategories = emptySet(),
+                        blockedDomains = emptySet(),
+                        allowedDomains = emptySet(),
+                        allowSocialMedia = true,
+                    )
+                }
                 val raw = preferences.getString(PREF_POLICY, null) ?: return PolicySnapshot(
                     enabled = false,
                     blockedCategories = emptySet(),
