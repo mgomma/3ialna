@@ -59,9 +59,11 @@ class PendingRequestBadge extends StatelessWidget {
     if (count <= 0) return const SizedBox.shrink();
     final AppLocalizations l10n = AppLocalizations.of(context);
     return Semantics(
+      container: true,
       label: l10n.pendingRequestCount(count),
       liveRegion: true,
-      child: Container(
+      child: ExcludeSemantics(
+        child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.error,
@@ -73,6 +75,7 @@ class PendingRequestBadge extends StatelessWidget {
             color: Theme.of(context).colorScheme.onError,
             fontWeight: FontWeight.bold,
             fontSize: 12,
+          ),
           ),
         ),
       ),
