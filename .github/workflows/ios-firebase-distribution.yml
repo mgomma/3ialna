@@ -1,0 +1,166 @@
+name: Signed iOS Firebase Distribution
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - 'ios/**'
+      - 'lib/**'
+      - 'assets/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - '.github/workflows/ios-firebase-distribution.yml'
+  workflow_dispatch:
+    inputs:
+      release_notes:
+        description: 'Release notes for Firebase testers'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-distribute:
+    name: Build signed IPA and upload to Firebase
+    runs-on: macos-14
+    timeout-minutes: 45
+    env:
+      APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+      APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      APPLE_PROVISIONING_PROFILES_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILES_BASE64 }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      FIREBASE_IOS_APP_ID: ${{ secrets.FIREBASE_IOS_APP_ID }}
+      FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+      FIREBASE_TESTER_GROUPS: ${{ secrets.FIREBASE_TESTER_GROUPS }}
+      KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Validate required signing and Firebase secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=()
+          for name in APPLE_CERTIFICATE_BASE64 APPLE_CERTIFICATE_PASSWORD APPLE_PROVISIONING_PROFILES_BASE64 APPLE_TEAM_ID FIREBASE_IOS_APP_ID FIREBASE_SERVICE_ACCOUNT_JSON KEYCHAIN_PASSWORD; do
+            if [[ -z "${!name:-}" ]]; then missing+=("$name"); fi
+          done
+          if (( ${#missing[@]} > 0 )); then
+            printf 'Missing required GitHub Actions secrets: %s\n' "${missing[*]}" >&2
+            exit 1
+          fi
+
+      - name: Import Apple distribution certificate
+        shell: bash
+        run: |
+          set -euo pipefail
+          keychain_path="$RUNNER_TEMP/3ialna-build.keychain-db"
+          certificate_path="$RUNNER_TEMP/apple-distribution.p12"
+          printf '%s' "$APPLE_CERTIFICATE_BASE64" | base64 --decode > "$certificate_path"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$keychain_path"
+          security set-keychain-settings -lut 21600 "$keychain_path"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$keychain_path"
+          security import "$certificate_path" -k "$keychain_path" -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$keychain_path"
+          security list-keychains -d user -s "$keychain_path" login.keychain-db
+          security default-keychain -s "$keychain_path"
+
+      - name: Install provisioning profiles and prepare export options
+        id: profiles
+        shell: bash
+        run: |
+          set -euo pipefail
+          profiles_zip="$RUNNER_TEMP/3ialna-profiles.zip"
+          profiles_dir="$RUNNER_TEMP/profiles"
+          destination="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$profiles_dir" "$destination"
+          printf '%s' "$APPLE_PROVISIONING_PROFILES_BASE64" | base64 --decode > "$profiles_zip"
+          unzip -q "$profiles_zip" -d "$profiles_dir"
+
+          runner_name=''
+          extension_name=''
+          while IFS= read -r -d '' profile; do
+            plist="$RUNNER_TEMP/profile.plist"
+            security cms -D -i "$profile" > "$plist"
+            bundle_id=$(/usr/libexec/PlistBuddy -c 'Print:Entitlements:application-identifier' "$plist" | sed "s/^${APPLE_TEAM_ID}\.//")
+            profile_name=$(/usr/libexec/PlistBuddy -c 'Print:Name' "$plist")
+            uuid=$(/usr/libexec/PlistBuddy -c 'Print:UUID' "$plist")
+            cp "$profile" "$destination/$uuid.mobileprovision"
+            case "$bundle_id" in
+              com.ialna.app) runner_name="$profile_name" ;;
+              com.ialna.app.ScreenTimeSafeguards) extension_name="$profile_name" ;;
+            esac
+          done < <(find "$profiles_dir" -type f -name '*.mobileprovision' -print0)
+
+          if [[ -z "$runner_name" || -z "$extension_name" ]]; then
+            echo 'The profile archive must contain profiles for com.ialna.app and com.ialna.app.ScreenTimeSafeguards.' >&2
+            exit 1
+          fi
+
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>ad-hoc</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>teamID</key><string>$APPLE_TEAM_ID</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.ialna.app</key><string>$runner_name</string>
+              <key>com.ialna.app.ScreenTimeSafeguards</key><string>$extension_name</string>
+            </dict>
+          </dict>
+          </plist>
+          EOF
+
+      - name: Install CocoaPods dependencies
+        working-directory: ios
+        run: pod install --repo-update
+
+      - name: Build signed iOS IPA
+        run: flutter build ipa --release --export-options-plist "$RUNNER_TEMP/ExportOptions.plist"
+
+      - name: Upload signed IPA to Firebase App Distribution
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
+          RELEASE_NOTES: ${{ inputs.release_notes || format('Signed iOS build from {0}', github.sha) }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > "$GOOGLE_APPLICATION_CREDENTIALS"
+          npm install --global firebase-tools
+          group_args=()
+          if [[ -n "${FIREBASE_TESTER_GROUPS:-}" ]]; then
+            group_args+=(--groups "$FIREBASE_TESTER_GROUPS")
+          fi
+          firebase appdistribution:distribute build/ios/ipa/*.ipa \
+            --app "$FIREBASE_IOS_APP_ID" \
+            --release-notes "$RELEASE_NOTES" \
+            "${group_args[@]}" \
+            --non-interactive
+
+      - name: Clean signing material
+        if: always()
+        shell: bash
+        run: |
+          security delete-keychain "$RUNNER_TEMP/3ialna-build.keychain-db" 2>/dev/null || true
+          rm -f "$RUNNER_TEMP/apple-distribution.p12" "$RUNNER_TEMP/3ialna-profiles.zip" "$RUNNER_TEMP/firebase-service-account.json" "$RUNNER_TEMP/ExportOptions.plist" "$RUNNER_TEMP/profile.plist"
+          find "$HOME/Library/MobileDevice/Provisioning Profiles" -type f -name '*.mobileprovision' -delete 2>/dev/null || true
