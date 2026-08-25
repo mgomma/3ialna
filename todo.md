@@ -392,3 +392,4 @@ Signed iOS workflow attempt #2 was rerun after the owner reported corrected secr
 - [x] Re-authenticate GitHub CLI and verify all jobs for the latest Flutter CI run.
 - [ ] Verify production Android upload-key and Play App Signing configuration, then build and validate a signed AAB through Internal testing.
 - [ ] Review the final landing-page copy and publish the website from the Management UI.
+- [ ] Audit and reorder Android installation, first-run permission, settings-return, and verification guidance for the clearest user journey; align the website and app copy.

@@ -162,12 +162,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     _loadSettings();
     _loadPrayerSettings();
-    final bool firstRunNeedsSettings = !_settings.firstRunSetupComplete;
-    await _runEssentialPermissionGuide();
-    await _askPermissionBeforeSystemSettings();
-    if (firstRunNeedsSettings &&
-        await _firstRunPermissions.hasLocationPermission() &&
-        await _firstRunPermissions.hasUsageAccess()) {
+    // Let the parent establish the protected profile and child baseline before
+    // sending them through Android system settings. The ordered permission
+    // guide runs from the dashboard handoff below, after the walkthrough.
+    if (!_settings.firstRunSetupComplete) {
       _openSettingsAfterFirstRun = true;
       _offerQuickSettingsAfterSetup = true;
     }
@@ -225,6 +223,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           builder: (_) => const ParentDashboardScreen(),
         ),
       );
+      // Permissions are requested only after the parent has seen the setup
+      // context and defined the child baseline. Each system-settings return is
+      // rechecked by the lifecycle handler before the next action.
+      await _runEssentialPermissionGuide();
+      await _askPermissionBeforeSystemSettings();
       await _settings.setFirstRunSetupComplete();
       await _offerQuickSettingsPrompt();
       _setupFlowScheduled = false;
