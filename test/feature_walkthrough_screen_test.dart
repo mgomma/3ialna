@@ -66,12 +66,16 @@ void main() {
 
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('walkthrough-parent-mode')));
     await tester.tap(find.byKey(const Key('walkthrough-parent-mode')));
     await tester.pump();
     expect(find.text('Verified in this example'), findsOneWidget);
 
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const Key('walkthrough-open-kids-management')),
+    );
     await tester.tap(find.byKey(const Key('walkthrough-open-kids-management')));
     await tester.pumpAndSettle();
     expect(profileSetupOpened, 1);
