@@ -14,8 +14,10 @@ class DevicePauseState {
   final String childId;
 
   bool get isActive => DateTime.now().isBefore(until);
-  int get remainingMinutes =>
-      (until.difference(DateTime.now()).inMinutes + 1).clamp(0, 24 * 60);
+  int get remainingMinutes {
+    if (!isActive) return 0;
+    return (until.difference(DateTime.now()).inMinutes + 1).clamp(0, 24 * 60);
+  }
 }
 
 class DevicePauseService {
