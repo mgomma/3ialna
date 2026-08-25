@@ -85,9 +85,10 @@ class ErrorReportService {
         event: event,
       );
 
-  /// Creates a parent-controlled diagnostic payload for the native share sheet.
-  /// It intentionally contains no child/profile data, credentials, recordings,
-  /// domains, app usage, reminder labels, recording paths, or raw errors.
+  /// Creates a parent-controlled diagnostic payload for the native share sheet
+  /// or the user's email composer. It intentionally contains no child/profile
+  /// data, credentials, recordings, domains, app usage, reminder labels,
+  /// recording paths, or raw errors.
   static Future<String> buildShareText() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final List<Map<String, String>> storedReports = <Map<String, String>>[
@@ -112,6 +113,21 @@ class ErrorReportService {
       'reports': reports.take(_maxReports).toList(growable: false),
     };
     return const JsonEncoder.withIndent('  ').convert(report);
+  }
+
+  /// Builds a mailto URI only after a parent explicitly chooses to send the
+  /// already-sanitized report. Opening an email composer is intentionally not
+  /// automatic: crashes must never send data or interrupt a child session.
+  static Future<Uri> buildEmailUri() async {
+    final String report = await buildShareText();
+    return Uri(
+      scheme: 'mailto',
+      path: '3ialna.app@gmail.com',
+      queryParameters: <String, String>{
+        'subject': '3ialna diagnostic report',
+        'body': report,
+      },
+    );
   }
 
   static List<Map<String, String>> _readReports(List<String> values) {
