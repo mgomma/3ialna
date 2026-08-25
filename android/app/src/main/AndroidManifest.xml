@@ -27,7 +27,8 @@
     <application
         android:label="3ialna"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:enableOnBackInvokedCallback="true">
         <receiver
             android:name=".BootReceiver"
             android:enabled="true"
@@ -87,7 +88,7 @@
         <service
             android:name=".usage.MonitorForegroundService"
             android:exported="false"
-            android:foregroundServiceType="specialUse">
+            android:foregroundServiceType="dataSync|specialUse">
             <property
                 android:name="android.app.property.FOREGROUND_SERVICE_TYPE_SPECIAL_USE_DESCRIPTION"
                 android:value="Monitoring app usage for parental controls" />

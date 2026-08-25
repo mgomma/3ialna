@@ -1474,15 +1474,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _buildUsageList(ColorScheme colorScheme) {
     if (usageDataMinutes.isEmpty) {
-      return Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          Icon(Icons.analytics_outlined, size: 64, color: colorScheme.primary),
-          const SizedBox(height: 16),
-          Text(context.l10n.noUsageTitle, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Text(context.l10n.noUsageSubtitle, textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyMedium),
-        ],
+      return Center(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Icon(Icons.analytics_outlined, size: 64, color: colorScheme.primary),
+              const SizedBox(height: 16),
+              Text(context.l10n.noUsageTitle, style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              Text(context.l10n.noUsageSubtitle, textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyMedium),
+            ],
+          ),
+        ),
       );
     }
 
