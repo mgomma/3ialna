@@ -40,7 +40,7 @@ class ActiveChildHandoverReminderCard extends StatelessWidget {
           children: <Widget>[
             Row(
               children: <Widget>[
-                Icon(Icons.handoff_outlined, color: colors.onPrimaryContainer),
+                Icon(Icons.people_outline, color: colors.onPrimaryContainer),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
