@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/social_media_apps.dart';
+import '../../domain/models/app_info.dart';
 import '../../domain/models/schedule.dart';
 import '../../domain/models/managed_app_category.dart';
 
@@ -154,6 +155,25 @@ class ParentalControlStorageService {
       values.putIfAbsent(packageName, () => ManagedAppCategory.games);
     }
     return values;
+  }
+
+  /// Reconciles categories for currently installed apps without overwriting
+  /// any parent assignment. Only the local package registry is used; no app
+  /// inventory or category data leaves the device.
+  Future<Map<String, ManagedAppCategory>> reconcileInstalledAppCategories(
+    List<AppInfo> installedApps,
+  ) async {
+    final Map<String, ManagedAppCategory> categories = await getAppCategories();
+    for (final AppInfo app in installedApps) {
+      if (categories.containsKey(app.packageName)) continue;
+      if (socialMediaApps.containsKey(app.packageName)) {
+        categories[app.packageName] = ManagedAppCategory.socialMedia;
+      } else if (gameApps.containsKey(app.packageName)) {
+        categories[app.packageName] = ManagedAppCategory.games;
+      }
+    }
+    await setAppCategories(categories);
+    return categories;
   }
 
   Future<void> setAppCategory(String packageName, ManagedAppCategory category) async {

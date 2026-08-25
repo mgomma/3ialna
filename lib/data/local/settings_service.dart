@@ -25,6 +25,8 @@ const String _prefsKeyIsDeviceLocked = 'is_device_locked';
 const String _prefsKeySelectedCountry = 'selected_country_profile';
 const String _prefsKeyEssentialPermissionsPrompted = 'essential_permissions_prompted_v1';
 const String _prefsKeyFeatureWalkthroughSeen = 'feature_walkthrough_seen_v1';
+const String _prefsKeyQuickSettingsPrompted = 'quick_settings_prompted_v1';
+const String _prefsKeyFirstRunSetupComplete = 'first_run_setup_complete_v1';
 const String _prayerOverlayPrefix = 'Prayer Time Lock';
 
 /// Thin wrapper around [SharedPreferences] to keep persistence logic in one
@@ -51,6 +53,12 @@ class SettingsService {
 
   bool get featureWalkthroughSeen =>
       _prefs.getBool(_prefsKeyFeatureWalkthroughSeen) ?? false;
+
+  bool get quickSettingsPrompted =>
+      _prefs.getBool(_prefsKeyQuickSettingsPrompted) ?? false;
+
+  bool get firstRunSetupComplete =>
+      _prefs.getBool(_prefsKeyFirstRunSetupComplete) ?? false;
 
   CountryWordProfile? get countryWordProfile {
     final String? country = selectedCountry;
@@ -90,6 +98,14 @@ class SettingsService {
 
   Future<void> setFeatureWalkthroughSeen() async {
     await _prefs.setBool(_prefsKeyFeatureWalkthroughSeen, true);
+  }
+
+  Future<void> setQuickSettingsPrompted() async {
+    await _prefs.setBool(_prefsKeyQuickSettingsPrompted, true);
+  }
+
+  Future<void> setFirstRunSetupComplete() async {
+    await _prefs.setBool(_prefsKeyFirstRunSetupComplete, true);
   }
 
   Future<void> saveOverlayData(OverlayData data) async {

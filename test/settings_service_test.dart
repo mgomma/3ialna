@@ -72,6 +72,16 @@ void main() {
     expect(settings.loadOverlayData().appName, 'TikTok');
   });
 
+  test('persists the one-time Quick Settings prompt flag', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final SettingsService settings =
+        SettingsService(await SharedPreferences.getInstance());
+
+    expect(settings.quickSettingsPrompted, isFalse);
+    await settings.setQuickSettingsPrompted();
+    expect(settings.quickSettingsPrompted, isTrue);
+  });
+
   test('persists feature walkthrough completion', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     final SettingsService settings =

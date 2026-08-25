@@ -28,7 +28,9 @@ class _AppManagementScreenState extends State<AppManagementScreen> {
   Map<String, ManagedAppCategory> _categories = {};
   bool _isLoading = true;
   String _searchQuery = '';
-  bool _showOnlyBlocked = false;
+  // A Manage Apps visit is intentionally focused on active blocks. Parents can
+  // explicitly expand the list when they need to add a new blocked app.
+  bool _showOnlyBlocked = true;
 
   @override
   void initState() {
@@ -47,7 +49,7 @@ class _AppManagementScreenState extends State<AppManagementScreen> {
       );
       final blocked = await _storage.getBlockedApps();
       final limits = await _storage.getTimeLimits();
-      final categories = await _storage.getAppCategories();
+      final categories = await _storage.reconcileInstalledAppCategories(apps);
 
       // Get current usage for apps with limits
       final usageMap = <String, int>{};
@@ -209,7 +211,7 @@ class _AppManagementScreenState extends State<AppManagementScreen> {
                 Row(
                   children: [
                     FilterChip(
-                      label: const Text('Show Blocked Only'),
+                      label: Text(_showOnlyBlocked ? 'Blocked apps only' : 'All installed apps'),
                       selected: _showOnlyBlocked,
                       onSelected: (selected) {
                         setState(() {
@@ -240,7 +242,9 @@ class _AppManagementScreenState extends State<AppManagementScreen> {
                             Text(
                               _searchQuery.isNotEmpty
                                   ? 'No apps found'
-                                  : 'No apps to display',
+                                  : _showOnlyBlocked
+                                      ? 'No blocked apps yet'
+                                      : 'No apps to display',
                               style: theme.textTheme.titleMedium?.copyWith(
                                 color: colorScheme.onSurfaceVariant,
                               ),

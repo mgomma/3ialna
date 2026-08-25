@@ -97,6 +97,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _isParentMode = false;
   bool _essentialPermissionGuideInProgress = false;
   bool _homeSettingsInitialized = false;
+  bool _openSettingsAfterFirstRun = false;
+  bool _offerQuickSettingsAfterSetup = false;
+  bool _setupFlowScheduled = false;
 
   bool get _isArabic => LocaleController.instance.isArabic;
 
@@ -159,8 +162,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     _loadSettings();
     _loadPrayerSettings();
+    final bool firstRunNeedsSettings = !_settings.firstRunSetupComplete;
     await _runEssentialPermissionGuide();
     await _askPermissionBeforeSystemSettings();
+    if (firstRunNeedsSettings &&
+        await _firstRunPermissions.hasLocationPermission() &&
+        await _firstRunPermissions.hasUsageAccess()) {
+      _openSettingsAfterFirstRun = true;
+      _offerQuickSettingsAfterSetup = true;
+    }
     await _refreshUsage();
     _loadCountryWordProfile();
     _profile = await _drupalSyncService.getProfile();
@@ -187,18 +197,65 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void _showFeatureWalkthroughIfNeeded() {
-    if (_settings.featureWalkthroughSeen || !mounted) return;
+    if (!mounted || _setupFlowScheduled) return;
+    if (_settings.featureWalkthroughSeen && !_openSettingsAfterFirstRun) return;
+    _setupFlowScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted || _settings.featureWalkthroughSeen) return;
+      if (!mounted) {
+        _setupFlowScheduled = false;
+        return;
+      }
+      if (!_settings.featureWalkthroughSeen) {
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => FeatureWalkthroughScreen(
+              onCompleted: _settings.setFeatureWalkthroughSeen,
+              onOpenProfileSetup: _openKidsManagementFromWalkthrough,
+            ),
+          ),
+        );
+      }
+      if (!mounted || !_openSettingsAfterFirstRun) {
+        _setupFlowScheduled = false;
+        return;
+      }
+      _openSettingsAfterFirstRun = false;
       await Navigator.of(context).push(
         MaterialPageRoute<void>(
-          builder: (_) => FeatureWalkthroughScreen(
-            onCompleted: _settings.setFeatureWalkthroughSeen,
-            onOpenProfileSetup: _openKidsManagementFromWalkthrough,
-          ),
+          builder: (_) => const ParentDashboardScreen(),
         ),
       );
+      await _settings.setFirstRunSetupComplete();
+      await _offerQuickSettingsPrompt();
+      _setupFlowScheduled = false;
     });
+  }
+
+  Future<void> _offerQuickSettingsPrompt() async {
+    if (!mounted || !_offerQuickSettingsAfterSetup || _settings.quickSettingsPrompted) return;
+    _offerQuickSettingsAfterSetup = false;
+    await _settings.setQuickSettingsPrompted();
+    if (!mounted) return;
+    final bool? addShortcut = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) => AlertDialog(
+        title: Text(_isArabic ? 'اختصار سريع لتبديل الطفل' : 'Quick child-switch shortcut'),
+        content: Text(_isArabic
+            ? 'اكتمل الإعداد الأساسي. أضف اختصار عيالنا إلى الإعدادات السريعة لتفتح قائمة «من يستخدم الجهاز الآن؟» بسرعة عند تسليم الهاتف.'
+            : 'Basic setup is complete. Add the 3ialna tile to Quick Settings to open “Who is using the device now?” quickly when handing over the phone.'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(_isArabic ? 'لاحقًا' : 'Later'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(_isArabic ? 'إضافة الاختصار' : 'Add shortcut'),
+          ),
+        ],
+      ),
+    );
+    if (addShortcut == true) await _requestQuickSettingsTile();
   }
 
   Future<void> _openKidsManagementFromWalkthrough() async {
@@ -288,6 +345,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (!mounted) return;
     await _refreshAccessibilityStatus();
     _loadPrayerSettings();
+    if (!_settings.firstRunSetupComplete &&
+        await _firstRunPermissions.hasLocationPermission() &&
+        await _firstRunPermissions.hasUsageAccess()) {
+      _openSettingsAfterFirstRun = true;
+      _offerQuickSettingsAfterSetup = true;
+      _showFeatureWalkthroughIfNeeded();
+    }
   }
 
   Future<void> _showActiveChildPicker() async {
