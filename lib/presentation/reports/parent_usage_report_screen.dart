@@ -13,7 +13,9 @@ import '../parental_control/pin_auth_screen.dart';
 enum _ReportRange { today, sevenDays, custom }
 
 class ParentUsageReportScreen extends StatefulWidget {
-  const ParentUsageReportScreen({super.key});
+  const ParentUsageReportScreen({super.key, this.usageLedger});
+
+  final ChildUsageLedgerService? usageLedger;
 
   @override
   State<ParentUsageReportScreen> createState() =>
@@ -23,7 +25,7 @@ class ParentUsageReportScreen extends StatefulWidget {
 class _ParentUsageReportScreenState extends State<ParentUsageReportScreen> {
   static const String _allChildren = '__all_children__';
 
-  final ChildUsageLedgerService _usageLedger = const ChildUsageLedgerService();
+  late ChildUsageLedgerService _usageLedger;
   _ReportRange _range = _ReportRange.today;
   late DateTime _start;
   late DateTime _end;
@@ -47,6 +49,7 @@ class _ParentUsageReportScreenState extends State<ParentUsageReportScreen> {
   @override
   void initState() {
     super.initState();
+    _usageLedger = widget.usageLedger ?? const ChildUsageLedgerService();
     _setRange(_ReportRange.today, reload: false);
     _loadChildrenAndReport();
   }

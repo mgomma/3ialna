@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mu_super_app/data/local/locale_controller.dart';
 import 'package:mu_super_app/presentation/parental_control/profile_pack_screen.dart';
+import 'package:mu_super_app/data/local/child_usage_ledger_service.dart';
 import 'package:mu_super_app/presentation/reports/parent_usage_report_screen.dart';
 
 void main() {
@@ -23,9 +24,14 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
 
     await tester.pumpWidget(
-      const MaterialApp(home: ParentUsageReportScreen()),
+      const MaterialApp(
+        home: ParentUsageReportScreen(
+          usageLedger: ChildUsageLedgerService(enableFileArchive: false),
+        ),
+      ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.byKey(const Key('parent-report-child-filter')), findsOneWidget);
     expect(find.byType(ChoiceChip), findsNWidgets(2));

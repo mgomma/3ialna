@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mu_super_app/data/local/age_safety_profile_service.dart';
+import 'package:mu_super_app/data/local/child_usage_ledger_service.dart';
 import 'package:mu_super_app/data/local/locale_controller.dart';
 import 'package:mu_super_app/domain/models/child_profile.dart';
 import 'package:mu_super_app/presentation/reports/parent_usage_report_screen.dart';
@@ -27,9 +28,14 @@ void main() {
   testWidgets('parent report exposes date-filter controls',
       (WidgetTester tester) async {
     await tester.pumpWidget(
-      const MaterialApp(home: ParentUsageReportScreen()),
+      const MaterialApp(
+        home: ParentUsageReportScreen(
+          usageLedger: ChildUsageLedgerService(enableFileArchive: false),
+        ),
+      ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.byType(ChoiceChip), findsNWidgets(2));
     expect(find.byType(ActionChip), findsOneWidget);
@@ -43,9 +49,14 @@ void main() {
       (WidgetTester tester) async {
     await addDefinedChild();
     await tester.pumpWidget(
-      const MaterialApp(home: ParentUsageReportScreen()),
+      const MaterialApp(
+        home: ParentUsageReportScreen(
+          usageLedger: ChildUsageLedgerService(enableFileArchive: false),
+        ),
+      ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.byKey(const Key('delete-child-history')), findsOneWidget);
   });

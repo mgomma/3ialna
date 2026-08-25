@@ -72,7 +72,9 @@ class ChildUsageLedgerAggregate {
 /// data, so usage before the first local observation cannot be retroactively
 /// assigned to a child.
 class ChildUsageLedgerService {
-  const ChildUsageLedgerService();
+  const ChildUsageLedgerService({this.enableFileArchive = true});
+
+  final bool enableFileArchive;
 
   static const String _entriesKey = 'child_usage_ledger_entries_v1';
   static const String _baselineKey = 'child_usage_ledger_baseline_v1';
@@ -202,6 +204,7 @@ class ChildUsageLedgerService {
   /// Returns the private application-document archive path when the platform
   /// exposes one. The archive is never attached to diagnostics or config packs.
   Future<String?> archivePath() async {
+    if (!enableFileArchive) return null;
     try {
       return (await _archiveFile()).path;
     } catch (_) {
@@ -212,16 +215,18 @@ class ChildUsageLedgerService {
   Future<List<ChildUsageLedgerEntry>> _loadEntries(
     SharedPreferences preferences,
   ) async {
-    try {
-      final File archive = await _archiveFile();
-      if (await archive.exists()) {
-        final List<ChildUsageLedgerEntry> entries =
-            _decodeEntries(await archive.readAsString());
-        if (entries.isNotEmpty) return entries;
+    if (enableFileArchive) {
+      try {
+        final File archive = await _archiveFile();
+        if (await archive.exists()) {
+          final List<ChildUsageLedgerEntry> entries =
+              _decodeEntries(await archive.readAsString());
+          if (entries.isNotEmpty) return entries;
+        }
+      } catch (_) {
+        // Preference cache remains the compatible local fallback in tests and
+        // on any device where the document directory is temporarily unavailable.
       }
-    } catch (_) {
-      // Preference cache remains the compatible local fallback in tests and
-      // on any device where the document directory is temporarily unavailable.
     }
     return _readEntries(preferences);
   }
@@ -266,14 +271,16 @@ class ChildUsageLedgerService {
       jsonEncode(entries.map((ChildUsageLedgerEntry entry) => entry.toJson()).toList()),
     );
     await preferences.setString(_baselineKey, jsonEncode(baseline.toJson()));
-    try {
-      final File archive = await _archiveFile();
-      await archive.writeAsString(
-        jsonEncode(entries.map((ChildUsageLedgerEntry entry) => entry.toJson()).toList()),
-        flush: true,
-      );
-    } catch (_) {
-      // SharedPreferences retains the on-device fallback if file I/O fails.
+    if (enableFileArchive) {
+      try {
+        final File archive = await _archiveFile();
+        await archive.writeAsString(
+          jsonEncode(entries.map((ChildUsageLedgerEntry entry) => entry.toJson()).toList()),
+          flush: true,
+        );
+      } catch (_) {
+        // SharedPreferences retains the on-device fallback if file I/O fails.
+      }
     }
   }
 
