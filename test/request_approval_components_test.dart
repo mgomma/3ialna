@@ -41,6 +41,8 @@ void main() {
   });
 
   testWidgets('pending badge exposes an accessible count', (WidgetTester tester) async {
+    final SemanticsHandle semantics = tester.ensureSemantics();
+    addTearDown(semantics.dispose);
     await tester.pumpWidget(_host(const PendingRequestBadge(count: 3)));
     await tester.pumpAndSettle();
 
