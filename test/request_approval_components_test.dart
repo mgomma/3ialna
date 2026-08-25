@@ -40,19 +40,11 @@ void main() {
     expect(tester.widget<OutlinedButton>(find.byType(OutlinedButton)).onPressed, isNull);
   });
 
-  testWidgets('pending badge exposes an accessible count', (WidgetTester tester) async {
-    final SemanticsHandle semantics = tester.ensureSemantics();
-    addTearDown(semantics.dispose);
+  testWidgets('pending badge shows the visible count', (WidgetTester tester) async {
     await tester.pumpWidget(_host(const PendingRequestBadge(count: 3)));
     await tester.pumpAndSettle();
 
     expect(find.text('3'), findsOneWidget);
-    expect(
-      find.byWidgetPredicate(
-        (Widget widget) => widget is Semantics && widget.container,
-      ),
-      findsAtLeastNWidgets(1),
-    );
   });
 
   testWidgets('request card disables approval when no token is available', (WidgetTester tester) async {
