@@ -132,11 +132,6 @@ class _RewardCenterScreenState extends State<RewardCenterScreen> {
     if (mounted) setState(() => _requestDurations = saved);
   }
 
-  Future<void> _reject(ChildExtraTimeRequest request) async {
-    await _rewards.updateRequestStatus(request.id, 'rejected');
-    await _load();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
