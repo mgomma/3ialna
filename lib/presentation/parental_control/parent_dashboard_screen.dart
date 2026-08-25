@@ -4,12 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../data/local/age_safety_profile_service.dart';
 import '../../data/local/locale_controller.dart';
 import '../../data/local/parental_control_storage_service.dart';
 import '../../data/local/settings_service.dart';
 import '../../data/system/accessibility_service_helper.dart';
 import '../../data/system/kiosk_service.dart';
 import '../../data/system/pin_auth_service.dart';
+import '../../domain/models/child_profile.dart';
+import 'active_child_handover_reminder_card.dart';
 import 'app_management_screen.dart';
 import 'pin_auth_screen.dart';
 import 'schedule_screen.dart';
@@ -44,6 +47,9 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
   late SettingsService _settings;
   int _blockedAppsCount = 0;
   int _appsWithTimeLimits = 0;
+  List<ChildProfile> _children = <ChildProfile>[];
+  ChildProfile? _activeChild;
+  bool _isParentModeActive = false;
 
   bool get _isIos => Platform.isIOS;
 
@@ -128,6 +134,10 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
     final isAccessibilityEnabled = await _accessibilityHelper.isAccessibilityServiceEnabled();
     final blockedApps = await _storage.getBlockedApps();
     final timeLimits = await _storage.getTimeLimits();
+    final AgeSafetyProfileService profileService = AgeSafetyProfileService(prefs);
+    final List<ChildProfile> children = profileService.loadChildren();
+    final ChildProfile? activeChild = profileService.activeChild();
+    final bool isParentModeActive = profileService.isParentModeActive();
 
     if (!mounted) return;
     setState(() {
@@ -137,7 +147,21 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
       _isStrictMode = _settings.isStrictMode;
       _blockedAppsCount = blockedApps.length;
       _appsWithTimeLimits = timeLimits.length;
+      _children = children;
+      _activeChild = activeChild;
+      _isParentModeActive = isParentModeActive;
     });
+  }
+
+  Future<void> _confirmActiveUserForHandover() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (BuildContext context) => const AgeSafetyProfilesScreen(
+          openChildManagerOnStart: true,
+        ),
+      ),
+    );
+    if (mounted) await _loadSettings();
   }
 
   Future<void> _toggleStrictMode(bool value) async {
@@ -283,6 +307,14 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              ActiveChildHandoverReminderCard(
+                isArabic: _isArabic,
+                childProfileCount: _children.length,
+                isParentModeActive: _isParentModeActive,
+                activeChildName: _activeChild?.name,
+                onConfirmActiveUser: _confirmActiveUserForHandover,
+              ),
+              if (_children.length >= 2) const SizedBox(height: 16),
               // Kiosk Mode & Protection Card
               Card(
                 child: Padding(
