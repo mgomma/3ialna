@@ -120,7 +120,7 @@ class AppCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      text('Limit: ${timeLimitMinutes}m/day', 'الحد: ${timeLimitMinutes} دقيقة/اليوم'),
+                      text('Limit: ${timeLimitMinutes}m/day', 'الحد: $timeLimitMinutes دقيقة/اليوم'),
                       style: theme.textTheme.bodySmall,
                     ),
                   ],
@@ -136,7 +136,7 @@ class AppCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      text('Used: ${currentUsageMinutes}m', 'المستخدم: ${currentUsageMinutes} دقيقة'),
+                      text('Used: ${currentUsageMinutes}m', 'المستخدم: $currentUsageMinutes دقيقة'),
                       style: theme.textTheme.bodySmall,
                     ),
                   ],
