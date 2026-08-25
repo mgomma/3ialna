@@ -47,7 +47,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('3'), findsOneWidget);
-    expect(find.byType(Semantics), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (Widget widget) => widget is Semantics && widget.container && widget.label == '3 pending extra-time requests',
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('request card disables approval when no token is available', (WidgetTester tester) async {
