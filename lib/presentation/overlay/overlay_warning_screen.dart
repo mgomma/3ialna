@@ -206,6 +206,7 @@ class _OverlayWarningScreenState extends State<OverlayWarningScreen> {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String childId = prefs.getString('flutter.active_child_id') ?? 'default';
     final List<int> durations = await _rewardService.loadRequestDurations();
+    if (!mounted) return;
     final int? minutes = durations.length == 1
         ? durations.first
         : await showDialog<int>(
