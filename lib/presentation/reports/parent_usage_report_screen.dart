@@ -12,6 +12,22 @@ import '../parental_control/pin_auth_screen.dart';
 
 enum _ReportRange { today, sevenDays, custom }
 
+class _SummaryMetric extends StatelessWidget {
+  const _SummaryMetric({required this.label, required this.value, required this.icon});
+
+  final String label;
+  final String value;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) => Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(children: <Widget>[Icon(icon), const SizedBox(height: 5), Text(value, textAlign: TextAlign.center), Text(label, textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodySmall)],
+        ),
+      );
+}
+
 class ParentUsageReportScreen extends StatefulWidget {
   const ParentUsageReportScreen({super.key, this.usageLedger});
 
@@ -204,6 +220,12 @@ class _ParentUsageReportScreenState extends State<ParentUsageReportScreen> {
         .toList(growable: false)
       ..sort((MapEntry<String, int> a, MapEntry<String, int> b) =>
           b.value.compareTo(a.value));
+    final int socialMinutes = summary.perAppMinutes.entries
+        .where((MapEntry<String, int> entry) => socialMediaApps.containsKey(entry.key))
+        .fold<int>(0, (int total, MapEntry<String, int> entry) => total + entry.value);
+    final int gamesMinutes = summary.perAppMinutes.entries
+        .where((MapEntry<String, int> entry) => gameApps.containsKey(entry.key))
+        .fold<int>(0, (int total, MapEntry<String, int> entry) => total + entry.value);
 
     return Scaffold(
       appBar: AppBar(
@@ -327,6 +349,14 @@ class _ParentUsageReportScreenState extends State<ParentUsageReportScreen> {
                   ],
                 ),
               ),
+            ),
+            const SizedBox(height: 18),
+            Row(
+              children: <Widget>[
+                Expanded(child: _SummaryMetric(label: _ar ? 'التواصل' : 'Social', value: _duration(socialMinutes), icon: Icons.forum_outlined)),
+                const SizedBox(width: 10),
+                Expanded(child: _SummaryMetric(label: _ar ? 'الألعاب' : 'Games', value: _duration(gamesMinutes), icon: Icons.sports_esports_outlined)),
+              ],
             ),
             const SizedBox(height: 18),
             Text(_ar ? 'التطبيقات المتتبعة' : 'Tracked apps',

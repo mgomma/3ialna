@@ -177,6 +177,7 @@ class MonitorForegroundService : Service() {
             releaseParentModeRestrictions(prefs)
             return
         }
+        if (isFamilyPauseActive(prefs)) return
 
         val socialLimit = readIntPreference(prefs, _PREF_ACTIVE_SOCIAL_LIMIT, 0)
         val gamesLimit = readIntPreference(prefs, _PREF_ACTIVE_GAMES_LIMIT, 0)
@@ -1012,6 +1013,23 @@ class MonitorForegroundService : Service() {
         } catch (e: Exception) {}
 
         return false
+    }
+
+    /**
+     * Checks whether a parent has paused child enforcement for the family.
+     */
+    private fun isFamilyPauseActive(prefs: android.content.SharedPreferences): Boolean {
+        val pauseUntil = prefs.getLong("${PFX}device_pause_until", 0L)
+        if (pauseUntil <= 0L) return false
+        if (System.currentTimeMillis() >= pauseUntil) {
+            prefs.edit()
+                .remove("${PFX}device_pause_until")
+                .remove("${PFX}device_pause_reason")
+                .remove("${PFX}device_pause_child_id")
+                .apply()
+            return false
+        }
+        return true
     }
 
     /**

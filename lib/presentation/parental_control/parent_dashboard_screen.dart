@@ -23,6 +23,8 @@ import 'parent_voice_notification_screen.dart';
 import 'profile_pack_screen.dart';
 import 'diagnostic_report_screen.dart';
 import 'task_voice_reminder_screen.dart';
+import '../reports/parent_usage_report_screen.dart';
+import 'parent_tools_screen.dart';
 import '../../l10n/app_localizations.dart';
 
 /// Main dashboard screen for parental controls.
@@ -461,6 +463,26 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                 childAspectRatio: 2.5,
                 children: [
                   _ActionCard(
+                    icon: Icons.pause_circle_outline,
+                    label: _isArabic ? 'إيقاف مؤقت للحماية' : 'Pause safeguards',
+                    color: colorScheme.error,
+                    onTap: _activeChild == null
+                        ? null
+                        : () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => PauseControlScreen(childId: _activeChild!.id, childName: _activeChild!.name))),
+                  ),
+                  _ActionCard(
+                    icon: Icons.insights_outlined,
+                    label: _isArabic ? 'ملخص الاستخدام' : 'Usage summary',
+                    color: colorScheme.primary,
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const ParentUsageReportScreen())),
+                  ),
+                  _ActionCard(
+                    icon: Icons.health_and_safety_outlined,
+                    label: _isArabic ? 'مركز الموثوقية' : 'Reliability Center',
+                    color: colorScheme.secondary,
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const ReliabilityCenterScreen())),
+                  ),
+                  _ActionCard(
                     icon: Icons.apps,
                     label: _isArabic ? 'إدارة التطبيقات' : 'Manage Apps',
                     color: colorScheme.primary,
@@ -581,7 +603,7 @@ class _ActionCard extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const _ActionCard({required this.icon, required this.label, required this.color, required this.onTap});
 
