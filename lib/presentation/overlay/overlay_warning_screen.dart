@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/constants/social_media_apps.dart';
 import '../../data/local/app_blocking_service.dart';
+import '../../data/local/reward_service.dart';
 import '../../data/local/settings_service.dart';
 import '../../data/system/accessibility_service_helper.dart';
 import '../../data/system/app_blocking_channel.dart';
@@ -52,6 +53,7 @@ class _OverlayWarningScreenState extends State<OverlayWarningScreen> {
   final AppBlockingService _blockingService = AppBlockingService();
   final AppBlockingChannel _blockingChannel = AppBlockingChannel();
   final AccessibilityServiceHelper _accessibilityHelper = AccessibilityServiceHelper();
+  final RewardService _rewardService = const RewardService();
 
   @override
   void initState() {
@@ -189,6 +191,15 @@ class _OverlayWarningScreenState extends State<OverlayWarningScreen> {
     }
   }
 
+  Future<void> _requestMoreTime() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String childId = prefs.getString('flutter.active_child_id') ?? 'default';
+    await _rewardService.createRequest(childId: childId, minutes: 5, packageName: packageName ?? '');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Request sent to parent.')));
+    }
+  }
+
   Future<void> _addMoreTime() async {
     // Lead to PIN auth for adding time
     if (mounted) {
@@ -315,6 +326,20 @@ class _OverlayWarningScreenState extends State<OverlayWarningScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            side: const BorderSide(color: Colors.white70, width: 1.5),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          onPressed: _requestMoreTime,
+                          child: const Text('Request 5 Minutes', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
                       SizedBox(
                         width: double.infinity,
                         child: OutlinedButton(
