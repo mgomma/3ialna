@@ -1,4 +1,5 @@
 name: Public Debug APK and Firebase Distribution
+# Stable evaluation signing is required; releases must remain upgrade-compatible.
 
 on:
   push:
