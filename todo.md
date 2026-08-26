@@ -436,3 +436,9 @@ Signed iOS workflow attempt #2 was rerun after the owner reported corrected secr
 - [x] Add language-aware FAQPage JSON-LD to the Manus-hosted document and runtime metadata.
 - [x] Add matching localized FAQPage JSON-LD and accessible accordion behavior to the GitHub Pages source.
 - [x] Build, inspect schema output, verify keyboard/expanded states, push GitHub Pages, and checkpoint Manus hosting.
+
+
+## FAQ transitions and Contact Support action
+
+- [x] Add smooth reduced-motion-aware expand/collapse transitions while preserving native hidden semantics and keyboard accessibility in both landing-page variants.
+- [x] Add a bilingual Contact Support button below the FAQ, route it to the existing support/contact destination, verify responsive layout, build both variants, and publish the update.
