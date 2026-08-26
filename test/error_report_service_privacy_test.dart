@@ -138,7 +138,7 @@ void main() {
     expect(reports, hasLength(20));
     expect(reports.every((dynamic value) {
       final Map<String, dynamic> entry = value as Map<String, dynamic>;
-      return entry['source'] == 'flutter' && entry['errorType'] == 'UnknownError';
+      return entry['source'] == 'flutter' && entry['errorType'] == 'StateError';
     }), isTrue);
   });
 }
