@@ -27,7 +27,7 @@ type NavigatorWithUserAgentData = Navigator & {
 
 const copy = {
   ar: {
-    nav: ["جولة الخصائص", "تنزيل", "الإعداد", "الملفات العمرية", "المقارنة", "الخصوصية", "تواصل"],
+    nav: ["جولة الخصائص", "تنزيل", "الإعداد", "الملفات العمرية", "المقارنة", "الخصوصية", "الأسئلة", "تواصل"],
     badge: "دليل الإعداد الرسمي · عيالنا",
     title: "احمِ وقت العائلة، لا خصوصيتها.",
     intro: "عيالنا يساعد الوالدين على بناء روتين رقمي هادئ يناسب عمر الطفل، مع رسائل صوتية بصوت الوالدين وإعدادات يمكن الرجوع عنها في أي وقت.",
@@ -80,7 +80,7 @@ const copy = {
     privacyTitle: "حماية عملية بلا مراقبة خفية",
     privacyPoints: ["لا قراءة للمحادثات أو صفحات الويب", "تخزين التسجيلات والإعدادات محليًا", "الوالد يملك التعديل والرجوع والإيقاف", "إشعارات مكتوبة وصوتية قابلة للتخصيص"],
     faq: "أسئلة شائعة",
-    faqItems: [["هل يقرأ عيالنا رسائل الطفل؟", "لا. يعتمد التطبيق على حدود الوقت، التطبيقات، النطاقات، والأذونات المطلوبة للتنفيذ."], ["هل يمكن تغيير الملف العمري؟", "نعم. يمكن اختيار أي ملف، تعديل قيمه، أو إعادة الملف الحالي إلى الإعداد الافتراضي."], ["أين يُحفظ التسجيل الصوتي؟", "محليًا على الجهاز الذي سجّله الوالد. لا يتم رفعه إلى خادم من خلال هذه الميزة."], ["هل يعمل iPhone بنفس الطريقة؟", "تختلف أذونات iOS عن Android. استخدم Family Controls وNetwork Extension وفق دليل iOS داخل المشروع." ]],
+    faqItems: [["هل يقرأ عيالنا رسائل الطفل؟", "لا. يعتمد التطبيق على حدود الوقت، التطبيقات، النطاقات، والأذونات المطلوبة للتنفيذ."], ["هل يمكن تغيير الملف العمري؟", "نعم. يمكن اختيار أي ملف، تعديل قيمه، أو إعادة الملف الحالي إلى الإعداد الافتراضي."], ["أين يُحفظ التسجيل الصوتي؟", "محليًا على الجهاز الذي سجّله الوالد. لا يتم رفعه إلى خادم من خلال هذه الميزة."], ["ماذا أفعل إذا ظهر تعارض مع حزمة موجودة؟", "هذا يعني غالبًا أن النسخة المثبتة موقعة بمفتاح مختلف. صدّر الإعداد القابل للمشاركة أولًا، ثم احذف النسخة القديمة وثبّت النسخة المستقرة الجديدة؛ قد تُحذف البيانات المحلية بعد الإزالة."], ["هل يجب تعطيل Google Play Protect؟", "لا. اترك Play Protect مفعّلًا. اسمح بالتثبيت من مصدر غير معروف للتطبيق الذي فتح ملف APK فقط، ثم أوقف الإذن بعد التثبيت."], ["أي أذونات يحتاجها التطبيق؟", "الموقع لمواقيت الصلاة، ووصول الاستخدام للحدود الزمنية، وOverlay وAccessibility عند تشغيل الحماية. Device Admin اختياري للقفل الصارم فقط."], ["لماذا لا تعمل الحماية بعد الرجوع من الإعدادات؟", "ارجع إلى عيالنا بعد تفعيل الإذن وانتظر بطاقة التحقق. إذا بقيت غير جاهزة، افتح مركز الموثوقية وراجع الإذن المطلوب قبل الضغط على بدء المراقبة."], ["لماذا فشل تثبيت النسخة الأولى؟", "استخدم الاختيار التلقائي أولًا. إذا لم ينجح، جرّب arm64 للهواتف الحديثة أو armv7 للهواتف الأقدم، ولا تثبّت نسخة موقعة من مصدر آخر فوق النسخة الحالية."], ["هل يعمل iPhone بنفس الطريقة؟", "تختلف أذونات iOS عن Android. استخدم Family Controls وNetwork Extension وفق دليل iOS داخل المشروع." ]],
     finalCta: "اجعل الإعداد مفهومًا من اليوم الأول.",
     finalBody: "شارك هذه الصفحة مع العائلة، ثم افتح التطبيق واختر الملف الذي يناسب طفلك.",
     download: "تنزيل APK للاختبار",
@@ -128,7 +128,7 @@ const copy = {
     contactError: "تعذر إرسال الرسالة الآن. حاول مرة أخرى لاحقًا.",
   },
   en: {
-    nav: ["Feature tour", "Download", "Setup", "Age profiles", "Comparison", "Privacy", "Contact"],
+    nav: ["Feature tour", "Download", "Setup", "Age profiles", "Comparison", "Privacy", "FAQ", "Contact"],
     badge: "Official setup guide · 3ialna",
     title: "Protect family time, not private conversations.",
     intro: "3ialna helps parents build a calmer digital routine by age, with parent-recorded voice messages and settings they can edit or reset at any time.",
@@ -175,7 +175,7 @@ const copy = {
     privacyTitle: "Practical protection without hidden surveillance",
     privacyPoints: ["No reading of conversations or page content", "Recordings and settings remain local", "Parents control edit, reset, and stop", "Written and voice alerts are configurable"],
     faq: "Common questions",
-    faqItems: [["Does 3ialna read a child’s messages?", "No. It uses time, app, domain, and permission-based controls."], ["Can I change the age profile?", "Yes. Choose another profile, edit values, or reset the current profile to its defaults."], ["Where is the voice recording stored?", "Locally on the device where the parent records it. This feature does not upload it to a server."], ["Does iPhone work the same way?", "iOS permissions differ from Android. Use Family Controls and Network Extension according to the project’s iOS guide."]],
+    faqItems: [["Does 3ialna read a child’s messages?", "No. It uses time, app, domain, and permission-based controls."], ["Can I change the age profile?", "Yes. Choose another profile, edit values, or reset the current profile to its defaults."], ["Where is the voice recording stored?", "Locally on the device where the parent records it. This feature does not upload it to a server."], ["What should I do if Android says the package conflicts?", "The installed copy is usually signed with a different certificate. Export a shareable setup first, then uninstall the old copy and install the stable-signed release; removing the old app may delete local data."], ["Should I disable Google Play Protect?", "No. Keep Play Protect enabled. Allow unknown-app installation only for the browser or file manager that opened the APK, then revoke that permission after installation."], ["Which permissions does the app need?", "Location for prayer times, Usage Access for time limits, and Overlay plus Accessibility when protection is enabled. Device Admin is optional for hard lock only."], ["Why is protection still unavailable after returning from Settings?", "Return to 3ialna after enabling the permission and wait for the verification card. If it is still not ready, open Reliability Center and review the remaining permission before pressing Start monitoring."], ["Why did the first APK choice fail to install?", "Try the automatic choice first. If it fails, try arm64 on newer phones or armv7 on older phones, and do not install an APK signed by another source over the current package."], ["Does iPhone work the same way?", "iOS permissions differ from Android. Use Family Controls and Network Extension according to the project’s iOS guide."]],
     finalCta: "Make setup understandable from day one.",
     finalBody: "Share this page with your family, then open the app and choose the profile that fits your child.",
     download: "Download test APK",
@@ -253,7 +253,9 @@ function TourPreview({ step, isArabic }: { step: number; isArabic: boolean }) {
 }
 
 export default function Home() {
-  const [language, setLanguage] = useState<Language>("ar");
+  const [language, setLanguage] = useState<Language>(() => {
+    try { return window.sessionStorage.getItem("3ialna-language") === "en" ? "en" : "ar"; } catch { return "ar"; }
+  });
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [detectedAbi, setDetectedAbi] = useState<AndroidAbi>("armv7");
   const [detectionState, setDetectionState] = useState<DetectionState>("checking");
@@ -261,6 +263,43 @@ export default function Home() {
   const [shareState, setShareState] = useState<"idle" | "shared" | "copied" | "error">("idle");
   const t = useMemo(() => copy[language], [language]);
   const isArabic = language === "ar";
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+    document.documentElement.dir = isArabic ? "rtl" : "ltr";
+    document.title = isArabic ? "عيالنا — أمان رقمي يحترم العائلة" : "3ialna — Family digital safety";
+    const ogImage = new URL("assets/3ialna-hero-family.jpg", publicSiteUrl).toString();
+    const tags: Record<string, string> = {
+      description: t.intro,
+      "og:type": "website",
+      "og:locale": isArabic ? "ar_AR" : "en_US",
+      "og:locale:alternate": isArabic ? "en_US" : "ar_AR",
+      "og:title": document.title,
+      "og:description": t.intro,
+      "og:url": publicSiteUrl,
+      "og:site_name": "3ialna / عيالنا",
+      "og:image": ogImage,
+      "og:image:alt": isArabic ? "عيالنا — أمان رقمي عائلي" : "3ialna — family digital safety",
+      "twitter:card": "summary_large_image",
+      "twitter:title": document.title,
+      "twitter:description": t.intro,
+      "twitter:image": ogImage,
+    };
+    Object.entries(tags).forEach(([key, content]) => {
+      const attribute = key.startsWith("og:") ? "property" : "name";
+      let meta = document.head.querySelector(`meta[${attribute}="${key}"]`);
+      if (!meta) {
+        meta = document.createElement("meta");
+        meta.setAttribute(attribute, key);
+        document.head.appendChild(meta);
+      }
+      meta.setAttribute("content", content);
+    });
+    const canonical = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (canonical) canonical.href = publicSiteUrl;
+    try { window.sessionStorage.setItem("3ialna-language", language); } catch { /* storage may be unavailable */ }
+  }, [isArabic, language, t]);
+
   const preferredDownloadUrl = currentRelease.downloadUrls[detectedAbi];
   const shareText = isArabic ? "شارك رابط تنزيل تطبيق عيالنا مع عائلتك." : "Share the 3ialna Android download with your family.";
   const whatsappShareUrl = useMemo(() => `https://wa.me/?text=${encodeURIComponent(`${shareText} ${preferredDownloadUrl}`)}`, [shareText, preferredDownloadUrl]);
@@ -359,9 +398,9 @@ export default function Home() {
     <div dir={isArabic ? "rtl" : "ltr"} className="site-shell">
       <header className="topbar">
         <a className="brand" href="#top"><span className="brand-mark" aria-hidden="true" /><span>3ialna</span><small>عيالنا</small></a>
-        <nav>{t.nav.map((item, index) => <a key={item} href={["#how", "#download", "#setup", "#profiles", "#comparison", "#privacy", "#contact"][index]}>{item}</a>)}</nav>
+        <nav>{t.nav.map((item, index) => <a key={item} href={["#how", "#download", "#setup", "#profiles", "#comparison", "#privacy", "#faq", "#contact"][index]}>{item}</a>)}</nav>
         <div className="top-actions">
-          <button className="lang-switch" onClick={() => setLanguage(isArabic ? "en" : "ar")}><Globe2 size={16} />{isArabic ? "English" : "العربية"}</button>
+          <button className="lang-switch" type="button" onClick={() => setLanguage(isArabic ? "en" : "ar")} aria-label={isArabic ? "Switch site language to English" : "تغيير لغة الموقع إلى العربية"} title={isArabic ? "Switch site language to English" : "تغيير لغة الموقع إلى العربية"}><Globe2 size={16} />{isArabic ? "English" : "العربية"}</button>
           <a className="mini-cta" href="#download">{isArabic ? "النسخة التجريبية" : "Test release"}<ArrowUpRight size={15} /></a>
         </div>
       </header>
@@ -391,11 +430,11 @@ export default function Home() {
 
         <section id="privacy" className="privacy-section"><div className="section-heading"><div><span className="section-kicker">07 / {isArabic ? "ما لا نفعله" : "What we do not do"}</span><h2>{t.privacyTitle}</h2></div></div><div className="privacy-grid">{t.privacyPoints.map((point, index) => { const Icon = privacyIcons[index]; return <div key={point} className="privacy-item"><span><Icon size={20} /></span><p>{point}</p></div>; })}</div></section>
 
-        <section className="faq-section section-grid"><div><span className="section-kicker">08 / FAQ</span><h2>{t.faq}</h2><CircleHelp size={34} className="faq-mark" /></div><div className="faq-list">{t.faqItems.map(([question, answer], index) => <div className={`faq-item ${openFaq === index ? "open" : ""}`} key={question}><button onClick={() => setOpenFaq(openFaq === index ? null : index)}><span>{question}</span>{openFaq === index ? <ArrowUp size={18} /> : <ArrowDown size={18} />}</button>{openFaq === index && <p>{answer}</p>}</div>)}</div></section>
+        <section id="faq" className="faq-section section-grid"><div className="faq-intro"><div className="editorial-stamp" aria-hidden="true"><span className="stamp-seed" /><span><b>3ialna</b><small>FAQ · HELP GUIDE</small></span></div><span className="english-rail-label">FAQ / TROUBLESHOOTING</span><span className="section-kicker">08 / FAQ</span><h2>{t.faq}</h2><CircleHelp size={34} className="faq-mark" /></div><div className="faq-list">{t.faqItems.map(([question, answer], index) => <div className={`faq-item ${openFaq === index ? "open" : ""}`} key={question}><button onClick={() => setOpenFaq(openFaq === index ? null : index)}><span>{question}</span>{openFaq === index ? <ArrowUp size={18} /> : <ArrowDown size={18} />}</button>{openFaq === index && <p>{answer}</p>}</div>)}</div></section>
 
-        <section id="contact" className="contact-section section-grid"><div className="contact-copy"><span className="section-kicker">{t.contactKicker}</span><h2>{t.contactTitle}</h2><p>{t.contactBody}</p><div className="contact-address"><Mail size={18} /><span>3ialna.app@gmail.com</span></div></div><form className="contact-form" action="https://formsubmit.co/3ialna.app@gmail.com" method="POST"><input type="hidden" name="_subject" value="3ialna website inquiry" /><input type="hidden" name="_template" value="table" /><input type="hidden" name="_captcha" value="true" /><input type="hidden" name="_next" value={`${publicSiteUrl}?sent=1#contact`} /><input type="hidden" name="_url" value={publicSiteUrl} /><input className="form-honeypot" type="text" name="_honey" tabIndex={-1} autoComplete="off" /><label>{t.name}<input required name="name" autoComplete="name" /></label><label>{t.email}<input required type="email" name="email" autoComplete="email" /></label><label>{t.subject}<input required name="subject" /></label><label>{t.message}<textarea required name="message" rows={5} /></label><button className="button dark-button contact-submit" type="submit"><Send size={17} />{t.submit}</button>{contactWasSubmitted && <p className="form-state success" role="status"><Check size={16} />{t.contactSuccess}</p>}</form></section>
+        <section id="contact" className="contact-section section-grid"><div className="contact-copy"><div className="editorial-stamp" aria-hidden="true"><span className="stamp-seed" /><span><b>3ialna</b><small>CONTACT · تواصل</small></span></div><span className="english-rail-label">CONTACT / SUPPORT</span><span className="section-kicker">{t.contactKicker}</span><h2>{t.contactTitle}</h2><p>{t.contactBody}</p><div className="contact-address"><Mail size={18} /><span>3ialna.app@gmail.com</span></div></div><form className="contact-form" action="https://formsubmit.co/3ialna.app@gmail.com" method="POST"><input type="hidden" name="_subject" value="3ialna website inquiry" /><input type="hidden" name="_template" value="table" /><input type="hidden" name="_captcha" value="true" /><input type="hidden" name="_next" value={`${publicSiteUrl}?sent=1#contact`} /><input type="hidden" name="_url" value={publicSiteUrl} /><input className="form-honeypot" type="text" name="_honey" tabIndex={-1} autoComplete="off" /><label>{t.name}<input required name="name" autoComplete="name" /></label><label>{t.email}<input required type="email" name="email" autoComplete="email" /></label><label>{t.subject}<input required name="subject" /></label><label>{t.message}<textarea required name="message" rows={5} /></label><button className="button dark-button contact-submit" type="submit"><Send size={17} />{t.submit}</button>{contactWasSubmitted && <p className="form-state success" role="status"><Check size={16} />{t.contactSuccess}</p>}</form></section>
 
-        <section className="final-cta"><div><Sparkles size={22} /><h2>{t.finalCta}</h2><p>{t.finalBody}</p></div><a className={`button primary light download-button ${downloadState === "opening" ? "is-opening" : ""}`} href={preferredDownloadUrl} target="_blank" rel="noreferrer" onClick={handleDownloadClick} aria-busy={downloadState === "opening"} aria-describedby="release-download-feedback">{downloadState === "opening" ? <LoaderCircle className="download-spinner" size={18} aria-hidden="true" /> : <Download size={18} aria-hidden="true" />}{downloadState === "opening" ? t.releaseOpening : t.download}</a></section>
+        <section className="final-cta"><div><span className="cta-stamp" aria-hidden="true">3ialna / عيالنا · READY</span><Sparkles size={22} /><h2>{t.finalCta}</h2><p>{t.finalBody}</p></div><a className={`button primary light download-button ${downloadState === "opening" ? "is-opening" : ""}`} href={preferredDownloadUrl} target="_blank" rel="noreferrer" onClick={handleDownloadClick} aria-busy={downloadState === "opening"} aria-describedby="release-download-feedback">{downloadState === "opening" ? <LoaderCircle className="download-spinner" size={18} aria-hidden="true" /> : <Download size={18} aria-hidden="true" />}{downloadState === "opening" ? t.releaseOpening : t.download}</a></section>
       </main>
       <footer><div className="brand footer-brand"><span className="brand-mark" aria-hidden="true" /><span>3ialna</span><small>عيالنا</small></div><span>{t.footer}</span><span>© 2026</span></footer>
     </div>

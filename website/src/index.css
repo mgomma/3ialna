@@ -222,3 +222,20 @@ footer { max-width: 1320px; margin: 0 auto; padding: 28px 38px; display: flex; a
 .message-share-button:focus-visible { outline: 3px solid #e8bf78; outline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) { .message-share-button { transition: none; } }
 @media (max-width: 520px) { .share-button-wrap, .message-share-button { width: 100%; } .share-tooltip { inset-inline-start: auto; inset-inline-end: 12px; transform: none; } .share-tooltip::after { inset-inline-start: auto; inset-inline-end: 15px; transform: rotate(45deg); } }
+
+/* Desert Signal utility finish: make support sections feel like stamped field notes rather than generic product panels. */
+.editorial-stamp { display: inline-flex; align-items: center; gap: 11px; margin-bottom: 18px; color: var(--green); }
+.editorial-stamp .stamp-seed { position: relative; display: grid; place-items: center; width: 43px; height: 50px; background: var(--saffron); clip-path: polygon(50% 0, 88% 25%, 79% 83%, 50% 100%, 21% 83%, 12% 25%); }
+.editorial-stamp .stamp-seed::after { content: ""; width: 14px; height: 24px; border: 1px solid rgba(255,255,255,.78); border-radius: 60% 40% 58% 42%; transform: rotate(26deg); }
+.editorial-stamp b { display: block; font-size: 18px; letter-spacing: -.06em; }
+.editorial-stamp small { display: block; margin-top: 2px; color: #7b6b51; font-size: 9px; font-weight: 850; letter-spacing: .1em; }
+.faq-section { position: relative; isolation: isolate; overflow: hidden; }
+.faq-section::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: .14; background: repeating-linear-gradient(135deg, transparent 0 14px, rgba(255,255,255,.45) 15px 16px, transparent 17px 28px); }
+.faq-section > * { position: relative; z-index: 1; }
+.faq-section h2 { max-width: 450px; font-size: clamp(34px, 5vw, 62px); letter-spacing: -.08em; }
+.faq-intro .editorial-stamp, .contact-copy .editorial-stamp { margin-bottom: 22px; }
+.cta-stamp { grid-column: 2; grid-row: 1; align-self: end; margin-bottom: 7px; color: rgba(255,255,255,.72); font-size: 9px; font-weight: 900; letter-spacing: .14em; }
+.final-cta > div > svg { grid-column: 1; grid-row: 1 / span 3; }
+.final-cta h2 { grid-column: 2; grid-row: 2; }
+.final-cta p { grid-column: 2; grid-row: 3; }
+@media (max-width: 850px) { .editorial-stamp b { font-size: 16px; } .cta-stamp { letter-spacing: .1em; } }
