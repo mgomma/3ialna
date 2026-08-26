@@ -396,6 +396,43 @@ Signed iOS workflow attempt #2 was rerun after the owner reported corrected secr
 
 ## Android package-conflict remediation
 
-- [ ] Compare the signing certificates of the current public APK and the newly generated build; identify whether the installed package can be upgraded in place.
-- [ ] Make the public evaluation release use a stable signing certificate and document the one-time migration path when an older certificate cannot be reused.
-- [ ] Publish a new APK release, update bilingual website download metadata and instructions, and verify the direct link.
+- [x] Compare the signing certificates of the current public APK and the newly generated build; identify whether the installed package can be upgraded in place.
+- [x] Make the public evaluation release use a stable signing certificate and document the one-time migration path when an older certificate cannot be reused.
+- [x] Publish a new APK release, update bilingual website download metadata and instructions, and verify the direct link.
+
+## Reusable release skill and landing-page download UX
+
+- [x] Create and validate a reusable skill for stable Android release signing, direct-link verification, website metadata synchronization, and package-conflict remediation.
+- [x] Add a QR code that encodes the verified stable-signed APK URL and place it in the bilingual landing page download section.
+- [x] Add accessible visual feedback to the landing-page download action, with reduced-motion support and desktop/mobile verification.
+
+## APK sharing action
+
+- [x] Add bilingual Share control beside the APK download link with native Web Share support and copy-link fallback.
+- [x] Verify share feedback, keyboard accessibility, responsive layout, and preserved direct-download/QR behavior.
+
+## Share control and custom Manus domain
+
+- [x] Add a bilingual Share control beside the APK download link with native share-sheet support and copy-link fallback.
+- [x] Validate share feedback, keyboard access, mobile layout, and preserved download/QR behavior.
+- [ ] Check availability of `3ialna.manus.space` and assign it through Manus hosting settings if available; otherwise report the exact domain constraint and keep the generated domain active.
+
+## Direct sharing shortcuts and clipboard tooltip
+
+- [x] Extend the reusable release/download skill with WhatsApp, Telegram, and clipboard-feedback patterns.
+- [x] Add bilingual WhatsApp and Telegram share shortcuts beside the general Share action.
+- [x] Show an accessible localized “Copied!” tooltip/status after successful clipboard fallback and validate all sharing paths.
+
+## Social previews, troubleshooting FAQ, and language toggle
+
+- [x] Extend the reusable release/download skill with Open Graph metadata, localized FAQ, and language-toggle verification patterns.
+- [x] Add branded Open Graph and Twitter metadata for WhatsApp and Telegram shared links in both website variants.
+- [x] Create bilingual FAQ entries for APK installation, package conflicts, Play Protect, permissions, and settings return behavior.
+- [x] Verify the Arabic/English toggle, build both sites, push the GitHub Pages source, and checkpoint the Manus site.
+
+## Localized FAQ schema and accordion
+
+- [x] Extend the reusable release/download skill with localized FAQ JSON-LD and accordion accessibility guidance.
+- [x] Add language-aware FAQPage JSON-LD to the Manus-hosted document and runtime metadata.
+- [x] Add matching localized FAQPage JSON-LD and accessible accordion behavior to the GitHub Pages source.
+- [x] Build, inspect schema output, verify keyboard/expanded states, push GitHub Pages, and checkpoint Manus hosting.

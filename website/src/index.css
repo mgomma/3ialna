@@ -239,3 +239,8 @@ footer { max-width: 1320px; margin: 0 auto; padding: 28px 38px; display: flex; a
 .final-cta h2 { grid-column: 2; grid-row: 2; }
 .final-cta p { grid-column: 2; grid-row: 3; }
 @media (max-width: 850px) { .editorial-stamp b { font-size: 16px; } .cta-stamp { letter-spacing: .1em; } }
+
+/* FAQ accordion accessibility: collapsed panels stay addressable while keyboard focus remains visible. */
+.faq-item button:focus-visible { outline: 3px solid var(--saffron); outline-offset: 4px; }
+.faq-item p[hidden] { display: none; }
+.faq-item p:not([hidden]) { padding-inline-start: 14px; border-inline-start: 2px solid rgba(232,191,120,.58); }
