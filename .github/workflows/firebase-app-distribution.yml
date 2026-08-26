@@ -66,7 +66,7 @@ jobs:
           if [ -n "$configured_alias" ] && keytool -list -keystore "$keystore_path" -storepass "$ANDROID_EVALUATION_KEYSTORE_PASSWORD" -alias "$configured_alias" >/dev/null 2>&1; then
             resolved_alias="$configured_alias"
           else
-            resolved_alias="$(keytool -list -v -keystore "$keystore_path" -storepass "$ANDROID_EVALUATION_KEYSTORE_PASSWORD" 2>/dev/null | awk -F, '/, PrivateKeyEntry,/{print $1; exit}')"
+            resolved_alias="$(keytool -list -keystore "$keystore_path" -storepass "$ANDROID_EVALUATION_KEYSTORE_PASSWORD" 2>/dev/null | awk -F, '$3 ~ /PrivateKeyEntry/ {gsub(/^ +| +$/, "", $1); print $1; exit}')"
             if [ -z "$resolved_alias" ]; then
               echo "No private-key alias was found in the configured evaluation keystore."
               exit 1
