@@ -106,4 +106,39 @@ void main() {
     expect(reports, hasLength(1));
     expect((reports.single as Map<String, dynamic>)['event'], 'notification_permission_denied');
   });
+
+  test('normalizes unknown diagnostic source and event values', () async {
+    await ErrorReportService.recordEvent(
+      source: 'child_name_from_ui',
+      event: 'reminder_label_leaked',
+    );
+
+    final Map<String, dynamic> report =
+        jsonDecode(await ErrorReportService.buildShareText()) as Map<String, dynamic>;
+    final Map<String, dynamic> entry =
+        (report['reports'] as List<dynamic>).single as Map<String, dynamic>;
+
+    expect(entry['source'], 'unknown');
+    expect(entry['errorType'], 'Event');
+    expect(entry.containsKey('event'), isFalse);
+  });
+
+  test('retains only the newest twenty sanitized reports', () async {
+    for (int index = 0; index < 25; index++) {
+      await ErrorReportService.recordHandled(
+        source: 'flutter',
+        error: StateError('local input $index'),
+      );
+    }
+
+    final Map<String, dynamic> report =
+        jsonDecode(await ErrorReportService.buildShareText()) as Map<String, dynamic>;
+    final List<dynamic> reports = report['reports'] as List<dynamic>;
+
+    expect(reports, hasLength(20));
+    expect(reports.every((dynamic value) {
+      final Map<String, dynamic> entry = value as Map<String, dynamic>;
+      return entry['source'] == 'flutter' && entry['errorType'] == 'UnknownError';
+    }), isTrue);
+  });
 }

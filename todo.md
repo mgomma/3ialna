@@ -442,3 +442,11 @@ Signed iOS workflow attempt #2 was rerun after the owner reported corrected secr
 
 - [x] Add smooth reduced-motion-aware expand/collapse transitions while preserving native hidden semantics and keyboard accessibility in both landing-page variants.
 - [x] Add a bilingual Contact Support button below the FAQ, route it to the existing support/contact destination, verify responsive layout, build both variants, and publish the update.
+
+
+## Deep application validation
+
+- [ ] Inventory Flutter modules, platform bridges, persistence, services, and current test coverage.
+- [ ] Run formatting, static analysis, unit/widget tests, coverage, Android checks, iOS checks, and tablet-oriented tests where the environment permits.
+- [ ] Identify and add regression tests for uncovered lifecycle, permission, multi-child, profile, reminder, privacy-export, usage-report, and responsive-layout scenarios.
+- [ ] Re-run the authoritative validation suite and document physical-device-only scenarios, blockers, and residual risks.

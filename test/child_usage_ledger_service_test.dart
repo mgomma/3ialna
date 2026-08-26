@@ -115,6 +115,73 @@ void main() {
     expect(reloaded.single.totalMinutes, 9);
   });
 
+  test('skips one malformed local record without dropping valid history', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'child_usage_ledger_entries_v1':
+          '[{"childId":"child-a","day":"2026-08-24","totalMinutes":8,"appUsageMinutes":{"com.game":8}},{"childId":"child-b","day":"2026-08-24","totalMinutes":"bad","appUsageMinutes":{}}]',
+    });
+    final ChildUsageLedgerService ledgerWithoutFileArchive =
+        const ChildUsageLedgerService(enableFileArchive: false);
+
+    final List<ChildUsageLedgerEntry> entries =
+        await ledgerWithoutFileArchive.loadEntries();
+
+    expect(entries, hasLength(1));
+    expect(entries.single.childId, 'child-a');
+    expect(entries.single.totalMinutes, 8);
+  });
+
+  test('starts a new daily baseline without carrying forward prior counters',
+      () async {
+    await ledger.recordObservedUsage(
+      childId: 'child-a',
+      observedAt: observedAt,
+      observedUsage: const AppUsageSummary(
+        totalMinutes: 30,
+        perAppMinutes: <String, int>{'com.instagram.android': 12},
+      ),
+    );
+    await ledger.recordObservedUsage(
+      childId: 'child-a',
+      observedAt: observedAt.add(const Duration(days: 1)),
+      observedUsage: const AppUsageSummary(
+        totalMinutes: 2,
+        perAppMinutes: <String, int>{'com.instagram.android': 1},
+      ),
+    );
+
+    final ChildUsageLedgerAggregate aggregate = await ledger.loadAggregate(
+      childId: 'child-a',
+      start: observedAt.add(const Duration(days: 1)),
+      end: observedAt.add(const Duration(days: 1)),
+    );
+    expect(aggregate.totalMinutes, 0);
+    expect(aggregate.appUsageMinutes, isEmpty);
+  });
+
+  test('clamps usage counter rollback to zero instead of adding negative time',
+      () async {
+    await ledger.recordObservedUsage(
+      childId: 'child-a',
+      observedAt: observedAt,
+      observedUsage: const AppUsageSummary(
+        totalMinutes: 10,
+        perAppMinutes: <String, int>{'com.instagram.android': 6},
+      ),
+    );
+    final ChildUsageLedgerEntry entry = await ledger.recordObservedUsage(
+      childId: 'child-a',
+      observedAt: observedAt.add(const Duration(minutes: 5)),
+      observedUsage: const AppUsageSummary(
+        totalMinutes: 3,
+        perAppMinutes: <String, int>{'com.instagram.android': 2},
+      ),
+    );
+
+    expect(entry.totalMinutes, 0);
+    expect(entry.appUsageMinutes, isEmpty);
+  });
+
   test('deletes one child history without removing other child history',
       () async {
     await ledger.recordObservedUsage(

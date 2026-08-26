@@ -117,4 +117,43 @@ void main() {
         'اقترب وقت صلاة الفجر. سيُقفل الجهاز بعد دقيقتين.');
     expect(loaded.notificationMessages[Prayer.asr], 'رسالة الوالد المخصصة');
   });
+
+  test('falls back safely when stored prayer settings are malformed', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'prayer_lock_settings': '{not-json',
+    });
+    final SettingsService settings =
+        SettingsService(await SharedPreferences.getInstance());
+
+    final PrayerLockSettings loaded = settings.loadPrayerLockSettings();
+    expect(loaded.enabled, isTrue);
+    expect(loaded.calculationMethodName, 'makkah');
+    expect(loaded.lockDurations[Prayer.fajr], 15);
+    expect(loaded.voiceNotificationsEnabled, isTrue);
+  });
+
+  test('preserves explicit disabled prayer lock and ignores unknown prayer keys',
+      () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'prayer_lock_settings': '{"enabled":false,"lockDurations":{"fajr":12,"unknown":99},"notificationMessages":{"fajr":"رسالة مخصصة","unknown":"تجاهل"}}',
+    });
+    final SettingsService settings =
+        SettingsService(await SharedPreferences.getInstance());
+
+    final PrayerLockSettings loaded = settings.loadPrayerLockSettings();
+    expect(loaded.enabled, isFalse);
+    expect(loaded.lockDurations, <Prayer, int>{Prayer.fajr: 12});
+    expect(loaded.notificationMessages, <Prayer, String>{Prayer.fajr: 'رسالة مخصصة'});
+  });
+
+  test('manual calculation-method override wins over a stored value', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'prayer_lock_settings': '{"calculationMethod":"isna"}',
+      'prayer_calculation_method_override': 'makkah',
+    });
+    final SettingsService settings =
+        SettingsService(await SharedPreferences.getInstance());
+
+    expect(settings.loadPrayerLockSettings().calculationMethodName, 'makkah');
+  });
 }

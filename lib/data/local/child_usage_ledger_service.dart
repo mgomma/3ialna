@@ -237,12 +237,23 @@ class ChildUsageLedgerService {
 
   List<ChildUsageLedgerEntry> _decodeEntries(String raw) {
     try {
-      return (jsonDecode(raw) as List<dynamic>)
-          .whereType<Map<String, dynamic>>()
-          .map(ChildUsageLedgerEntry.fromJson)
-          .where((ChildUsageLedgerEntry entry) =>
-              entry.childId.isNotEmpty && entry.day.isNotEmpty)
-          .toList(growable: true);
+      final dynamic decoded = jsonDecode(raw);
+      if (decoded is! List<dynamic>) return <ChildUsageLedgerEntry>[];
+
+      final List<ChildUsageLedgerEntry> entries = <ChildUsageLedgerEntry>[];
+      for (final dynamic value in decoded) {
+        if (value is! Map<String, dynamic>) continue;
+        try {
+          final ChildUsageLedgerEntry entry =
+              ChildUsageLedgerEntry.fromJson(value);
+          if (entry.childId.isNotEmpty && entry.day.isNotEmpty) {
+            entries.add(entry);
+          }
+        } catch (_) {
+          // Ignore one corrupt record while preserving other local history.
+        }
+      }
+      return entries;
     } catch (_) {
       return <ChildUsageLedgerEntry>[];
     }
