@@ -53,7 +53,7 @@ jobs:
           ANDROID_EVALUATION_KEY_PASSWORD: ${{ secrets.ANDROID_EVALUATION_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          for value in ANDROID_EVALUATION_KEYSTORE_BASE64 ANDROID_EVALUATION_KEYSTORE_PASSWORD ANDROID_EVALUATION_KEY_ALIAS ANDROID_EVALUATION_KEY_PASSWORD; do
+          for value in ANDROID_EVALUATION_KEYSTORE_BASE64 ANDROID_EVALUATION_KEYSTORE_PASSWORD ANDROID_EVALUATION_KEY_PASSWORD; do
             if [ -z "${!value}" ]; then
               echo "Missing required Actions secret: ${value}. Refusing to create an upgrade-incompatible APK."
               exit 1
@@ -62,10 +62,21 @@ jobs:
           keystore_path="$RUNNER_TEMP/3ialna-evaluation.keystore"
           printf '%s' "$ANDROID_EVALUATION_KEYSTORE_BASE64" | base64 --decode > "$keystore_path"
           test -s "$keystore_path"
+          configured_alias="${ANDROID_EVALUATION_KEY_ALIAS:-}"
+          if [ -n "$configured_alias" ] && keytool -list -keystore "$keystore_path" -storepass "$ANDROID_EVALUATION_KEYSTORE_PASSWORD" -alias "$configured_alias" >/dev/null 2>&1; then
+            resolved_alias="$configured_alias"
+          else
+            resolved_alias="$(keytool -list -v -keystore "$keystore_path" -storepass "$ANDROID_EVALUATION_KEYSTORE_PASSWORD" 2>/dev/null | awk -F, '/, PrivateKeyEntry,/{print $1; exit}')"
+            if [ -z "$resolved_alias" ]; then
+              echo "No private-key alias was found in the configured evaluation keystore."
+              exit 1
+            fi
+            echo "Configured alias was not found; using the keystore’s private-key alias."
+          fi
           cat > android/key.properties <<EOF
           storeFile=$keystore_path
           storePassword=$ANDROID_EVALUATION_KEYSTORE_PASSWORD
-          keyAlias=$ANDROID_EVALUATION_KEY_ALIAS
+          keyAlias=$resolved_alias
           keyPassword=$ANDROID_EVALUATION_KEY_PASSWORD
           EOF
           chmod 600 android/key.properties "$keystore_path"
