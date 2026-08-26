@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, ArrowUpRight, Check, ChevronDown, CircleHelp, Clock3, Download, ExternalLink, Globe2, LoaderCircle, LockKeyhole, Mail, Mic2, RotateCcw, Send, ShieldCheck, Smartphone, Sparkles } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpRight, Check, ChevronDown, CircleHelp, Clock3, Download, ExternalLink, Globe2, LoaderCircle, LockKeyhole, Mail, Mic2, RotateCcw, Send, Share2, ShieldCheck, Smartphone, Sparkles } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { currentRelease } from "./release.generated";
 
@@ -93,6 +93,10 @@ const copy = {
     releaseButton: "تنزيل النسخة المناسبة لهاتفك",
     releaseOpening: "جارٍ فتح رابط التنزيل…",
     releaseReady: "رابط مباشر · سيُفتح التنزيل الآن",
+    share: "مشاركة",
+    shareDone: "تم فتح قائمة المشاركة",
+    shareCopied: "تم نسخ رابط التنزيل",
+    shareError: "تعذر المشاركة الآن",
     releaseNotice: "هذه نسخة تقييم وليست إصدار متجر. قد يطلب Android السماح بالتثبيت من المتصفح أو مدير الملفات. إذا ظهرت رسالة «يتعارض مع حزمة موجودة»، فالتطبيق القديم موقّع بمفتاح مختلف. لا تحذفه قبل تصدير إعداد قابل للمشاركة؛ الحذف يمسح بيانات الأطفال وPIN والتسجيلات والاستخدام المحلية.",
     apkChoiceTitle: "إذا لم يتم التثبيت، جرّب البديل المناسب لهاتفك",
     apkChoiceArm64: "بديل للهواتف الحديثة التي لا تقبل النسخة الأصغر · arm64",
@@ -181,6 +185,10 @@ const copy = {
     releaseButton: "Download the compatible APK",
     releaseOpening: "Opening the download…",
     releaseReady: "Direct link · the download is opening",
+    share: "Share",
+    shareDone: "Share sheet opened",
+    shareCopied: "Download link copied",
+    shareError: "Sharing is unavailable right now",
     releaseNotice: "This is an evaluation build, not a store release. Android may ask you to allow installation from your browser or file manager. If Android says the package conflicts with an existing package, the installed copy has a different signing key. Do not uninstall before exporting a shareable setup; uninstalling removes local child data, PINs, recordings, and usage.",
     apkChoiceTitle: "If installation fails, try the compatible alternative",
     apkChoiceArm64: "Fallback for modern phones that cannot install the smaller build · arm64",
@@ -244,6 +252,7 @@ export default function Home() {
   const [detectedAbi, setDetectedAbi] = useState<AndroidAbi>("armv7");
   const [detectionState, setDetectionState] = useState<DetectionState>("checking");
   const [downloadState, setDownloadState] = useState<"idle" | "opening">("idle");
+  const [shareState, setShareState] = useState<"idle" | "shared" | "copied" | "error">("idle");
   const t = useMemo(() => copy[language], [language]);
   const isArabic = language === "ar";
 
@@ -299,6 +308,44 @@ export default function Home() {
     window.setTimeout(() => setDownloadState("idle"), 1800);
   }
 
+  async function copyDownloadLink() {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(preferredDownloadUrl);
+      return;
+    }
+    const helper = document.createElement("textarea");
+    helper.value = preferredDownloadUrl;
+    helper.setAttribute("readonly", "true");
+    helper.style.position = "fixed";
+    helper.style.opacity = "0";
+    document.body.appendChild(helper);
+    helper.select();
+    const copied = document.execCommand("copy");
+    helper.remove();
+    if (!copied) throw new Error("Copy command unavailable");
+  }
+
+  async function handleShareClick() {
+    const shareData = {
+      title: "3ialna / عيالنا",
+      text: isArabic ? "شارك رابط تنزيل تطبيق عيالنا مع عائلتك." : "Share the 3ialna Android download with your family.",
+      url: preferredDownloadUrl,
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        setShareState("shared");
+      } else {
+        await copyDownloadLink();
+        setShareState("copied");
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      setShareState("error");
+    }
+    window.setTimeout(() => setShareState("idle"), 2200);
+  }
+
   return (
     <div dir={isArabic ? "rtl" : "ltr"} className="site-shell">
       <header className="topbar">
@@ -324,7 +371,7 @@ export default function Home() {
 
         <section id="how" className="walkthrough-section"><div className="walkthrough-heading"><div><span className="section-kicker">02 / {isArabic ? "الجولة التعريفية" : "Feature tour"}</span><h2>{t.guide}</h2></div><p>{t.guideIntro}</p></div><ol className="walkthrough-list">{t.walkthrough.map(([title, body], index) => <li className="walkthrough-step" key={title}><span className="walkthrough-number">{String(index + 1).padStart(2, "0")}</span><TourPreview step={index} isArabic={isArabic} /><h3>{title}</h3><p>{body}</p></li>)}</ol></section>
 
-        <section id="download" className="release-section section-grid"><div className="release-copy"><span className="section-kicker">{t.releaseKicker}</span><h2>{t.releaseTitle}</h2><p>{t.releaseBody}</p><a className="release-request" href="#contact"><Mail size={16} />{t.requestInvite}<ArrowUpRight size={15} /></a></div><div className="release-panel"><div className="release-status"><span className="release-pulse" aria-hidden="true" />{isArabic ? "إصدار متاح" : "Release available"}</div><div className="release-facts"><div><span>{isArabic ? "المنصة" : "Platform"}</span><b>{currentRelease.platform}</b></div><div><span>{isArabic ? "الإصدار" : "Version"}</span><b>{releaseVersion}</b></div><div><span>{isArabic ? "قناة التثبيت" : "Install channel"}</span><b>{t.releaseChannel}</b></div></div><a className={`button release-button ${downloadState === "opening" ? "is-opening" : ""}`} href={preferredDownloadUrl} target="_blank" rel="noreferrer" onClick={handleDownloadClick} aria-busy={downloadState === "opening"} aria-describedby="release-download-feedback">{downloadState === "opening" ? <LoaderCircle className="download-spinner" size={18} aria-hidden="true" /> : <Download size={18} aria-hidden="true" />}{downloadState === "opening" ? t.releaseOpening : t.releaseButton}<ExternalLink size={16} aria-hidden="true" /></a><p className="release-download-feedback" id="release-download-feedback" role="status" aria-live="polite">{downloadState === "opening" ? t.releaseOpening : t.releaseReady}</p><p className="release-detection" role="status"><Smartphone size={16} />{detectionMessage}</p><div className="apk-choice-list"><b>{t.apkChoiceTitle}</b>{apkChoices.map((choice) => <a key={choice.key} href={choice.url} target="_blank" rel="noreferrer"><Download size={14} />{choice.label}<ExternalLink size={13} /></a>)}</div><p className="release-notice"><ShieldCheck size={17} />{t.releaseNotice}</p><p className="release-updated">{t.releaseUpdated}: {releaseDate}</p><div className="release-qr-grid"><div className="release-qr-card"><QRCodeSVG value={currentRelease.downloadUrls.arm64} size={128} level="M" includeMargin bgColor="#f7f3eb" fgColor="#174a3b" /><div><b>{t.testerQrTitle}</b><span>{t.testerQrBody}</span></div></div><div className="release-qr-card"><QRCodeSVG value={publicSiteUrl} size={128} level="M" includeMargin bgColor="#f7f3eb" fgColor="#174a3b" /><div><b>{t.siteQrTitle}</b><span>{t.siteQrBody}</span></div></div></div></div></section>
+        <section id="download" className="release-section section-grid"><div className="release-copy"><span className="section-kicker">{t.releaseKicker}</span><h2>{t.releaseTitle}</h2><p>{t.releaseBody}</p><a className="release-request" href="#contact"><Mail size={16} />{t.requestInvite}<ArrowUpRight size={15} /></a></div><div className="release-panel"><div className="release-status"><span className="release-pulse" aria-hidden="true" />{isArabic ? "إصدار متاح" : "Release available"}</div><div className="release-facts"><div><span>{isArabic ? "المنصة" : "Platform"}</span><b>{currentRelease.platform}</b></div><div><span>{isArabic ? "الإصدار" : "Version"}</span><b>{releaseVersion}</b></div><div><span>{isArabic ? "قناة التثبيت" : "Install channel"}</span><b>{t.releaseChannel}</b></div></div><div className="release-actions"><a className={`button release-button ${downloadState === "opening" ? "is-opening" : ""}`} href={preferredDownloadUrl} target="_blank" rel="noreferrer" onClick={handleDownloadClick} aria-busy={downloadState === "opening"} aria-describedby="release-download-feedback">{downloadState === "opening" ? <LoaderCircle className="download-spinner" size={18} aria-hidden="true" /> : <Download size={18} aria-hidden="true" />}{downloadState === "opening" ? t.releaseOpening : t.releaseButton}<ExternalLink size={16} aria-hidden="true" /></a><button className={`share-button ${shareState !== "idle" ? "is-feedback" : ""}`} type="button" onClick={handleShareClick} aria-describedby="release-share-feedback"><Share2 size={17} aria-hidden="true" />{shareState === "shared" ? t.shareDone : shareState === "copied" ? t.shareCopied : shareState === "error" ? t.shareError : t.share}</button></div><p className="release-download-feedback" id="release-download-feedback" role="status" aria-live="polite">{downloadState === "opening" ? t.releaseOpening : t.releaseReady}</p><p className="release-share-feedback" id="release-share-feedback" role="status" aria-live="polite">{shareState === "shared" ? t.shareDone : shareState === "copied" ? t.shareCopied : shareState === "error" ? t.shareError : ""}</p><p className="release-detection" role="status"><Smartphone size={16} />{detectionMessage}</p><div className="apk-choice-list"><b>{t.apkChoiceTitle}</b>{apkChoices.map((choice) => <a key={choice.key} href={choice.url} target="_blank" rel="noreferrer"><Download size={14} />{choice.label}<ExternalLink size={13} /></a>)}</div><p className="release-notice"><ShieldCheck size={17} />{t.releaseNotice}</p><p className="release-updated">{t.releaseUpdated}: {releaseDate}</p><div className="release-qr-grid"><div className="release-qr-card"><QRCodeSVG value={currentRelease.downloadUrls.arm64} size={128} level="M" includeMargin bgColor="#f7f3eb" fgColor="#174a3b" /><div><b>{t.testerQrTitle}</b><span>{t.testerQrBody}</span></div></div><div className="release-qr-card"><QRCodeSVG value={publicSiteUrl} size={128} level="M" includeMargin bgColor="#f7f3eb" fgColor="#174a3b" /><div><b>{t.siteQrTitle}</b><span>{t.siteQrBody}</span></div></div></div></div></section>
 
         <section id="setup" className="setup-section section-grid"><div className="sticky-heading"><span className="section-kicker">04 / {isArabic ? "الدليل العملي" : "The practical guide"}</span><h2>{t.install}</h2><p>{t.installIntro}</p><a className="button dark-button" href="#profiles"><ArrowDown size={17} />{isArabic ? "تابع إلى الملفات" : "Continue to profiles"}</a></div><div className="steps">{t.steps.map(([title, body], index) => <article className="step" key={title}><div className="step-index">{String(index + 1).padStart(2, "0")}</div><div><h3>{title}</h3><p>{body}</p></div><Check size={18} className="step-check" /></article>)}</div><div className="installation-details"><article><h3>{t.androidInstallTitle}</h3><ol>{t.androidInstallSteps.map((step) => <li key={step}>{step}</li>)}</ol></article><article><h3>{t.iosInstallTitle}</h3><ol>{t.iosInstallSteps.map((step) => <li key={step}>{step}</li>)}</ol></article><aside><h3>{t.packTitle}</h3><p>{t.packBody}</p></aside></div></section>
 
