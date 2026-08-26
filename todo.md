@@ -390,6 +390,12 @@ Signed iOS workflow attempt #2 was rerun after the owner reported corrected secr
 ## Final release follow-up
 
 - [x] Re-authenticate GitHub CLI and verify all jobs for the latest Flutter CI run.
-- [ ] Verify production Android upload-key and Play App Signing configuration, then build and validate a signed AAB through Internal testing.
-- [ ] Review the final landing-page copy and publish the website from the Management UI.
-- [ ] Audit and reorder Android installation, first-run permission, settings-return, and verification guidance for the clearest user journey; align the website and app copy.
+- [ ] Verify production Android upload-key and Play App Signing configuration, then build and validate a signed AAB through Internal testing. Blocked pending repository access to confirm signing secret names/values and Play Console account-side setup.
+- [x] Review the final landing-page copy and save the final website checkpoint. Publication remains a user-side Management UI action.
+- [x] Audit and reorder Android installation, first-run permission, settings-return, and verification guidance for the clearest user journey; align the website and app copy.
+
+## Android package-conflict remediation
+
+- [ ] Compare the signing certificates of the current public APK and the newly generated build; identify whether the installed package can be upgraded in place.
+- [ ] Make the public evaluation release use a stable signing certificate and document the one-time migration path when an older certificate cannot be reused.
+- [ ] Publish a new APK release, update bilingual website download metadata and instructions, and verify the direct link.

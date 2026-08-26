@@ -42,7 +42,7 @@ jobs:
           cache: true
       - name: Install Flutter packages
         run: flutter pub get
-      - name: Configure stable evaluation signing when available
+      - name: Configure stable evaluation signing
         id: evaluation_signing
         env:
           ANDROID_EVALUATION_KEYSTORE_BASE64: ${{ secrets.ANDROID_EVALUATION_KEYSTORE_BASE64 }}
@@ -51,25 +51,24 @@ jobs:
           ANDROID_EVALUATION_KEY_PASSWORD: ${{ secrets.ANDROID_EVALUATION_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          if [ -z "$ANDROID_EVALUATION_KEYSTORE_BASE64" ] || [ -z "$ANDROID_EVALUATION_KEYSTORE_PASSWORD" ] || [ -z "$ANDROID_EVALUATION_KEY_ALIAS" ] || [ -z "$ANDROID_EVALUATION_KEY_PASSWORD" ]; then
-            echo "Stable evaluation signing is not configured; this run uses the runner debug key and cannot be relied on for in-place upgrades."
-            echo "description=GitHub optimized debug-signed evaluation release" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
+          for value in ANDROID_EVALUATION_KEYSTORE_BASE64 ANDROID_EVALUATION_KEYSTORE_PASSWORD ANDROID_EVALUATION_KEY_ALIAS ANDROID_EVALUATION_KEY_PASSWORD; do
+            if [ -z "${!value}" ]; then
+              echo "Missing required Actions secret: ${value}. Refusing to create an upgrade-incompatible APK."
+              exit 1
+            fi
+          done
           keystore_path="$RUNNER_TEMP/3ialna-evaluation.keystore"
           printf '%s' "$ANDROID_EVALUATION_KEYSTORE_BASE64" | base64 --decode > "$keystore_path"
+          test -s "$keystore_path"
           cat > android/key.properties <<EOF
           storeFile=$keystore_path
           storePassword=$ANDROID_EVALUATION_KEYSTORE_PASSWORD
           keyAlias=$ANDROID_EVALUATION_KEY_ALIAS
           keyPassword=$ANDROID_EVALUATION_KEY_PASSWORD
           EOF
+          chmod 600 android/key.properties "$keystore_path"
           echo "description=GitHub optimized stable-signed evaluation release" >> "$GITHUB_OUTPUT"
       - name: Build optimized public evaluation APKs
-        env:
-          # Allows the release-mode build to use the Android debug key only for
-          # this explicitly labelled public evaluation artifact.
-          ORG_GRADLE_PROJECT_allowDebugReleaseSigning: "true"
         run: flutter build apk --release --split-per-abi --target-platform android-arm,android-arm64
       - name: Publish optimized public evaluation pre-release
         id: public_release
@@ -200,6 +199,6 @@ jobs:
             --release-notes "$RELEASE_NOTES" \
             $group_args \
             --non-interactive
-      - name: Remove service account credential
+      - name: Remove release credentials
         if: always()
         run: rm -f "$RUNNER_TEMP/firebase-service-account.json" "$RUNNER_TEMP/3ialna-evaluation.keystore" android/key.properties
