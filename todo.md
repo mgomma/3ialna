@@ -446,7 +446,7 @@ Signed iOS workflow attempt #2 was rerun after the owner reported corrected secr
 
 ## Deep application validation
 
-- [ ] Inventory Flutter modules, platform bridges, persistence, services, and current test coverage.
-- [ ] Run formatting, static analysis, unit/widget tests, coverage, Android checks, iOS checks, and tablet-oriented tests where the environment permits.
-- [ ] Identify and add regression tests for uncovered lifecycle, permission, multi-child, profile, reminder, privacy-export, usage-report, and responsive-layout scenarios.
-- [ ] Re-run the authoritative validation suite and document physical-device-only scenarios, blockers, and residual risks.
+- [x] Inventory Flutter modules, platform bridges, persistence, services, and current test coverage.
+- [x] Run formatting, static analysis, unit/widget tests, coverage, Android checks, iOS checks, and tablet-oriented tests where the environment permits.
+- [x] Identify and add regression tests for uncovered lifecycle, permission, multi-child, profile, reminder, privacy-export, usage-report, and responsive-layout scenarios.
+- [x] Re-run the authoritative validation suite and document physical-device-only scenarios, blockers, and residual risks.
