@@ -457,3 +457,8 @@ Signed iOS workflow attempt #2 was rerun after the owner reported corrected secr
 - [x] Define a reproducible Android permission and notification matrix with expected outcomes, evidence, and reset steps.
 - [x] Prepare accurate deep-test presentation content from the passing CI run and coverage artifact.
 - [x] Generate, verify, and present the deep-test slide deck.
+
+
+## Physical test CI/CD integration strategy
+
+- [x] Map the physical Android permission and notification matrix to PR, nightly, device-farm, and release-gate execution layers, including artifacts, evidence, and failure policy.
