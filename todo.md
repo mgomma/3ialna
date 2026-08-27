@@ -462,3 +462,8 @@ Signed iOS workflow attempt #2 was rerun after the owner reported corrected secr
 ## Physical test CI/CD integration strategy
 
 - [x] Map the physical Android permission and notification matrix to PR, nightly, device-farm, and release-gate execution layers, including artifacts, evidence, and failure policy.
+
+
+## GitHub Pages release-link synchronization
+
+- [x] Verify the latest stable-signed Android release asset and update the GitHub Pages download, QR, and architecture fallback targets, then build and push the website source.
