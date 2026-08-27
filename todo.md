@@ -450,3 +450,10 @@ Signed iOS workflow attempt #2 was rerun after the owner reported corrected secr
 - [x] Run formatting, static analysis, unit/widget tests, coverage, Android checks, iOS checks, and tablet-oriented tests where the environment permits.
 - [x] Identify and add regression tests for uncovered lifecycle, permission, multi-child, profile, reminder, privacy-export, usage-report, and responsive-layout scenarios.
 - [x] Re-run the authoritative validation suite and document physical-device-only scenarios, blockers, and residual risks.
+
+
+## Physical Android matrix and deep-test presentation
+
+- [x] Define a reproducible Android permission and notification matrix with expected outcomes, evidence, and reset steps.
+- [x] Prepare accurate deep-test presentation content from the passing CI run and coverage artifact.
+- [x] Generate, verify, and present the deep-test slide deck.
