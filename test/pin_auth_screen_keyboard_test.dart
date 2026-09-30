@@ -6,8 +6,31 @@ import 'package:mu_super_app/data/system/pin_auth_service.dart';
 import 'package:mu_super_app/presentation/parental_control/pin_auth_screen.dart';
 
 void main() {
-  testWidgets('accepts Arabic keyboard numerals and stores a normalized PIN',
-      (WidgetTester tester) async {
+  testWidgets('PIN fields remain reachable on a short landscape viewport', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 360);
+    tester.view.devicePixelRatio = 1;
+    tester.view.viewInsets = const FakeViewPadding(bottom: 210);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetViewInsets);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PinAuthScreen(isSetupMode: true, onAuthenticated: () {}),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Set Parent PIN'), findsOneWidget);
+    expect(find.byType(TextField), findsNWidgets(4));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('accepts Arabic keyboard numerals and stores a normalized PIN', (
+    WidgetTester tester,
+  ) async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     bool authenticated = false;
 

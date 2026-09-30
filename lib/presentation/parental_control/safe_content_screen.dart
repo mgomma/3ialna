@@ -17,7 +17,8 @@ class SafeContentScreen extends StatefulWidget {
   State<SafeContentScreen> createState() => _SafeContentScreenState();
 }
 
-class _SafeContentScreenState extends State<SafeContentScreen> with WidgetsBindingObserver {
+class _SafeContentScreenState extends State<SafeContentScreen>
+    with WidgetsBindingObserver {
   final SafeContentPolicyStorageService _storage =
       SafeContentPolicyStorageService();
   final SafeContentVpnService _vpnService = SafeContentVpnService();
@@ -75,7 +76,11 @@ class _SafeContentScreenState extends State<SafeContentScreen> with WidgetsBindi
         _vpnError = null;
       });
     } catch (error, stackTrace) {
-      ErrorReportService.recordHandled(source: 'vpn_status_refresh', error: error, stackTrace: stackTrace);
+      ErrorReportService.recordHandled(
+        source: 'vpn_status_refresh',
+        error: error,
+        stackTrace: stackTrace,
+      );
       if (!mounted) return;
       setState(() {
         _vpnError = _friendlyError(error);
@@ -98,12 +103,38 @@ class _SafeContentScreenState extends State<SafeContentScreen> with WidgetsBindi
 
   Future<void> _grantVpnPermission() async {
     if (!Platform.isAndroid) return;
+    final consented = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          _isArabic ? 'كيف يعمل ترشيح النطاقات' : 'How domain filtering works',
+        ),
+        content: Text(
+          _isArabic
+              ? 'يقرأ مرشح DNS أسماء النطاقات المطلوبة لتطبيق قواعد الحظر والسماح التي يحددها الوالد. لا يقرأ محتوى الصفحات ولا يمرر حركة التطبيقات الأخرى. تُرسل طلبات DNS المسموح بها إلى Cloudflare (1.1.1.1) عبر DNS غير مشفر؛ لا يحفظ 3ialna سجلًا بهذه الطلبات.'
+              : 'The DNS filter reads requested domain names to apply parent-configured block and allow rules. It does not read page contents or route other app traffic. Allowed DNS requests are sent to Cloudflare (1.1.1.1) using unencrypted DNS; 3ialna does not store a query log.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(_isArabic ? 'إلغاء' : 'Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(_isArabic ? 'متابعة' : 'Continue'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || consented != true) return;
     try {
       final granted = await _vpnService.requestPermission();
       if (!granted) {
-        _showMessage(_isArabic
-            ? 'وافق على إذن VPN ثم اضغط تشغيل الحماية مرة أخرى.'
-            : 'Approve VPN permission, then start protection again.');
+        _showMessage(
+          _isArabic
+              ? 'وافق على إذن VPN ثم اضغط تشغيل الحماية مرة أخرى.'
+              : 'Approve VPN permission, then start protection again.',
+        );
         return;
       }
       await _refreshVpnStatus();
@@ -140,24 +171,38 @@ class _SafeContentScreenState extends State<SafeContentScreen> with WidgetsBindi
     if (!mounted) return;
     await _refreshVpnStatus(showError: false);
     if (!granted && mounted) {
-      _showMessage(_isArabic ? 'لم يتم منح إذن VPN. يمكنك المحاولة مرة أخرى لاحقًا.' : 'VPN permission was not granted. You can try again later.');
+      _showMessage(
+        _isArabic
+            ? 'لم يتم منح إذن VPN. يمكنك المحاولة مرة أخرى لاحقًا.'
+            : 'VPN permission was not granted. You can try again later.',
+      );
     }
   }
 
-  String _friendlyError(Object error) => error is PlatformException ? (error.message ?? error.code) : error.runtimeType.toString();
+  String _friendlyError(Object error) => error is PlatformException
+      ? (error.message ?? error.code)
+      : error.runtimeType.toString();
 
   void _handleVpnError(Object error, StackTrace stackTrace) {
-    ErrorReportService.recordHandled(source: 'vpn_permission_or_start', error: error, stackTrace: stackTrace);
+    ErrorReportService.recordHandled(
+      source: 'vpn_permission_or_start',
+      error: error,
+      stackTrace: stackTrace,
+    );
     if (!mounted) return;
     setState(() => _vpnError = _friendlyError(error));
-    _showMessage(_isArabic
-        ? 'تعذر تشغيل الحماية. تحقق من إذن VPN ثم حاول مرة أخرى.'
-        : 'Protection could not start. Check VPN permission and try again.');
+    _showMessage(
+      _isArabic
+          ? 'تعذر تشغيل الحماية. تحقق من إذن VPN ثم حاول مرة أخرى.'
+          : 'Protection could not start. Check VPN permission and try again.',
+    );
   }
 
   void _showMessage(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _toggleCategory(SafeContentCategory category, bool enabled) {
@@ -171,27 +216,31 @@ class _SafeContentScreenState extends State<SafeContentScreen> with WidgetsBindi
   }
 
   void _addBlocked(String domain) {
-    _savePolicy(_policy.copyWith(
-      blockedDomains: {..._policy.blockedDomains, domain},
-    ));
+    _savePolicy(
+      _policy.copyWith(blockedDomains: {..._policy.blockedDomains, domain}),
+    );
   }
 
   void _addAllowed(String domain) {
-    _savePolicy(_policy.copyWith(
-      allowedDomains: {..._policy.allowedDomains, domain},
-    ));
+    _savePolicy(
+      _policy.copyWith(allowedDomains: {..._policy.allowedDomains, domain}),
+    );
   }
 
   void _removeBlocked(String domain) {
-    _savePolicy(_policy.copyWith(
-      blockedDomains: {..._policy.blockedDomains}..remove(domain),
-    ));
+    _savePolicy(
+      _policy.copyWith(
+        blockedDomains: {..._policy.blockedDomains}..remove(domain),
+      ),
+    );
   }
 
   void _removeAllowed(String domain) {
-    _savePolicy(_policy.copyWith(
-      allowedDomains: {..._policy.allowedDomains}..remove(domain),
-    ));
+    _savePolicy(
+      _policy.copyWith(
+        allowedDomains: {..._policy.allowedDomains}..remove(domain),
+      ),
+    );
   }
 
   @override
@@ -237,12 +286,16 @@ class _SafeContentScreenState extends State<SafeContentScreen> with WidgetsBindi
             const SizedBox(height: 16),
             Card(
               child: SwitchListTile(
-                title: Text(_isArabic
-                    ? 'تفعيل سياسة المحتوى الآمن'
-                    : 'Enable safe-content policy'),
-                subtitle: Text(_isArabic
-                    ? 'تُطبّق الفئات وقواعد النطاقات على خدمات 3ialna المدعومة.'
-                    : 'Apply categories and domain rules to supported 3ialna services.'),
+                title: Text(
+                  _isArabic
+                      ? 'تفعيل سياسة المحتوى الآمن'
+                      : 'Enable safe-content policy',
+                ),
+                subtitle: Text(
+                  _isArabic
+                      ? 'تُطبّق الفئات وقواعد النطاقات على خدمات 3ialna المدعومة.'
+                      : 'Apply categories and domain rules to supported 3ialna services.',
+                ),
                 value: _policy.enabled,
                 onChanged: (value) =>
                     _savePolicy(_policy.copyWith(enabled: value)),
@@ -272,14 +325,18 @@ class _SafeContentScreenState extends State<SafeContentScreen> with WidgetsBindi
               ),
             ),
             SwitchListTile(
-              title: Text(_isArabic ? 'السماح بوسائل التواصل' : 'Allow social media'),
-              subtitle: Text(_isArabic
-                  ? 'اترك وسائل التواصل متاحة ما لم تضفها يدوياً إلى قائمة الحظر.'
-                  : 'Keep social media available unless you add it to the blocked list.'),
+              title: Text(
+                _isArabic ? 'السماح بوسائل التواصل' : 'Allow social media',
+              ),
+              subtitle: Text(
+                _isArabic
+                    ? 'اترك وسائل التواصل متاحة ما لم تضفها يدوياً إلى قائمة الحظر.'
+                    : 'Keep social media available unless you add it to the blocked list.',
+              ),
               value: _policy.allowSocialMedia,
               onChanged: _policy.enabled
                   ? (value) =>
-                      _savePolicy(_policy.copyWith(allowSocialMedia: value))
+                        _savePolicy(_policy.copyWith(allowSocialMedia: value))
                   : null,
             ),
             const Divider(height: 32),
@@ -297,9 +354,11 @@ class _SafeContentScreenState extends State<SafeContentScreen> with WidgetsBindi
               color: theme.colorScheme.surfaceContainerHighest,
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: Text(_isArabic
-                    ? 'ملاحظة الخصوصية: تحفظ الحماية إعدادات القواعد فقط ولا تقرأ الرسائل أو الصور أو محتوى الصفحات. قد لا تغطي عناوين IP المباشرة أو DNS المشفر الذي يتجاوز محلل النظام.'
-                    : 'Privacy note: filtering stores rule configuration only and does not read messages, photos, or page content. It may not cover direct IP access or encrypted DNS that bypasses the system resolver.'),
+                child: Text(
+                  _isArabic
+                      ? 'ملاحظة الخصوصية: تحفظ الحماية إعدادات القواعد فقط ولا تقرأ الرسائل أو الصور أو محتوى الصفحات. قد لا تغطي عناوين IP المباشرة أو DNS المشفر الذي يتجاوز محلل النظام.'
+                      : 'Privacy note: filtering stores rule configuration only and does not read messages, photos, or page content. It may not cover direct IP access or encrypted DNS that bypasses the system resolver.',
+                ),
               ),
             ),
           ],

@@ -12,10 +12,13 @@ import android.os.ParcelFileDescriptor
 import androidx.core.app.NotificationCompat
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.net.DatagramPacket
-import java.net.DatagramSocket
-import java.net.InetAddress
+import java.io.DataInputStream
+import java.io.DataOutputStream
+import java.net.InetSocketAddress
 import java.util.concurrent.Executors
+import javax.net.ssl.SNIHostName
+import javax.net.ssl.SSLSocket
+import javax.net.ssl.SSLSocketFactory
 import org.json.JSONObject
 
 /**
@@ -117,17 +120,29 @@ class SafeContentVpnService : VpnService() {
     }
 
     private fun forwardDns(payload: ByteArray): ByteArray? {
+        if (payload.size > MAX_DNS_PACKET_SIZE) return null
         return try {
-            val socket = DatagramSocket()
-            socket.soTimeout = DNS_TIMEOUT_MS
-            protect(socket)
-            val upstream = InetAddress.getByName(UPSTREAM_DNS)
-            socket.send(DatagramPacket(payload, payload.size, upstream, DNS_PORT))
-            val responseBuffer = ByteArray(MAX_DNS_PACKET_SIZE)
-            val response = DatagramPacket(responseBuffer, responseBuffer.size)
-            socket.receive(response)
-            socket.close()
-            response.data.copyOf(response.length)
+            val socket = SSLSocketFactory.getDefault().createSocket() as SSLSocket
+            socket.use {
+                if (!protect(socket)) return null
+                socket.soTimeout = DNS_TIMEOUT_MS
+                socket.sslParameters = socket.sslParameters.apply {
+                    endpointIdentificationAlgorithm = "HTTPS"
+                    serverNames = listOf(SNIHostName(UPSTREAM_DNS_HOSTNAME))
+                }
+                socket.connect(InetSocketAddress(UPSTREAM_DNS, DNS_TLS_PORT), DNS_TIMEOUT_MS)
+                socket.startHandshake()
+
+                val output = DataOutputStream(socket.outputStream)
+                output.writeShort(payload.size)
+                output.write(payload)
+                output.flush()
+
+                val input = DataInputStream(socket.inputStream)
+                val responseLength = input.readUnsignedShort()
+                if (responseLength !in DNS_HEADER_SIZE..MAX_DNS_PACKET_SIZE) return null
+                ByteArray(responseLength).also(input::readFully)
+            }
         } catch (_: Exception) {
             null
         }
@@ -378,6 +393,8 @@ class SafeContentVpnService : VpnService() {
         private const val VPN_CLIENT_IP = "10.8.0.2"
         private const val VPN_DNS_IP = "10.8.0.1"
         private const val UPSTREAM_DNS = "1.1.1.1"
+        private const val UPSTREAM_DNS_HOSTNAME = "cloudflare-dns.com"
+        private const val DNS_TLS_PORT = 853
         private const val DNS_PORT = 53
         private const val DNS_TIMEOUT_MS = 1500
         private const val DNS_HEADER_SIZE = 12

@@ -36,6 +36,11 @@ flutter build appbundle --release
 - [ ] Confirm export/import files strip child names, birth dates, gender, PINs, recordings, usage history, and device identifiers before sharing.
 - [ ] Confirm the app provides a parent-controlled path to delete local history and recordings.
 - [ ] Review every declared permission and remove unused permissions. Explain location, usage access, accessibility, notification, microphone, VPN, and exact-alarm behavior in the listing and onboarding.
+- [ ] Complete the AccessibilityService declaration as a non-accessibility-tool parental-control feature; provide the required video of disclosure, affirmative consent, denial, and app-blocking behavior.
+- [ ] Submit the `QUERY_ALL_PACKAGES` permission declaration. Explain that installed-app selection is core parental-control functionality and why narrower package visibility is insufficient.
+- [ ] Submit the `VpnService` declaration under parental control. Document DNS-only filtering in the listing and provide the required video. The in-app disclosure must match the implementation, including DNS domain processing and the Cloudflare resolver.
+- [ ] Declare each `specialUse` foreground service in Play Console with its matching manifest subtype and a video showing how the user starts the feature. Explain interruption/deferment impact.
+- [ ] Recheck target SDK before every upload. As of August 31, 2026, new apps and updates must target API 36 or higher.
 
 ## Functional release validation
 

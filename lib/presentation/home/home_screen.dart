@@ -16,7 +16,6 @@ import '../../data/system/app_usage_service.dart';
 import '../../data/local/age_safety_profile_service.dart';
 import '../../data/system/drupal_sync_service.dart';
 import '../../data/system/first_run_permission_service.dart';
-import '../../data/system/social_auth_service.dart';
 import '../../data/system/kiosk_service.dart';
 import '../../data/system/notification_service.dart';
 import '../../data/system/overlay_service.dart';
@@ -31,7 +30,6 @@ import '../../domain/models/local_user_profile.dart';
 import '../../domain/models/overlay_data.dart';
 import '../../domain/models/prayer.dart';
 import '../../domain/models/prayer_lock_settings.dart';
-import '../../domain/models/social_auth_profile.dart';
 import '../../l10n/app_localizations.dart';
 import '../parental_control/parent_dashboard_screen.dart';
 import '../parental_control/age_safety_profiles_screen.dart';
@@ -85,13 +83,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   PrayerLockSettings? _prayerSettings;
   Timer? _prayerStatusTimer;
 
-  final AccessibilityServiceHelper _accessibilityHelper = AccessibilityServiceHelper();
+  final AccessibilityServiceHelper _accessibilityHelper =
+      AccessibilityServiceHelper();
   bool _isAccessibilityEnabled = false;
   bool _isDeviceLocked = false;
   OverlayData? _lastOverlayData;
   CountryWordProfile? _countryWordProfile;
   final DrupalSyncService _drupalSyncService = DrupalSyncService();
-  final SocialAuthService _socialAuthService = SocialAuthService();
   LocalUserProfile? _profile;
   ChildProfile? _activeChild;
   bool _isParentMode = false;
@@ -118,15 +116,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _childProfiles = AgeSafetyProfileService(prefs);
     await _childProfiles.ensureDefaultChild();
     AgeSafetyProfileService.changes.addListener(_onChildProfileChanged);
-    ChildShortcutService.listen(
-      (String childId) async {
-        await _captureOutgoingChildUsage();
-        await _childProfiles.setActiveChild(childId);
-        _loadSettings();
-      },
-      onQuickSettingsRequested: _showActiveChildPicker,
-    );
-    final String? shortcutChildId = await ChildShortcutService.consumeInitialChildId();
+    ChildShortcutService.listen((String childId) async {
+      await _captureOutgoingChildUsage();
+      await _childProfiles.setActiveChild(childId);
+      _loadSettings();
+    }, onQuickSettingsRequested: _showActiveChildPicker);
+    final String? shortcutChildId =
+        await ChildShortcutService.consumeInitialChildId();
     if (shortcutChildId != null) {
       await _captureOutgoingChildUsage();
       await _childProfiles.setActiveChild(shortcutChildId);
@@ -141,13 +137,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
 
     // Listen for device lock events from native side
-    const MethodChannel('parental_control/kiosk').setMethodCallHandler((call) async {
+    const MethodChannel('parental_control/kiosk').setMethodCallHandler((
+      call,
+    ) async {
       if (call.method == 'onDeviceLocked') {
         _loadSettings();
       }
     });
-    const MethodChannel('parental_control/onboarding')
-        .setMethodCallHandler((MethodCall call) async {
+    const MethodChannel('parental_control/onboarding').setMethodCallHandler((
+      MethodCall call,
+    ) async {
       if (call.method == 'onUsageAccessSettingsResult') {
         await _refreshAfterSystemSettingsReturn();
       }
@@ -174,8 +173,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _profile = await _drupalSyncService.getProfile();
 
     await _refreshAccessibilityStatus();
-    if (isMonitoring) {
-      final bool started = !Platform.isAndroid ||
+    if (isMonitoring && !_isParentMode) {
+      final bool started =
+          !Platform.isAndroid ||
           (_isAccessibilityEnabled && await _startBackgroundMonitoring());
       if (started) {
         _startMonitoring();
@@ -204,14 +204,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         return;
       }
       if (!_settings.featureWalkthroughSeen) {
-        await Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => FeatureWalkthroughScreen(
-              onCompleted: _settings.setFeatureWalkthroughSeen,
-              onOpenProfileSetup: _openKidsManagementFromWalkthrough,
-            ),
-          ),
-        );
+        await _offerFeatureWalkthrough();
       }
       if (!mounted || !_openSettingsAfterFirstRun) {
         _setupFlowScheduled = false;
@@ -219,9 +212,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       }
       _openSettingsAfterFirstRun = false;
       await Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => const ParentDashboardScreen(),
-        ),
+        MaterialPageRoute<void>(builder: (_) => const ParentDashboardScreen()),
       );
       // Permissions are requested only after the parent has seen the setup
       // context and defined the child baseline. Each system-settings return is
@@ -234,18 +225,72 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
   }
 
+  /// Marks the tour as offered (so it never auto-starts again) and asks the
+  /// parent, via a dismissible dialog, whether to open it now. The tour
+  /// remains available afterwards from the "Feature tour" toolbar button.
+  Future<void> _offerFeatureWalkthrough() async {
+    await _settings.setFeatureWalkthroughSeen();
+    if (!mounted) return;
+    final bool? startTour = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) => AlertDialog(
+        title: Text(_isArabic ? 'جولة سريعة؟' : 'Quick tour?'),
+        content: Text(
+          _isArabic
+              ? 'تعرّف على أهم الميزات في أقل من دقيقة. يمكنك بدء الجولة لاحقًا في أي وقت من زر الجولة التعريفية.'
+              : 'See the key features in under a minute. You can start the tour later anytime from the feature tour button.',
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(_isArabic ? 'ليس الآن' : 'Not now'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(_isArabic ? 'ابدأ الجولة' : 'Start tour'),
+          ),
+        ],
+      ),
+    );
+    if (startTour == true) {
+      await _openFeatureWalkthrough();
+    }
+  }
+
+  Future<void> _openFeatureWalkthrough() async {
+    if (!mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => FeatureWalkthroughScreen(
+          onCompleted: _settings.setFeatureWalkthroughSeen,
+          onOpenProfileSetup: _openKidsManagementFromWalkthrough,
+        ),
+      ),
+    );
+  }
+
   Future<void> _offerQuickSettingsPrompt() async {
-    if (!mounted || !_offerQuickSettingsAfterSetup || _settings.quickSettingsPrompted) return;
+    if (!mounted ||
+        !_offerQuickSettingsAfterSetup ||
+        _settings.quickSettingsPrompted) {
+      return;
+    }
     _offerQuickSettingsAfterSetup = false;
     await _settings.setQuickSettingsPrompted();
     if (!mounted) return;
     final bool? addShortcut = await showDialog<bool>(
       context: context,
       builder: (BuildContext dialogContext) => AlertDialog(
-        title: Text(_isArabic ? 'اختصار سريع لتبديل الطفل' : 'Quick child-switch shortcut'),
-        content: Text(_isArabic
-            ? 'اكتمل الإعداد الأساسي. أضف اختصار عيالنا إلى الإعدادات السريعة لتفتح قائمة «من يستخدم الجهاز الآن؟» بسرعة عند تسليم الهاتف.'
-            : 'Basic setup is complete. Add the 3ialna tile to Quick Settings to open “Who is using the device now?” quickly when handing over the phone.'),
+        title: Text(
+          _isArabic
+              ? 'اختصار سريع لتبديل الطفل'
+              : 'Quick child-switch shortcut',
+        ),
+        content: Text(
+          _isArabic
+              ? 'اكتمل الإعداد الأساسي. أضف اختصار عيالنا إلى الإعدادات السريعة لتفتح قائمة «من يستخدم الجهاز الآن؟» بسرعة عند تسليم الهاتف.'
+              : 'Basic setup is complete. Add the 3ialna tile to Quick Settings to open “Who is using the device now?” quickly when handing over the phone.',
+        ),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -264,9 +309,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _openKidsManagementFromWalkthrough() async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => const AgeSafetyProfilesScreen(
-          openChildManagerOnStart: true,
-        ),
+        builder: (_) =>
+            const AgeSafetyProfilesScreen(openChildManagerOnStart: true),
       ),
     );
     if (mounted) _loadSettings();
@@ -287,7 +331,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _prayerSettings = base.copyWith(
         enabled: base.enabled && childPreset.prayerLockEnabled,
         lockDurations: <Prayer, int>{
-          for (final Prayer prayer in Prayer.values) prayer: childPreset.prayerLockMinutes,
+          for (final Prayer prayer in Prayer.values)
+            prayer: childPreset.prayerLockMinutes,
         },
         fridayDhuhrDuration: childPreset.prayerLockMinutes,
       );
@@ -297,9 +342,34 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   void _onChildProfileChanged() {
     if (!mounted) return;
+    final bool wasParentMode = _isParentMode;
     _loadSettings();
     _loadPrayerSettings();
     ChildShortcutService.sync(_childProfiles.loadChildren());
+    // Stop enforcement while the parent is holding the device, then resume
+    // it automatically once a child profile is active again.
+    final bool isParentModeNow = _childProfiles.isParentModeActive();
+    if (isParentModeNow && !wasParentMode) {
+      _pauseMonitoringForParentMode();
+    } else if (!isParentModeNow && wasParentMode) {
+      _resumeMonitoringAfterParentMode();
+    }
+  }
+
+  /// The persisted monitoring preference is left untouched so it resumes
+  /// automatically for the next child; only the running timer/service stop.
+  Future<void> _pauseMonitoringForParentMode() async {
+    _stopMonitoring();
+    await _stopBackgroundMonitoring();
+  }
+
+  Future<void> _resumeMonitoringAfterParentMode() async {
+    if (!mounted || !_settings.isMonitoring) return;
+    final bool started =
+        !Platform.isAndroid || await _startBackgroundMonitoring();
+    if (!started || !mounted) return;
+    _startMonitoring();
+    await _checkAppUsage();
   }
 
   Future<void> _captureOutgoingChildUsage() async {
@@ -313,7 +383,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _prayerStatusTimer?.cancel();
     _prayerStatusTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
       if (mounted) {
-        final bool isEnabled = await _accessibilityHelper.isAccessibilityServiceEnabled();
+        final bool isEnabled = await _accessibilityHelper
+            .isAccessibilityServiceEnabled();
         setState(() {
           _isAccessibilityEnabled = isEnabled;
         });
@@ -363,9 +434,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final String? selectedId = await showDialog<String>(
       context: context,
       builder: (BuildContext dialogContext) => SimpleDialog(
-        title: Text(_isArabic
-            ? 'من يستخدم الجهاز الآن؟'
-            : 'Who is using the device now?'),
+        title: Text(
+          _isArabic ? 'من يستخدم الجهاز الآن؟' : 'Who is using the device now?',
+        ),
         children: <Widget>[
           SimpleDialogOption(
             key: const Key('active-profile-parent-option'),
@@ -386,14 +457,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
           const Divider(),
           ...children.map(
-              (ChildProfile child) => SimpleDialogOption(
-                onPressed: () => Navigator.of(dialogContext).pop(child.id),
-                child: Text(
-                  '${child.name} · ${child.ageYears} '
-                  '${_isArabic ? 'سنة' : 'years'}',
-                ),
+            (ChildProfile child) => SimpleDialogOption(
+              onPressed: () => Navigator.of(dialogContext).pop(child.id),
+              child: Text(
+                '${child.name} · ${child.ageYears} '
+                '${_isArabic ? 'سنة' : 'years'}',
               ),
             ),
+          ),
         ],
       ),
     );
@@ -429,32 +500,39 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _loadPrayerSettings();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(_isArabic
-            ? 'تم تفعيل وضع الوالد. لا تُطبّق حدود الأطفال أو قيودهم.'
-            : 'Parent mode is active. Child limits and restrictions are paused.'),
+        content: Text(
+          _isArabic
+              ? 'تم تفعيل وضع الوالد. لا تُطبّق حدود الأطفال أو قيودهم.'
+              : 'Parent mode is active. Child limits and restrictions are paused.',
+        ),
       ),
     );
   }
 
   Future<void> _requestQuickSettingsTile() async {
-    final bool requested = await ChildShortcutService.requestQuickSettingsTile();
+    final bool requested =
+        await ChildShortcutService.requestQuickSettingsTile();
+    if (requested) await _settings.setQuickSettingsTileAdded();
     if (!mounted) return;
+    if (requested) setState(() {});
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(requested
-            ? (_isArabic
-                ? 'وافق على إضافة اختصار عيالنا في الإعدادات السريعة، ثم اسحب شاشة الإشعارات لفتحه.'
-                : 'Approve the 3ialna Quick Settings tile, then pull down notifications to use it.')
-            : (_isArabic
-                ? 'من لوحة الإشعارات، اختر تعديل الإعدادات السريعة ثم أضف اختصار عيالنا.'
-                : 'Open Quick Settings edit from the notification shade, then add the 3ialna tile.')),
+        content: Text(
+          requested
+              ? (_isArabic
+                    ? 'وافق على إضافة اختصار عيالنا في الإعدادات السريعة، ثم اسحب شاشة الإشعارات لفتحه.'
+                    : 'Approve the 3ialna Quick Settings tile, then pull down notifications to use it.')
+              : (_isArabic
+                    ? 'من لوحة الإشعارات، اختر تعديل الإعدادات السريعة ثم أضف اختصار عيالنا.'
+                    : 'Open Quick Settings edit from the notification shade, then add the 3ialna tile.'),
+        ),
       ),
     );
   }
 
   Future<bool> _refreshAccessibilityStatus() async {
-    final bool enabled =
-        await _accessibilityHelper.isAccessibilityServiceEnabled();
+    final bool enabled = await _accessibilityHelper
+        .isAccessibilityServiceEnabled();
     if (mounted) setState(() => _isAccessibilityEnabled = enabled);
     return enabled;
   }
@@ -468,7 +546,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _isParentMode = parentMode;
       timeLimitMinutes = parentMode
           ? 0
-          : active?.preset.dailyLimitMinutes ?? _settings.timeLimitMinutes;
+          : active?.effectiveDailyLimitMinutes() ?? _settings.timeLimitMinutes;
       isMonitoring = _settings.isMonitoring;
       _isDeviceLocked = parentMode ? false : _settings.isDeviceLocked;
       if (_isDeviceLocked) {
@@ -484,13 +562,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _showRegisterDialog() async {
-    final TextEditingController emailController = TextEditingController(text: _profile?.email ?? '');
+    final TextEditingController emailController = TextEditingController(
+      text: _profile?.email ?? '',
+    );
     final TextEditingController passwordController = TextEditingController();
-    final TextEditingController firstNameController = TextEditingController(text: _profile?.firstName ?? '');
-    final TextEditingController lastNameController = TextEditingController(text: _profile?.lastName ?? '');
-    final TextEditingController phoneController = TextEditingController(text: _profile?.phone ?? '');
-    String selectedCountry = _profile?.country.isNotEmpty == true ? _profile!.country : 'SA';
-    String selectedLanguage = _profile?.language.isNotEmpty == true ? _profile!.language : 'ar';
+    final TextEditingController firstNameController = TextEditingController(
+      text: _profile?.firstName ?? '',
+    );
+    final TextEditingController lastNameController = TextEditingController(
+      text: _profile?.lastName ?? '',
+    );
+    final TextEditingController phoneController = TextEditingController(
+      text: _profile?.phone ?? '',
+    );
+    String selectedCountry = _profile?.country.isNotEmpty == true
+        ? _profile!.country
+        : 'SA';
+    String selectedLanguage = _profile?.language.isNotEmpty == true
+        ? _profile!.language
+        : 'ar';
 
     final String? action = await showDialog<String>(
       context: context,
@@ -503,30 +593,102 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    TextField(controller: firstNameController, decoration: InputDecoration(labelText: context.l10n.firstNameLabel)),
-                    TextField(controller: lastNameController, decoration: InputDecoration(labelText: context.l10n.lastNameLabel)),
-                    TextField(controller: emailController, keyboardType: TextInputType.emailAddress, decoration: InputDecoration(labelText: context.l10n.emailLabel)),
-                    TextField(controller: passwordController, obscureText: true, decoration: InputDecoration(labelText: context.l10n.passwordLabel)),
-                    TextField(controller: phoneController, keyboardType: TextInputType.phone, decoration: InputDecoration(labelText: context.l10n.phoneLabel)),
+                    TextField(
+                      controller: firstNameController,
+                      decoration: InputDecoration(
+                        labelText: context.l10n.firstNameLabel,
+                      ),
+                    ),
+                    TextField(
+                      controller: lastNameController,
+                      decoration: InputDecoration(
+                        labelText: context.l10n.lastNameLabel,
+                      ),
+                    ),
+                    TextField(
+                      controller: emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: InputDecoration(
+                        labelText: context.l10n.emailLabel,
+                      ),
+                    ),
+                    TextField(
+                      controller: passwordController,
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        labelText: context.l10n.passwordLabel,
+                      ),
+                    ),
+                    TextField(
+                      controller: phoneController,
+                      keyboardType: TextInputType.phone,
+                      decoration: InputDecoration(
+                        labelText: context.l10n.phoneLabel,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
                       initialValue: selectedCountry,
-                      decoration: InputDecoration(labelText: context.l10n.countryProfileCountryLabel),
+                      decoration: InputDecoration(
+                        labelText: context.l10n.countryProfileCountryLabel,
+                      ),
                       items: const <DropdownMenuItem<String>>[
-                        DropdownMenuItem<String>(value: 'SA', child: Text('Saudi Arabia')),
-                        DropdownMenuItem<String>(value: 'EG', child: Text('Egypt')),
-                        DropdownMenuItem<String>(value: 'AE', child: Text('UAE')),
-                        DropdownMenuItem<String>(value: 'KW', child: Text('Kuwait')),
-                        DropdownMenuItem<String>(value: 'QA', child: Text('Qatar')),
-                        DropdownMenuItem<String>(value: 'BH', child: Text('Bahrain')),
-                        DropdownMenuItem<String>(value: 'IQ', child: Text('Iraq')),
-                        DropdownMenuItem<String>(value: 'LB', child: Text('Lebanon')),
-                        DropdownMenuItem<String>(value: 'JO', child: Text('Jordan')),
-                        DropdownMenuItem<String>(value: 'SY', child: Text('Syria')),
-                        DropdownMenuItem<String>(value: 'SD', child: Text('Sudan')),
-                        DropdownMenuItem<String>(value: 'TN', child: Text('Tunisia')),
-                        DropdownMenuItem<String>(value: 'DZ', child: Text('Algeria')),
-                        DropdownMenuItem<String>(value: 'MA', child: Text('Maroc')),
+                        DropdownMenuItem<String>(
+                          value: 'SA',
+                          child: Text('Saudi Arabia'),
+                        ),
+                        DropdownMenuItem<String>(
+                          value: 'EG',
+                          child: Text('Egypt'),
+                        ),
+                        DropdownMenuItem<String>(
+                          value: 'AE',
+                          child: Text('UAE'),
+                        ),
+                        DropdownMenuItem<String>(
+                          value: 'KW',
+                          child: Text('Kuwait'),
+                        ),
+                        DropdownMenuItem<String>(
+                          value: 'QA',
+                          child: Text('Qatar'),
+                        ),
+                        DropdownMenuItem<String>(
+                          value: 'BH',
+                          child: Text('Bahrain'),
+                        ),
+                        DropdownMenuItem<String>(
+                          value: 'IQ',
+                          child: Text('Iraq'),
+                        ),
+                        DropdownMenuItem<String>(
+                          value: 'LB',
+                          child: Text('Lebanon'),
+                        ),
+                        DropdownMenuItem<String>(
+                          value: 'JO',
+                          child: Text('Jordan'),
+                        ),
+                        DropdownMenuItem<String>(
+                          value: 'SY',
+                          child: Text('Syria'),
+                        ),
+                        DropdownMenuItem<String>(
+                          value: 'SD',
+                          child: Text('Sudan'),
+                        ),
+                        DropdownMenuItem<String>(
+                          value: 'TN',
+                          child: Text('Tunisia'),
+                        ),
+                        DropdownMenuItem<String>(
+                          value: 'DZ',
+                          child: Text('Algeria'),
+                        ),
+                        DropdownMenuItem<String>(
+                          value: 'MA',
+                          child: Text('Maroc'),
+                        ),
                       ],
                       onChanged: (String? value) {
                         if (value == null) return;
@@ -537,10 +699,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ),
                     DropdownButtonFormField<String>(
                       initialValue: selectedLanguage,
-                      decoration: InputDecoration(labelText: context.l10n.languageLabel),
+                      decoration: InputDecoration(
+                        labelText: context.l10n.languageLabel,
+                      ),
                       items: const <DropdownMenuItem<String>>[
-                        DropdownMenuItem<String>(value: 'ar', child: Text('Arabic')),
-                        DropdownMenuItem<String>(value: 'en', child: Text('English')),
+                        DropdownMenuItem<String>(
+                          value: 'ar',
+                          child: Text('Arabic'),
+                        ),
+                        DropdownMenuItem<String>(
+                          value: 'en',
+                          child: Text('English'),
+                        ),
                       ],
                       onChanged: (String? value) {
                         if (value == null) return;
@@ -549,28 +719,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         });
                       },
                     ),
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: () => Navigator.of(context).pop('google'),
-                      icon: const Icon(Icons.g_mobiledata),
-                      label: Text(context.l10n.registerWithGoogle),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: () => Navigator.of(context).pop('facebook'),
-                      icon: const Icon(Icons.facebook),
-                      label: Text(context.l10n.registerWithFacebook),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: () => Navigator.of(context).pop('apple'),
-                      icon: const Icon(Icons.apple),
-                      label: Text(context.l10n.registerWithApple),
-                    ),
+                    // Social registration is hidden until the Google, Facebook,
+                    // and Apple provider credentials are configured for release.
                   ],
                 ),
               ),
               actions: <Widget>[
-                TextButton(onPressed: () => Navigator.of(context).pop('cancel'), child: Text(context.l10n.notNow)),
-                FilledButton(onPressed: () => Navigator.of(context).pop('manual'), child: Text(context.l10n.registerButton)),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop('cancel'),
+                  child: Text(context.l10n.notNow),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop('manual'),
+                  child: Text(context.l10n.registerButton),
+                ),
               ],
             );
           },
@@ -579,15 +741,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
 
     if (action == null || action == 'cancel') {
-      return;
-    }
-
-    if (action == 'google' || action == 'facebook' || action == 'apple') {
-      await _registerWithSocialProvider(
-        action,
-        country: selectedCountry,
-        language: selectedLanguage,
-      );
       return;
     }
 
@@ -605,7 +758,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     if (draft.email.isEmpty || passwordController.text.trim().isEmpty) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.profileSavedLocalOnly)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.profileSavedLocalOnly)),
+      );
       setState(() {
         _profile = draft;
       });
@@ -613,88 +768,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
 
     try {
-      final LocalUserProfile registered = await _drupalSyncService.registerAndLinkDevice(
-        profile: draft,
-        password: passwordController.text.trim(),
-      );
+      final LocalUserProfile registered = await _drupalSyncService
+          .registerAndLinkDevice(
+            profile: draft,
+            password: passwordController.text.trim(),
+          );
       if (!mounted) return;
       setState(() {
         _profile = registered;
       });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.registerSuccess)));
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _profile = draft;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.registerFailedLocalMode)));
-    }
-  }
-
-  Future<void> _registerWithSocialProvider(
-    String provider, {
-    required String country,
-    required String language,
-  }) async {
-    SocialAuthProfile? social;
-    try {
-      switch (provider) {
-        case 'google':
-          social = await _socialAuthService.signInWithGoogle();
-          break;
-        case 'facebook':
-          social = await _socialAuthService.signInWithFacebook();
-          break;
-        case 'apple':
-          social = await _socialAuthService.signInWithApple();
-          break;
-      }
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.socialSignInFailed)),
-      );
-      return;
-    }
-
-    if (social == null) {
-      return;
-    }
-
-    if (social.email.isEmpty) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.socialMissingEmail)),
-      );
-      return;
-    }
-
-    final LocalUserProfile draft = LocalUserProfile(
-      email: social.email,
-      firstName: social.firstName,
-      lastName: social.lastName,
-      phone: _profile?.phone ?? '',
-      country: country,
-      language: language,
-      authProvider: social.provider,
-      providerUserId: social.providerUserId,
-      isRegistered: false,
-    );
-
-    await _drupalSyncService.saveLocalProfile(draft);
-
-    try {
-      final LocalUserProfile registered = await _drupalSyncService.registerAndLinkDeviceWithSocial(
-        profile: draft,
-        social: social,
-      );
-      if (!mounted) return;
-      setState(() {
-        _profile = registered;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.registerSuccess)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.registerSuccess)));
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -709,8 +794,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _submitDailyReport() async {
     // Existing sync payloads remain device-level: child identifiers and child
     // usage attribution stay in the local parent report only.
-    final AppUsageSummary deviceUsage =
-        await _usageService.loadTodayUsageSummary();
+    final AppUsageSummary deviceUsage = await _usageService
+        .loadTodayUsageSummary();
 
     final String date = DateTime.now().toIso8601String().split('T').first;
     final DailyUsageReport report = DailyUsageReport(
@@ -719,8 +804,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       totalUsageMinutes: deviceUsage.totalMinutes,
       appUsage: deviceUsage.perAppMinutes,
       categoryUsage: <String, int>{
-        'social_media': deviceUsage.perAppMinutes.values
-            .fold<int>(0, (int acc, int value) => acc + value),
+        'social_media': deviceUsage.perAppMinutes.values.fold<int>(
+          0,
+          (int acc, int value) => acc + value,
+        ),
       },
       isSynced: false,
     );
@@ -733,7 +820,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final bool isRegistered = _profile?.isRegistered ?? false;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(isRegistered ? context.l10n.reportSubmittedOrQueued : context.l10n.reportSavedLocally),
+        content: Text(
+          isRegistered
+              ? context.l10n.reportSubmittedOrQueued
+              : context.l10n.reportSavedLocally,
+        ),
       ),
     );
   }
@@ -748,7 +839,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _showCountryProfileDialog({bool isMandatory = false}) async {
-    String selectedCountry = _settings.selectedCountry ?? CountryWordProfile.supportedCountries.first;
+    String selectedCountry =
+        _settings.selectedCountry ??
+        CountryWordProfile.supportedCountries.first;
 
     final String? result = await showDialog<String>(
       context: context,
@@ -853,8 +946,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           title: Text(context.l10n.overlayPermissionTitle),
           content: Text(context.l10n.overlayPermissionBody),
           actions: <Widget>[
-            TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(context.l10n.notNow)),
-            TextButton(onPressed: () => Navigator.of(context).pop(true), child: Text(context.l10n.continueLabel)),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(context.l10n.notNow),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(context.l10n.continueLabel),
+            ),
           ],
         );
       },
@@ -887,12 +986,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) => AlertDialog(
-        title: Text(LocaleController.instance.isArabic
-            ? 'إذن الموقع لمواقيت الصلاة'
-            : 'Location for prayer times'),
-        content: Text(LocaleController.instance.isArabic
-            ? 'يُستخدم موقع الجهاز لحساب مواقيت الصلاة بدقة. يمكنك تغيير الموقع أو طريقة الحساب لاحقًا من إعدادات الصلاة.'
-            : 'Device location helps calculate prayer times accurately. You can change the location or calculation method later in Prayer settings.'),
+        title: Text(
+          LocaleController.instance.isArabic
+              ? 'إذن الموقع لمواقيت الصلاة'
+              : 'Location for prayer times',
+        ),
+        content: Text(
+          LocaleController.instance.isArabic
+              ? 'يُستخدم موقع الجهاز لحساب مواقيت الصلاة بدقة. يمكنك تغيير الموقع أو طريقة الحساب لاحقًا من إعدادات الصلاة.'
+              : 'Device location helps calculate prayer times accurately. You can change the location or calculation method later in Prayer settings.',
+        ),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -907,18 +1010,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
     if (continueRequest != true) return;
 
-    final PermissionStatus status =
-        await _firstRunPermissions.requestLocationPermission();
+    final PermissionStatus status = await _firstRunPermissions
+        .requestLocationPermission();
     if (status.isPermanentlyDenied && mounted) {
       final bool? openSettings = await showDialog<bool>(
         context: context,
         builder: (BuildContext context) => AlertDialog(
-          title: Text(LocaleController.instance.isArabic
-              ? 'فعّل الموقع من الإعدادات'
-              : 'Enable location in Settings'),
-          content: Text(LocaleController.instance.isArabic
-              ? 'بعد التفعيل استخدم زر الرجوع للعودة إلى عيالنا تلقائيًا.'
-              : 'After enabling it, use Back to return to 3ialna automatically.'),
+          title: Text(
+            LocaleController.instance.isArabic
+                ? 'فعّل الموقع من الإعدادات'
+                : 'Enable location in Settings',
+          ),
+          content: Text(
+            LocaleController.instance.isArabic
+                ? 'بعد التفعيل استخدم زر الرجوع للعودة إلى عيالنا تلقائيًا.'
+                : 'After enabling it, use Back to return to 3ialna automatically.',
+          ),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
@@ -944,9 +1051,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       barrierDismissible: false,
       builder: (BuildContext context) => AlertDialog(
         title: Text(context.l10n.usageAccessTitle),
-        content: Text(LocaleController.instance.isArabic
-            ? 'يحتاج عيالنا إلى إذن بيانات الاستخدام لتطبيق الحدود الزمنية. ستفتح إعدادات Android؛ استخدم زر الرجوع للعودة إلى التطبيق.'
-            : '3ialna needs Usage access to apply time limits. Android Settings will open; use Back to return to the app.'),
+        content: Text(
+          LocaleController.instance.isArabic
+              ? 'يحتاج عيالنا إلى إذن بيانات الاستخدام لتطبيق الحدود الزمنية. ستفتح إعدادات Android؛ استخدم زر الرجوع للعودة إلى التطبيق.'
+              : '3ialna needs Usage access to apply time limits. Android Settings will open; use Back to return to the app.',
+        ),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -993,12 +1102,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (active == null) return;
     await _childUsageLedger.captureActiveChildUsage(childId: active.id);
     final DateTime now = DateTime.now();
-    final ChildUsageLedgerAggregate usageSummary =
-        await _childUsageLedger.loadAggregate(
-      childId: active.id,
-      start: DateTime(now.year, now.month, now.day),
-      end: now,
-    );
+    final ChildUsageLedgerAggregate usageSummary = await _childUsageLedger
+        .loadAggregate(
+          childId: active.id,
+          start: DateTime(now.year, now.month, now.day),
+          end: now,
+        );
 
     if (!mounted) {
       return;
@@ -1006,7 +1115,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     setState(() {
       _activeChild = active;
-      timeLimitMinutes = active.preset.dailyLimitMinutes;
+      timeLimitMinutes = active.effectiveDailyLimitMinutes();
       usageDataMinutes = usageSummary.appUsageMinutes;
       totalUsageMinutes = usageSummary.totalMinutes;
     });
@@ -1030,12 +1139,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       return;
     }
 
-    if (_prayerSettings!.latitude == null || _prayerSettings!.longitude == null) {
+    if (_prayerSettings!.latitude == null ||
+        _prayerSettings!.longitude == null) {
       return;
     }
 
     final DateTime now = DateTime.now();
-    final Map<Prayer, DateTime>? prayerTimes = _prayerTimeService.calculatePrayerTimes(now, _prayerSettings!);
+    final Map<Prayer, DateTime>? prayerTimes = _prayerTimeService
+        .calculatePrayerTimes(now, _prayerSettings!);
 
     if (prayerTimes == null) {
       return;
@@ -1045,8 +1156,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     for (final MapEntry<Prayer, DateTime> entry in prayerTimes.entries) {
       final Prayer prayer = entry.key;
       final DateTime prayerTime = entry.value;
-      final int lockDuration = _prayerSettings!.getLockDuration(prayer, prayerTime);
-      final DateTime lockEndTime = prayerTime.add(Duration(minutes: lockDuration));
+      final int lockDuration = _prayerSettings!.getLockDuration(
+        prayer,
+        prayerTime,
+      );
+      final DateTime lockEndTime = prayerTime.add(
+        Duration(minutes: lockDuration),
+      );
 
       // Check if current time is between prayer time and lock end time
       if (now.isAfter(prayerTime) && now.isBefore(lockEndTime)) {
@@ -1090,9 +1206,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(_isArabic
-                ? 'تعذر بدء المراقبة الآن. راجع أذونات الإشعارات وبيانات الاستخدام ثم حاول مرة أخرى.'
-                : 'Monitoring could not start. Check notification and Usage Access permissions, then try again.'),
+            content: Text(
+              _isArabic
+                  ? 'تعذر بدء المراقبة الآن. راجع أذونات الإشعارات وبيانات الاستخدام ثم حاول مرة أخرى.'
+                  : 'Monitoring could not start. Check notification and Usage Access permissions, then try again.',
+            ),
           ),
         );
       }
@@ -1108,12 +1226,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final bool? openSettings = await showDialog<bool>(
       context: context,
       builder: (BuildContext dialogContext) => AlertDialog(
-        title: Text(_isArabic
-            ? 'فعّل خدمة إمكانية الوصول أولًا'
-            : 'Enable Accessibility first'),
-        content: Text(_isArabic
-            ? 'لن تبدأ عيالنا المراقبة كأن حظر التطبيقات يعمل بينما خدمة إمكانية الوصول متوقفة. افتح إعدادات Android، ثم فعّل عيالنا ضمن التطبيقات المثبتة. إذا كان الجهاز يمنع التفعيل، استخدم هاتفًا أو ملف مستخدم يسمح بخدمات إمكانية الوصول.'
-            : '3ialna will not start monitoring as if app blocking works while Accessibility is off. Open Android Settings, then enable 3ialna under installed apps. If the device blocks this setting, use a phone or user profile that permits Accessibility services.'),
+        title: Text(
+          _isArabic
+              ? 'فعّل خدمة إمكانية الوصول أولًا'
+              : 'Enable Accessibility first',
+        ),
+        content: Text(
+          _isArabic
+              ? 'لن تبدأ عيالنا المراقبة كأن حظر التطبيقات يعمل بينما خدمة إمكانية الوصول متوقفة. افتح إعدادات Android، ثم فعّل عيالنا ضمن التطبيقات المثبتة. إذا كان الجهاز يمنع التفعيل، استخدم هاتفًا أو ملف مستخدم يسمح بخدمات إمكانية الوصول.'
+              : '3ialna will not start monitoring as if app blocking works while Accessibility is off. Open Android Settings, then enable 3ialna under installed apps. If the device blocks this setting, use a phone or user profile that permits Accessibility services.',
+        ),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -1131,9 +1253,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (!mounted || opened) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(_isArabic
-            ? 'تعذر فتح إعدادات إمكانية الوصول. افتح إعدادات Android يدويًا ثم ابحث عن «إمكانية الوصول».'
-            : 'Could not open Accessibility Settings. Open Android Settings manually and search for Accessibility.'),
+        content: Text(
+          _isArabic
+              ? 'تعذر فتح إعدادات إمكانية الوصول. افتح إعدادات Android يدويًا ثم ابحث عن «إمكانية الوصول».'
+              : 'Could not open Accessibility Settings. Open Android Settings manually and search for Accessibility.',
+        ),
       ),
     );
   }
@@ -1179,53 +1303,100 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
+  List<Widget> _buildHomeSections(ColorScheme colorScheme) => <Widget>[
+    if (_countryWordProfile != null) ...<Widget>[
+      _buildCountryWordCard(),
+      const SizedBox(height: 16),
+    ],
+    _buildPrayerStatusCard(),
+    const SizedBox(height: 16),
+    _buildAccessibilityStatusCard(colorScheme),
+    const SizedBox(height: 16),
+    _buildTimeLimitCard(),
+    const SizedBox(height: 16),
+    if (_isParentMode) ...<Widget>[
+      _buildMonitorToggle(),
+      const SizedBox(height: 16),
+    ],
+    if (_isParentMode) ...<Widget>[
+      OutlinedButton.icon(
+        onPressed: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => const EducationalExpertContactScreen(),
+          ),
+        ),
+        icon: const Icon(Icons.support_agent_outlined),
+        label: const Text('طلب تواصل مع خبير تربوى'),
+      ),
+      const SizedBox(height: 16),
+    ],
+    if (!_settings.quickSettingsTileAdded) ...<Widget>[
+      OutlinedButton.icon(
+        onPressed: _requestQuickSettingsTile,
+        icon: const Icon(Icons.tune_outlined),
+        label: Text(
+          _isArabic
+              ? 'إضافة اختصار الطفل إلى الإعدادات السريعة'
+              : 'Add child shortcut to Quick Settings',
+        ),
+      ),
+      const SizedBox(height: 16),
+    ],
+  ];
+
   @override
   Widget build(BuildContext context) {
+    if (!_homeSettingsInitialized) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     final colorScheme = Theme.of(context).colorScheme;
     return Stack(
       children: [
         Scaffold(
           appBar: _buildAppBar(),
-          floatingActionButton: FloatingActionButton(onPressed: _refreshUsage, child: const Icon(Icons.refresh)),
+          floatingActionButton: FloatingActionButton(
+            onPressed: _refreshUsage,
+            child: const Icon(Icons.refresh),
+          ),
           body: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  if (_countryWordProfile != null) ...<Widget>[
-                    _buildCountryWordCard(),
-                    const SizedBox(height: 16),
-                  ],
-                  _buildPrayerStatusCard(),
-                  const SizedBox(height: 16),
-                  _buildAccessibilityStatusCard(colorScheme),
-                  const SizedBox(height: 16),
-                  _buildTimeLimitCard(),
-                  const SizedBox(height: 16),
-                  _buildMonitorToggle(),
-                  const SizedBox(height: 16),
-                  OutlinedButton.icon(
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const EducationalExpertContactScreen(),
-                      ),
+            child: LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints constraints) {
+                final List<Widget> sections = _buildHomeSections(colorScheme);
+                if (constraints.maxHeight < 500) {
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[
+                        ...sections,
+                        if (isLoading)
+                          const SizedBox(
+                            height: 160,
+                            child: Center(child: CircularProgressIndicator()),
+                          )
+                        else
+                          _buildUsageList(colorScheme, shrinkWrap: true),
+                      ],
                     ),
-                    icon: const Icon(Icons.support_agent_outlined),
-                    label: const Text('طلب تواصل مع خبير تربوى'),
+                  );
+                }
+
+                return Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      ...sections,
+                      Expanded(
+                        child: isLoading
+                            ? const Center(child: CircularProgressIndicator())
+                            : _buildUsageList(colorScheme),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  OutlinedButton.icon(
-                    onPressed: _requestQuickSettingsTile,
-                    icon: const Icon(Icons.tune_outlined),
-                    label: Text(_isArabic
-                        ? 'إضافة اختصار الطفل إلى الإعدادات السريعة'
-                        : 'Add child shortcut to Quick Settings'),
-                  ),
-                  const SizedBox(height: 16),
-                  Expanded(child: isLoading ? const Center(child: CircularProgressIndicator()) : _buildUsageList(colorScheme)),
-                ],
-              ),
+                );
+              },
             ),
           ),
         ),
@@ -1242,7 +1413,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         IconButton(
           icon: const Icon(Icons.family_restroom),
           onPressed: () {
-            Navigator.of(context).push(MaterialPageRoute(builder: (context) => const ParentDashboardScreen()));
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const ParentDashboardScreen(),
+              ),
+            );
           },
           tooltip: 'Parental Controls',
         ),
@@ -1263,18 +1438,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               builder: (_) => const ParentUsageReportScreen(),
             ),
           ),
-          tooltip: _isArabic ? 'تقرير الاستخدام للوالدين' : 'Parent usage report',
+          tooltip: _isArabic
+              ? 'تقرير الاستخدام للوالدين'
+              : 'Parent usage report',
         ),
         IconButton(
           icon: const Icon(Icons.auto_awesome_outlined),
-          onPressed: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (_) => FeatureWalkthroughScreen(
-                onCompleted: _settings.setFeatureWalkthroughSeen,
-                onOpenProfileSetup: _openKidsManagementFromWalkthrough,
-              ),
-            ),
-          ),
+          onPressed: _openFeatureWalkthrough,
           tooltip: _isArabic ? 'جولة تعريفية' : 'Feature tour',
         ),
         IconButton(
@@ -1282,7 +1452,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           onPressed: () => _showCountryProfileDialog(),
           tooltip: context.l10n.countryProfileTitle,
         ),
-        IconButton(icon: const Icon(Icons.settings), onPressed: _navigateToPrayerSettings, tooltip: 'Prayer Lock Settings'),
+        IconButton(
+          icon: const Icon(Icons.settings),
+          onPressed: _navigateToPrayerSettings,
+          tooltip: 'Prayer Lock Settings',
+        ),
       ],
     );
   }
@@ -1337,7 +1511,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             color: colorScheme.errorContainer,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(color: colorScheme.error, width: 2),
-            boxShadow: [BoxShadow(color: Colors.black.withAlpha(100), blurRadius: 20, spreadRadius: 5)],
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(100),
+                blurRadius: 20,
+                spreadRadius: 5,
+              ),
+            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1346,19 +1526,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               const SizedBox(height: 24),
               Text(
                 'Device Locked',
-                style: textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onErrorContainer),
+                style: textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onErrorContainer,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
               Text(
                 'Time limit reached for:\n${data.appName}',
-                style: textTheme.titleMedium?.copyWith(color: colorScheme.onErrorContainer),
+                style: textTheme.titleMedium?.copyWith(
+                  color: colorScheme.onErrorContainer,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               Text(
                 'Used: ${data.usedMinutes}m / Limit: ${data.limitMinutes}m',
-                style: textTheme.bodyLarge?.copyWith(color: colorScheme.onErrorContainer.withAlpha(200)),
+                style: textTheme.bodyLarge?.copyWith(
+                  color: colorScheme.onErrorContainer.withAlpha(200),
+                ),
                 textAlign: TextAlign.center,
               ),
               Wrap(
@@ -1371,7 +1558,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     icon: const Icon(Icons.security),
                     label: const Text('Parent Unlock'),
                     style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 16,
+                      ),
                       backgroundColor: colorScheme.error,
                       foregroundColor: colorScheme.onError,
                     ),
@@ -1381,7 +1571,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     icon: const Icon(Icons.edit),
                     label: const Text('Adjust Limit'),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 16,
+                      ),
                       foregroundColor: colorScheme.onErrorContainer,
                       side: BorderSide(color: colorScheme.onErrorContainer),
                     ),
@@ -1431,10 +1624,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           children: [
             const Text('Add more minutes to today\'s limit?'),
             const SizedBox(height: 16),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [_buildAdjustOption(5), _buildAdjustOption(15), _buildAdjustOption(30)]),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildAdjustOption(5),
+                _buildAdjustOption(15),
+                _buildAdjustOption(30),
+              ],
+            ),
           ],
         ),
-        actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel'))],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+        ],
       ),
     );
 
@@ -1451,8 +1656,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           onTap: () => Navigator.of(context).pop(minutes),
           child: Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: Theme.of(context).colorScheme.primaryContainer, borderRadius: BorderRadius.circular(12)),
-            child: Text('+$minutes', style: const TextStyle(fontWeight: FontWeight.bold)),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              '+$minutes',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ),
         const SizedBox(height: 4),
@@ -1482,23 +1693,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text(context.l10n.dailyTimeLimit, style: Theme.of(context).textTheme.titleMedium),
+                  Text(
+                    context.l10n.dailyTimeLimit,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   const SizedBox(height: 8),
                   Text(
                     _isParentMode
                         ? (_isArabic ? 'وضع الوالد' : 'Parent mode')
                         : '$timeLimitMinutes ${context.l10n.minutesSuffix}',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     _isParentMode
                         ? (_isArabic
-                            ? 'لا توجد حدود زمنية أو قيود للأطفال.'
-                            : 'No child time limits or restrictions apply.')
+                              ? 'لا توجد حدود زمنية أو قيود للأطفال.'
+                              : 'No child time limits or restrictions apply.')
                         : '${_activeChild?.name ?? (_isArabic ? 'الطفل النشط' : 'Active child')}: '
-                            '${_isArabic ? 'استخدم اليوم' : 'Used today'} $totalUsageMinutes '
-                            '${context.l10n.minutesSuffix}',
+                              '${_isArabic ? 'استخدم اليوم' : 'Used today'} $totalUsageMinutes '
+                              '${context.l10n.minutesSuffix}',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
@@ -1507,8 +1723,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             Row(
               children: <Widget>[
                 if (!_isParentMode) ...<Widget>[
-                  IconButton(icon: const Icon(Icons.remove), onPressed: () => _adjustTimeLimit(-5)),
-                  IconButton(icon: const Icon(Icons.add), onPressed: () => _adjustTimeLimit(5)),
+                  IconButton(
+                    icon: const Icon(Icons.remove),
+                    onPressed: () => _adjustTimeLimit(-5),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.add),
+                    onPressed: () => _adjustTimeLimit(5),
+                  ),
                 ],
               ],
             ),
@@ -1522,7 +1744,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final bool active = isMonitoring;
     final Color backgroundColor = active ? Colors.red : Colors.green;
     final IconData icon = active ? Icons.pause : Icons.play_arrow;
-    final String label = active ? context.l10n.stopMonitoring : context.l10n.startMonitoring;
+    final String label = active
+        ? context.l10n.stopMonitoring
+        : context.l10n.startMonitoring;
 
     return SizedBox(
       height: 52,
@@ -1530,7 +1754,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         style: FilledButton.styleFrom(
           backgroundColor: backgroundColor,
           foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
         onPressed: _toggleMonitoring,
         icon: Icon(icon),
@@ -1539,28 +1765,42 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildUsageList(ColorScheme colorScheme) {
+  Widget _buildUsageList(ColorScheme colorScheme, {bool shrinkWrap = false}) {
     if (usageDataMinutes.isEmpty) {
       return Center(
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Icon(Icons.analytics_outlined, size: 64, color: colorScheme.primary),
-              const SizedBox(height: 16),
-              Text(context.l10n.noUsageTitle, style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              Text(context.l10n.noUsageSubtitle, textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyMedium),
-            ],
-          ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(
+              Icons.analytics_outlined,
+              size: 64,
+              color: colorScheme.primary,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              context.l10n.noUsageTitle,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              context.l10n.noUsageSubtitle,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ],
         ),
       );
     }
 
-    final List<MapEntry<String, int>> entries = usageDataMinutes.entries.toList()
-      ..sort((MapEntry<String, int> a, MapEntry<String, int> b) => b.value.compareTo(a.value));
+    final List<MapEntry<String, int>> entries =
+        usageDataMinutes.entries.toList()..sort(
+          (MapEntry<String, int> a, MapEntry<String, int> b) =>
+              b.value.compareTo(a.value),
+        );
 
     return ListView.separated(
+      shrinkWrap: shrinkWrap,
+      physics: shrinkWrap ? const NeverScrollableScrollPhysics() : null,
       itemCount: entries.length,
       separatorBuilder: (_, _) => const SizedBox(height: 8),
       itemBuilder: (BuildContext context, int index) {
@@ -1570,20 +1810,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         final String appName = socialMediaApps[packageName] ?? packageName;
         final int safeTimeLimit = timeLimitMinutes <= 0 ? 1 : timeLimitMinutes;
 
-        final double progress = (usedMinutes / safeTimeLimit).clamp(0, 2).toDouble();
+        final double progress = (usedMinutes / safeTimeLimit)
+            .clamp(0, 2)
+            .toDouble();
         final bool overLimit = usedMinutes > timeLimitMinutes;
 
         final Color progressColor = overLimit ? Colors.red : Colors.blue;
 
         return Card(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Row(
               children: <Widget>[
                 CircleAvatar(
                   backgroundColor: colorScheme.primaryContainer,
-                  child: Text(appName.isNotEmpty ? appName[0] : '?', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  child: Text(
+                    appName.isNotEmpty ? appName[0] : '?',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -1592,8 +1839,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     children: <Widget>[
                       Row(
                         children: <Widget>[
-                          Expanded(child: Text(appName, style: Theme.of(context).textTheme.titleMedium)),
-                          if (overLimit) Icon(Icons.warning_amber, color: Colors.red),
+                          Expanded(
+                            child: Text(
+                              appName,
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                          ),
+                          if (overLimit)
+                            Icon(Icons.warning_amber, color: Colors.red),
                         ],
                       ),
                       const SizedBox(height: 6),
@@ -1603,7 +1856,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           value: progress > 1 ? 1 : progress,
                           minHeight: 8,
                           backgroundColor: colorScheme.surfaceContainerHighest,
-                          valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            progressColor,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -1624,9 +1879,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _navigateToPrayerSettings() async {
-    final PrayerLockSettings? result = await Navigator.of(
-      context,
-    ).push<PrayerLockSettings>(MaterialPageRoute<PrayerLockSettings>(builder: (BuildContext context) => const PrayerLockSettingsScreen()));
+    final PrayerLockSettings? result = await Navigator.of(context)
+        .push<PrayerLockSettings>(
+          MaterialPageRoute<PrayerLockSettings>(
+            builder: (BuildContext context) => const PrayerLockSettingsScreen(),
+          ),
+        );
 
     if (result != null) {
       await _settings.savePrayerLockSettings(result);
@@ -1639,7 +1897,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       return const SizedBox.shrink();
     }
 
-    final ({Prayer prayer, DateTime time})? nextPrayer = _prayerTimeService.getNextPrayer(_prayerSettings!);
+    final ({Prayer prayer, DateTime time})? nextPrayer = _prayerTimeService
+        .getNextPrayer(_prayerSettings!);
 
     if (nextPrayer == null) {
       return Card(
@@ -1650,7 +1909,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               const Icon(Icons.location_off, color: Colors.grey),
               const SizedBox(width: 12),
               const Expanded(
-                child: Text('Location not set for prayer times', style: TextStyle(color: Colors.grey)),
+                child: Text(
+                  'Location not set for prayer times',
+                  style: TextStyle(color: Colors.grey),
+                ),
               ),
             ],
           ),
@@ -1678,18 +1940,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     _isArabic
                         ? 'الصلاة القادمة: ${nextPrayer.prayer.arabicDisplayName}'
                         : 'Next Prayer: ${nextPrayer.prayer.displayName}',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 4),
-                  Text(timeString, style: Theme.of(context).textTheme.bodyMedium),
+                  Text(
+                    timeString,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
                   Text(
                     _isArabic
                         ? 'الساعة ${_formatTime(nextPrayer.time)}'
                         : 'At ${_formatTime(nextPrayer.time)}',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: Colors.grey),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: Colors.grey),
                   ),
                 ],
               ),
@@ -1714,7 +1980,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ? '${duration.inHours} ساعة ${duration.inMinutes % 60} دقيقة'
           : '${duration.inHours}h ${duration.inMinutes % 60}m';
     } else {
-      return _isArabic ? '${duration.inMinutes} دقيقة' : '${duration.inMinutes}m';
+      return _isArabic
+          ? '${duration.inMinutes} دقيقة'
+          : '${duration.inMinutes}m';
     }
   }
 
@@ -1751,16 +2019,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Widget _buildAccessibilityStatusCard(ColorScheme colorScheme) {
     final bool isEnabled = _isAccessibilityEnabled;
     final Color statusColor = isEnabled ? Colors.green : Colors.orange;
-    final IconData statusIcon = isEnabled ? Icons.check_circle : Icons.warning_amber;
-    final String statusText = isEnabled ? 'App Blocking Enabled' : 'App Blocking Disabled';
-    final String subtitleText = isEnabled ? 'Apps can be blocked when limits are exceeded' : 'Tap to enable Accessibility Service for app blocking';
+    final IconData statusIcon = isEnabled
+        ? Icons.check_circle
+        : Icons.warning_amber;
+    final String statusText = isEnabled
+        ? 'App Blocking Enabled'
+        : 'App Blocking Disabled';
+    final String subtitleText = isEnabled
+        ? 'Apps can be blocked when limits are exceeded'
+        : 'Tap to enable Accessibility Service for app blocking';
 
     return Card(
       elevation: isEnabled ? 2 : 4,
-      color: isEnabled ? null : colorScheme.errorContainer.withValues(alpha: 0.3),
+      color: isEnabled
+          ? null
+          : colorScheme.errorContainer.withValues(alpha: 0.3),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: isEnabled ? BorderSide.none : BorderSide(color: colorScheme.error.withValues(alpha: 0.5), width: 2),
+        side: isEnabled
+            ? BorderSide.none
+            : BorderSide(
+                color: colorScheme.error.withValues(alpha: 0.5),
+                width: 2,
+              ),
       ),
       child: InkWell(
         onTap: isEnabled
@@ -1778,7 +2059,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     // Recheck status after a delay
                     await Future.delayed(const Duration(seconds: 2));
                     if (mounted) {
-                      final bool newStatus = await _accessibilityHelper.isAccessibilityServiceEnabled();
+                      final bool newStatus = await _accessibilityHelper
+                          .isAccessibilityServiceEnabled();
                       setState(() {
                         _isAccessibilityEnabled = newStatus;
                       });
@@ -1799,16 +2081,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   children: <Widget>[
                     Text(
                       statusText,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: isEnabled ? null : colorScheme.error),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: isEnabled ? null : colorScheme.error,
+                      ),
                     ),
                     const SizedBox(height: 4),
-                    Text(subtitleText, style: Theme.of(context).textTheme.bodySmall),
+                    Text(
+                      subtitleText,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                   ],
                 ),
               ),
-              if (!isEnabled) Icon(Icons.arrow_forward_ios, size: 16, color: colorScheme.error),
+              if (!isEnabled)
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: colorScheme.error,
+                ),
             ],
           ),
         ),

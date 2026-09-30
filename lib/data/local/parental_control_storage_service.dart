@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/classification/app_category_classifier.dart';
 import '../../core/constants/social_media_apps.dart';
 import '../../domain/models/app_info.dart';
 import '../../domain/models/schedule.dart';
@@ -12,6 +13,8 @@ class ParentalControlStorageService {
   static const String _keyTimeLimits = 'parental_control_time_limits';
   static const String _keySchedule = 'parental_control_schedule';
   static const String _keyParentPin = 'parental_control_parent_pin';
+  static const String _keyPinFailedAttempts = 'parental_control_pin_failed_attempts';
+  static const String _keyPinLockoutUntil = 'parental_control_pin_lockout_until';
   static const String _keyKioskModeEnabled = 'parental_control_kiosk_mode_enabled';
   static const String _keyAppCategories = 'parental_control_app_categories';
   
@@ -158,19 +161,18 @@ class ParentalControlStorageService {
   }
 
   /// Reconciles categories for currently installed apps without overwriting
-  /// any parent assignment. Only the local package registry is used; no app
-  /// inventory or category data leaves the device.
+  /// any parent assignment. Classification only consults the local package
+  /// registry and OS-declared app category already fetched with the app
+  /// list; no app inventory or category data leaves the device. Every
+  /// installed app ends up in one of the three parent-facing buckets
+  /// (games, social media, or other) so quick setup requires no manual work.
   Future<Map<String, ManagedAppCategory>> reconcileInstalledAppCategories(
     List<AppInfo> installedApps,
   ) async {
     final Map<String, ManagedAppCategory> categories = await getAppCategories();
     for (final AppInfo app in installedApps) {
       if (categories.containsKey(app.packageName)) continue;
-      if (socialMediaApps.containsKey(app.packageName)) {
-        categories[app.packageName] = ManagedAppCategory.socialMedia;
-      } else if (gameApps.containsKey(app.packageName)) {
-        categories[app.packageName] = ManagedAppCategory.games;
-      }
+      categories[app.packageName] = AppCategoryClassifier.classify(app);
     }
     await setAppCategories(categories);
     return categories;
@@ -257,6 +259,33 @@ class ParentalControlStorageService {
   Future<bool> hasParentPin() async {
     final pin = await getParentPin();
     return pin != null && pin.isNotEmpty;
+  }
+
+  /// Number of consecutive failed PIN attempts, used for lockout backoff.
+  Future<int> getPinFailedAttempts() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_keyPinFailedAttempts) ?? 0;
+  }
+
+  Future<void> setPinFailedAttempts(int attempts) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyPinFailedAttempts, attempts);
+  }
+
+  /// Instant until which PIN entry stays blocked; survives an app restart.
+  Future<DateTime?> getPinLockoutUntil() async {
+    final prefs = await SharedPreferences.getInstance();
+    final int? millis = prefs.getInt(_keyPinLockoutUntil);
+    return millis == null ? null : DateTime.fromMillisecondsSinceEpoch(millis);
+  }
+
+  Future<void> setPinLockoutUntil(DateTime? until) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (until == null) {
+      await prefs.remove(_keyPinLockoutUntil);
+      return;
+    }
+    await prefs.setInt(_keyPinLockoutUntil, until.millisecondsSinceEpoch);
   }
 
   /// Gets kiosk mode enabled state.

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="#174A3B" name="theme-color"/>
+<meta content="سياسة خصوصية تطبيق عيالنا — ما الذي يُحفظ على الجهاز وما الذي يُرسل." name="description"/>
+<link href="https://mgomma.github.io/3ialna/privacy.html" rel="canonical"/>
+<title>سياسة الخصوصية — عيالنا / 3ialna Privacy Policy</title>
+<style>
+  :root { --ink:#13241f; --muted:#4d6159; --line:#d8e3dd; --brand:#174A3B; --bg:#f7faf8; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",Tahoma,Arial,sans-serif; line-height:1.75; }
+  header { background:var(--brand); color:#fff; padding:2.2rem 1.25rem; }
+  .wrap { max-width:860px; margin:0 auto; }
+  header p { margin:.4rem 0 0; opacity:.9; font-size:.95rem; }
+  main { padding:1.5rem 1.25rem 4rem; }
+  section { background:#fff; border:1px solid var(--line); border-radius:14px;
+    padding:1.25rem 1.4rem; margin-bottom:1.1rem; }
+  h1 { margin:0; font-size:1.6rem; }
+  h2 { margin:0 0 .6rem; font-size:1.15rem; color:var(--brand); }
+  h3 { margin:1.1rem 0 .3rem; font-size:1rem; }
+  ul { margin:.4rem 0; padding-inline-start:1.3rem; }
+  li { margin:.3rem 0; }
+  .muted { color:var(--muted); font-size:.92rem; }
+  .en { direction:ltr; text-align:left; border-top:2px dashed var(--line); margin-top:2.5rem; padding-top:1.5rem; }
+  a { color:var(--brand); }
+  .back { display:inline-block; margin-top:1rem; color:#fff; text-decoration:underline; }
+  table { width:100%; border-collapse:collapse; margin:.5rem 0; font-size:.93rem; }
+  th, td { border:1px solid var(--line); padding:.5rem .6rem; text-align:start; vertical-align:top; }
+  th { background:#eef4f1; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>سياسة الخصوصية — عيالنا</h1>
+    <p>آخر تحديث: 30 سبتمبر 2026</p>
+    <a class="back" href="./">العودة إلى الصفحة الرئيسية</a>
+  </div>
+</header>
+
+<main class="wrap">
+
+<section>
+  <h2>الخلاصة</h2>
+  <p>عيالنا تطبيق رقابة أبوية يعمل على جهاز الطفل. <strong>تبقى بيانات العائلة محفوظة على الجهاز نفسه بشكل افتراضي.</strong> لا يحتوي التطبيق على أي أدوات تتبّع أو تحليلات أو إعلانات، ولا يقرأ محتوى الرسائل أو الصور أو صفحات الويب.</p>
+  <p class="muted">المسؤول عن التطبيق: فريق عيالنا — للتواصل: <a href="mailto:3ialna.app@gmail.com">3ialna.app@gmail.com</a></p>
+</section>
+
+<section>
+  <h2>١. بيانات تُحفظ على الجهاز فقط</h2>
+  <p>لا تغادر هذه البيانات الجهاز، ولا تُرفع إلى خوادمنا:</p>
+  <ul>
+    <li>ملفات الأطفال: الاسم، تاريخ الميلاد، الجنس، والملف العمري.</li>
+    <li>الحدود اليومية، جداول النوم، وإعدادات قفل الصلاة.</li>
+    <li>رمز الوالد السري (PIN) — يُحفظ مُجزّأً (hashed) بصيغة PBKDF2 مع مُلح عشوائي، ولا يُحفظ كنص صريح.</li>
+    <li>التسجيلات الصوتية التي يسجّلها الوالد.</li>
+    <li>قواعد التطبيقات، والنطاقات المحظورة والمسموح بها.</li>
+    <li>سجل الاستخدام المفصّل لكل طفل، وطلبات المكافآت ورصيد النقاط.</li>
+  </ul>
+  <p><strong>النسخ الاحتياطي السحابي معطّل</strong> لهذا التطبيق، لذلك لا تُنسخ هذه البيانات إلى Google Drive ولا تُنقل عبر خاصية نقل بيانات الجهاز.</p>
+</section>
+
+<section>
+  <h2>٢. بيانات تُرسل إلى الخادم — فقط إذا أنشأ الوالد حسابًا</h2>
+  <p>إنشاء الحساب <strong>اختياري</strong>، ويعمل التطبيق بكامل وظائفه بدونه. عند التسجيل فقط، يُرسل ما يلي إلى <code>https://3ialna.net</code> عبر اتصال مشفّر (HTTPS):</p>
+  <table>
+    <tr><th>البيان</th><th>الغرض</th></tr>
+    <tr><td>البريد الإلكتروني، الاسم الأول واسم العائلة، رقم الهاتف، الدولة، اللغة</td><td>إنشاء حساب الوالد</td></tr>
+    <tr><td>معرّف الجهاز المرتبط ورمز الجهاز</td><td>ربط الجهاز بحساب الوالد</td></tr>
+    <tr><td>ملخص استخدام يومي على مستوى الجهاز: التاريخ، إجمالي الدقائق، دقائق كل تطبيق، ومجموع الفئات</td><td>تقرير الاستخدام للوالد</td></tr>
+  </table>
+  <p><strong>لا يشمل ذلك</strong> أسماء الأطفال ولا تواريخ ميلادهم ولا جنسهم ولا الرمز السري ولا التسجيلات الصوتية ولا سجل الطفل المنفصل. يبقى ربط الاستخدام بطفل محدد داخل الجهاز فقط.</p>
+</section>
+
+<section>
+  <h2>٣. الأذونات ولماذا نطلبها</h2>
+  <ul>
+    <li><strong>الوصول إلى إحصاءات الاستخدام:</strong> لحساب الوقت المستهلك وتطبيق الحدود.</li>
+    <li><strong>خدمة إمكانية الوصول (Accessibility):</strong> لمعرفة التطبيق الظاهر في المقدمة فقط، لتطبيق الحجب. <strong>لا تقرأ</strong> محتوى الرسائل أو الصفحات ولا تلتقط ما يُكتب.</li>
+    <li><strong>العرض فوق التطبيقات (Overlay):</strong> لإظهار شاشة الحجب التي ضبطها الوالد.</li>
+    <li><strong>الموقع:</strong> لحساب مواقيت الصلاة على الجهاز. لا يُرسل الموقع إلى خوادمنا.</li>
+    <li><strong>الميكروفون:</strong> لتسجيل رسائل الوالد الصوتية، وتُحفظ محليًا.</li>
+    <li><strong>الإشعارات والمنبّه الدقيق:</strong> لتذكيرات الصلاة والمهام في وقتها.</li>
+    <li><strong>قائمة التطبيقات المثبّتة:</strong> ليختار الوالد التطبيقات التي يريد إدارتها.</li>
+    <li><strong>VPN محلي:</strong> لترشيح النطاقات كما هو موضّح أدناه.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>٤. ترشيح المحتوى عبر DNS</h2>
+  <p>عند تفعيل الحماية، ينشئ التطبيق اتصال VPN محليًا على الجهاز لفحص <strong>أسماء النطاقات المطلوبة فقط</strong> وتطبيق قواعد الوالد. هذا الاتصال لا يمر عبر خوادمنا، ولا يفحص محتوى الصفحات.</p>
+  <ul>
+    <li>تُعالَج أسماء النطاقات على الجهاز.</li>
+    <li>الطلبات المسموح بها تُمرَّر إلى محلّل Cloudflare العام (1.1.1.1) مشفّرة عبر DNS-over-TLS.</li>
+    <li><strong>لا يحتفظ عيالنا بسجل لطلبات DNS.</strong></li>
+  </ul>
+  <p class="muted">حدود معروفة: قد لا يغطي الترشيح الوصول المباشر عبر عناوين IP أو خدمات DNS المشفّرة التي تتجاوز محلّل النظام.</p>
+</section>
+
+<section>
+  <h2>٥. ما لا نفعله</h2>
+  <ul>
+    <li>لا إعلانات، ولا شبكات إعلانية.</li>
+    <li>لا أدوات تحليلات أو تتبّع من طرف ثالث.</li>
+    <li>لا بيع أو مشاركة بيانات العائلة مع أي جهة.</li>
+    <li>لا قراءة للرسائل أو الصور أو محتوى صفحات الويب.</li>
+    <li>لا إرسال تلقائي لتقارير الأعطال؛ تُحفظ محليًا بصيغة مُنقّاة، ولا تُرسل إلا إذا اختار الوالد إرسالها بنفسه عبر البريد.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>٦. خصوصية الأطفال</h2>
+  <p>يُعدّ التطبيق ويُدار من قِبَل الوالد أو الوصي. بيانات الطفل التعريفية تبقى على الجهاز ولا تُرسل إلينا. ننصح الوالد بشرح وجود التطبيق للطفل بما يناسب عمره.</p>
+</section>
+
+<section>
+  <h2>٧. الاحتفاظ بالبيانات وحذفها</h2>
+  <ul>
+    <li>يمكن للوالد حذف ملفات الأطفال والتسجيلات والسجل المحلي من داخل التطبيق في أي وقت.</li>
+    <li>إلغاء تثبيت التطبيق يحذف جميع البيانات المحفوظة محليًا.</li>
+    <li>لحذف حساب مُسجَّل وما يرتبط به من بيانات على الخادم، راسلنا على <a href="mailto:3ialna.app@gmail.com">3ialna.app@gmail.com</a>.</li>
+    <li>عند تصدير إعداد قابل للمشاركة، تُزال أسماء الأطفال وتواريخ ميلادهم وجنسهم والرمز السري والتسجيلات وسجل الاستخدام قبل المشاركة.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>٨. تعديلات على هذه السياسة</h2>
+  <p>قد نحدّث هذه السياسة عند تغيّر وظائف التطبيق. سيظهر تاريخ آخر تحديث أعلى الصفحة، وستبقى النسخة الحالية متاحة على هذا الرابط.</p>
+</section>
+
+<!-- ============ ENGLISH ============ -->
+<div class="en">
+
+<section>
+  <h2>Summary (English)</h2>
+  <p>3ialna is a parental-control app that runs on a child's device. <strong>Family data stays on the device by default.</strong> The app contains no advertising, no analytics, and no third-party trackers, and it does not read message content, photos, or web page content.</p>
+  <p class="muted">Contact: <a href="mailto:3ialna.app@gmail.com">3ialna.app@gmail.com</a> · Last updated: 30 September 2026</p>
+</section>
+
+<section>
+  <h2>1. Data kept only on the device</h2>
+  <p>The following never leaves the device and is never uploaded to our servers:</p>
+  <ul>
+    <li>Child profiles: name, birth date, gender, and age profile.</li>
+    <li>Daily limits, sleep schedules, and prayer-lock settings.</li>
+    <li>The parent PIN — stored as a PBKDF2 hash with a random salt, never in plain text.</li>
+    <li>Voice recordings made by the parent.</li>
+    <li>App rules and blocked/allowed domain lists.</li>
+    <li>Per-child usage history, reward requests, and token balances.</li>
+  </ul>
+  <p><strong>Cloud backup is disabled</strong> for this app, so this data is not copied to Google Drive and is not included in device-to-device transfer.</p>
+</section>
+
+<section>
+  <h2>2. Data sent to our server — only if the parent creates an account</h2>
+  <p>Registration is <strong>optional</strong> and the app is fully functional without it. Only when a parent registers, the following is sent to <code>https://3ialna.net</code> over an encrypted HTTPS connection:</p>
+  <table>
+    <tr><th>Data</th><th>Purpose</th></tr>
+    <tr><td>Email, first and last name, phone number, country, language</td><td>Create the parent account</td></tr>
+    <tr><td>Linked device identifier and device token</td><td>Link the device to the parent account</td></tr>
+    <tr><td>Device-level daily usage summary: date, total minutes, per-app minutes, category totals</td><td>Parent usage reporting</td></tr>
+  </table>
+  <p>This <strong>excludes</strong> child names, birth dates, gender, the PIN, voice recordings, and per-child history. Attribution of usage to a specific child remains on the device only.</p>
+</section>
+
+<section>
+  <h2>3. Permissions and why they are requested</h2>
+  <ul>
+    <li><strong>Usage access:</strong> to measure screen time and enforce limits.</li>
+    <li><strong>Accessibility service:</strong> to detect only which app is in the foreground so blocking can be applied. It does <strong>not</strong> read message or page content and does not capture keystrokes.</li>
+    <li><strong>Display over other apps:</strong> to show the parent-configured blocking screen.</li>
+    <li><strong>Location:</strong> to calculate prayer times on the device. Location is not sent to our servers.</li>
+    <li><strong>Microphone:</strong> to record parent voice messages, stored locally.</li>
+    <li><strong>Notifications and exact alarms:</strong> to deliver prayer and task reminders on time.</li>
+    <li><strong>Installed app list:</strong> so the parent can choose which apps to manage.</li>
+    <li><strong>Local VPN:</strong> for domain filtering as described below.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>4. DNS-based content filtering</h2>
+  <p>When protection is enabled, the app creates a local, on-device VPN to inspect <strong>requested domain names only</strong> and apply the parent's rules. This traffic does not pass through our servers, and page content is not inspected.</p>
+  <ul>
+    <li>Domain names are evaluated on the device.</li>
+    <li>Allowed queries are forwarded to Cloudflare's public resolver (1.1.1.1), encrypted with DNS-over-TLS.</li>
+    <li><strong>3ialna does not keep a DNS query log.</strong></li>
+  </ul>
+  <p class="muted">Known limits: filtering may not cover direct IP access or encrypted DNS services that bypass the system resolver.</p>
+</section>
+
+<section>
+  <h2>5. What we do not do</h2>
+  <ul>
+    <li>No advertising or ad networks.</li>
+    <li>No third-party analytics or tracking SDKs.</li>
+    <li>No selling or sharing of family data with anyone.</li>
+    <li>No reading of messages, photos, or web page content.</li>
+    <li>No automatic crash reporting. Diagnostics are stored locally in sanitized form and are sent only if the parent explicitly chooses to email them.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>6. Children's privacy</h2>
+  <p>The app is configured and managed by a parent or guardian. Identifying child data stays on the device and is not transmitted to us. We encourage parents to explain the app to their child in an age-appropriate way.</p>
+</section>
+
+<section>
+  <h2>7. Retention and deletion</h2>
+  <ul>
+    <li>Parents can delete child profiles, recordings, and local history from inside the app at any time.</li>
+    <li>Uninstalling the app removes all locally stored data.</li>
+    <li>To delete a registered account and its server-side data, email <a href="mailto:3ialna.app@gmail.com">3ialna.app@gmail.com</a>.</li>
+    <li>Shareable configuration exports strip child names, birth dates, gender, the PIN, recordings, and usage history before sharing.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>8. Changes to this policy</h2>
+  <p>We may update this policy when app functionality changes. The last-updated date appears at the top of this page, and the current version always remains available at this URL.</p>
+</section>
+
+</div>
+</main>
+</body>
+</html>

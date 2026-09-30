@@ -26,6 +26,7 @@ const String _prefsKeySelectedCountry = 'selected_country_profile';
 const String _prefsKeyEssentialPermissionsPrompted = 'essential_permissions_prompted_v1';
 const String _prefsKeyFeatureWalkthroughSeen = 'feature_walkthrough_seen_v1';
 const String _prefsKeyQuickSettingsPrompted = 'quick_settings_prompted_v1';
+const String _prefsKeyQuickSettingsTileAdded = 'quick_settings_tile_added_v1';
 const String _prefsKeyFirstRunSetupComplete = 'first_run_setup_complete_v1';
 const String _prayerOverlayPrefix = 'Prayer Time Lock';
 
@@ -56,6 +57,9 @@ class SettingsService {
 
   bool get quickSettingsPrompted =>
       _prefs.getBool(_prefsKeyQuickSettingsPrompted) ?? false;
+
+  bool get quickSettingsTileAdded =>
+      _prefs.getBool(_prefsKeyQuickSettingsTileAdded) ?? false;
 
   bool get firstRunSetupComplete =>
       _prefs.getBool(_prefsKeyFirstRunSetupComplete) ?? false;
@@ -102,6 +106,10 @@ class SettingsService {
 
   Future<void> setQuickSettingsPrompted() async {
     await _prefs.setBool(_prefsKeyQuickSettingsPrompted, true);
+  }
+
+  Future<void> setQuickSettingsTileAdded() async {
+    await _prefs.setBool(_prefsKeyQuickSettingsTileAdded, true);
   }
 
   Future<void> setFirstRunSetupComplete() async {

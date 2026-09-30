@@ -19,6 +19,7 @@ class AgeSafetyProfileService {
   static const String _parentModeActiveKey =
       'parental_control_parent_mode_active';
   static const String _runtimeActiveChildKey = 'active_child_id';
+  static const String _runtimeActiveUserNameKey = 'active_user_name';
   static const String _runtimeSocialLimitKey = 'active_social_media_limit_minutes';
   static const String _runtimeGamesLimitKey = 'active_games_limit_minutes';
   static const String _runtimePrayerLockEnabledKey = 'active_prayer_lock_enabled';
@@ -187,6 +188,38 @@ class AgeSafetyProfileService {
     await _saveChildren(children, activeId: activeChild()?.id ?? updatedChild.id);
   }
 
+  ChildProfile? _findChild(String childId) {
+    for (final ChildProfile item in loadChildren()) {
+      if (item.id == childId) return item;
+    }
+    return null;
+  }
+
+  /// Sets extra minutes added to the daily limit on Saturdays and Sundays.
+  Future<void> setWeekendBonusMinutes(String childId, int minutes) async {
+    final ChildProfile? child = _findChild(childId);
+    if (child == null) return;
+    await updateChild(child.copyWith(weekendBonusMinutes: minutes.clamp(0, 24 * 60).toInt()));
+  }
+
+  /// Adds or replaces a special-day (e.g. public holiday) bonus for [date].
+  Future<void> setSpecialDayBonusMinutes(String childId, DateTime date, int minutes) async {
+    final ChildProfile? child = _findChild(childId);
+    if (child == null) return;
+    final Map<String, int> bonuses = Map<String, int>.from(child.specialDayBonusMinutes);
+    bonuses[ChildProfile.dateKey(date)] = minutes.clamp(0, 24 * 60).toInt();
+    await updateChild(child.copyWith(specialDayBonusMinutes: bonuses));
+  }
+
+  /// Removes a previously set special-day bonus for [date].
+  Future<void> removeSpecialDayBonus(String childId, DateTime date) async {
+    final ChildProfile? child = _findChild(childId);
+    if (child == null) return;
+    final Map<String, int> bonuses = Map<String, int>.from(child.specialDayBonusMinutes)
+      ..remove(ChildProfile.dateKey(date));
+    await updateChild(child.copyWith(specialDayBonusMinutes: bonuses));
+  }
+
   /// Updates only profiles previously marked as birth-date recommendations.
   /// Parent-selected or edited profiles deliberately remain unchanged.
   Future<bool> refreshAutomaticAgeProfiles({DateTime? now}) async {
@@ -246,6 +279,7 @@ class AgeSafetyProfileService {
     if (child == null) return;
     if (isParentModeActive()) {
       await _prefs.setString(_runtimeActiveChildKey, 'parent');
+      await _prefs.setString(_runtimeActiveUserNameKey, 'Parent');
       await _prefs.setInt(_runtimeSocialLimitKey, 0);
       await _prefs.setInt(_runtimeGamesLimitKey, 0);
       await _prefs.setBool(_runtimePrayerLockEnabledKey, false);
@@ -268,6 +302,7 @@ class AgeSafetyProfileService {
       return;
     }
     await _prefs.setString(_runtimeActiveChildKey, child.id);
+    await _prefs.setString(_runtimeActiveUserNameKey, child.name);
     await _prefs.setInt(_runtimeSocialLimitKey, child.preset.socialMediaLimitMinutes);
     await _prefs.setInt(_runtimeGamesLimitKey, child.preset.gamesLimitMinutes);
     await _prefs.setBool(_runtimePrayerLockEnabledKey, child.preset.prayerLockEnabled);

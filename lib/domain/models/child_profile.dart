@@ -10,6 +10,8 @@ class ChildProfile {
     required this.gender,
     required this.preset,
     this.profileFollowsBirthDate = false,
+    this.weekendBonusMinutes = 0,
+    this.specialDayBonusMinutes = const <String, int>{},
   });
 
   final String id;
@@ -18,6 +20,31 @@ class ChildProfile {
   final ChildGender gender;
   final AgeSafetyProfilePreset preset;
   final bool profileFollowsBirthDate;
+
+  /// Extra minutes added to the daily limit on Saturdays and Sundays.
+  final int weekendBonusMinutes;
+
+  /// Extra minutes for specific calendar dates (e.g. public holidays),
+  /// keyed by [dateKey]. Stacks with [weekendBonusMinutes] when applicable.
+  final Map<String, int> specialDayBonusMinutes;
+
+  /// Formats [date] as a lookup key for [specialDayBonusMinutes].
+  static String dateKey(DateTime date) =>
+      '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
+
+  /// The daily time limit that applies on [date] (defaults to today),
+  /// including any weekend or special-day bonus the parent has set.
+  int effectiveDailyLimitMinutes([DateTime? date]) {
+    final DateTime day = date ?? DateTime.now();
+    int minutes = preset.dailyLimitMinutes;
+    if (day.weekday == DateTime.saturday || day.weekday == DateTime.sunday) {
+      minutes += weekendBonusMinutes;
+    }
+    minutes += specialDayBonusMinutes[dateKey(day)] ?? 0;
+    return minutes;
+  }
 
   int get ageYears {
     final DateTime today = DateTime.now();
@@ -34,6 +61,8 @@ class ChildProfile {
     ChildGender? gender,
     AgeSafetyProfilePreset? preset,
     bool? profileFollowsBirthDate,
+    int? weekendBonusMinutes,
+    Map<String, int>? specialDayBonusMinutes,
   }) {
     return ChildProfile(
       id: id,
@@ -43,6 +72,9 @@ class ChildProfile {
       preset: preset ?? this.preset,
       profileFollowsBirthDate:
           profileFollowsBirthDate ?? this.profileFollowsBirthDate,
+      weekendBonusMinutes: weekendBonusMinutes ?? this.weekendBonusMinutes,
+      specialDayBonusMinutes:
+          specialDayBonusMinutes ?? this.specialDayBonusMinutes,
     );
   }
 
@@ -64,6 +96,8 @@ class ChildProfile {
         'requireParentApproval': preset.requireParentApproval,
         'voiceNotifications': preset.voiceNotifications,
         'profileFollowsBirthDate': profileFollowsBirthDate,
+        'weekendBonusMinutes': weekendBonusMinutes,
+        'specialDayBonusMinutes': specialDayBonusMinutes,
       };
 
   factory ChildProfile.fromJson(Map<String, dynamic> json) {
@@ -98,6 +132,18 @@ class ChildProfile {
       ),
       profileFollowsBirthDate:
           json['profileFollowsBirthDate'] as bool? ?? false,
+      weekendBonusMinutes: json['weekendBonusMinutes'] as int? ?? 0,
+      specialDayBonusMinutes: _decodeSpecialDayBonusMinutes(json['specialDayBonusMinutes']),
     );
+  }
+
+  static Map<String, int> _decodeSpecialDayBonusMinutes(dynamic raw) {
+    if (raw is! Map) return const <String, int>{};
+    try {
+      return raw.map((dynamic key, dynamic value) =>
+          MapEntry(key as String, value as int));
+    } catch (_) {
+      return const <String, int>{};
+    }
   }
 }

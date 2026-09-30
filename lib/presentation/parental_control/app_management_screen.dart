@@ -138,11 +138,12 @@ class _AppManagementScreenState extends State<AppManagementScreen> {
   String _categoryLabel(ManagedAppCategory category) => switch (category) {
         ManagedAppCategory.socialMedia => _text('Social media (shared budget)', 'التواصل الاجتماعي (ميزانية مشتركة)'),
         ManagedAppCategory.games => _text('Games (shared budget)', 'الألعاب (ميزانية مشتركة)'),
+        ManagedAppCategory.other => _text('Others', 'أخرى'),
         ManagedAppCategory.unassigned => _text('Not assigned', 'غير مصنّف'),
       };
 
   Future<void> _setCategory(AppInfo app) async {
-    final ManagedAppCategory current = _categories[app.packageName] ?? ManagedAppCategory.unassigned;
+    final ManagedAppCategory current = _categories[app.packageName] ?? ManagedAppCategory.other;
     final ManagedAppCategory? chosen = await showModalBottomSheet<ManagedAppCategory>(
       context: context,
       builder: (BuildContext context) => SafeArea(
@@ -151,7 +152,13 @@ class _AppManagementScreenState extends State<AppManagementScreen> {
           onChanged: (ManagedAppCategory? value) => Navigator.pop(context, value),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            children: ManagedAppCategory.values
+            // Parents only choose among the three quick-setup buckets;
+            // `unassigned` is an internal default, not a pickable category.
+            children: const <ManagedAppCategory>[
+              ManagedAppCategory.socialMedia,
+              ManagedAppCategory.games,
+              ManagedAppCategory.other,
+            ]
                 .map((ManagedAppCategory category) => RadioListTile<ManagedAppCategory>(
                       value: category,
                       title: Text(_categoryLabel(category)),
@@ -266,7 +273,7 @@ class _AppManagementScreenState extends State<AppManagementScreen> {
                           final isBlocked = _blockedApps.contains(app.packageName);
                           final timeLimit = _timeLimits[app.packageName];
                           final usage = _currentUsage[app.packageName] ?? 0;
-                          final category = _categories[app.packageName] ?? ManagedAppCategory.unassigned;
+                          final category = _categories[app.packageName] ?? ManagedAppCategory.other;
 
                           return AppCard(
                             appInfo: app,

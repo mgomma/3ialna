@@ -27,8 +27,19 @@ object AppListHelper {
         val isSystemApp: Boolean,
         val isEnabled: Boolean,
         val installTime: Long,
-        val updateTime: Long
+        val updateTime: Long,
+        // Android's own declared app category (ApplicationInfo.CATEGORY_*), -1 when undeclared/unavailable.
+        val category: Int = ApplicationInfo.CATEGORY_UNDEFINED
     )
+
+    /** Reads the OS-declared category without any network access; API 26+ only. */
+    private fun readDeclaredCategory(appInfo: ApplicationInfo): Int {
+        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            appInfo.category
+        } else {
+            ApplicationInfo.CATEGORY_UNDEFINED
+        }
+    }
 
     /**
      * Gets a list of all installed applications.
@@ -93,7 +104,8 @@ object AppListHelper {
                             isSystemApp = isSystemApp,
                             isEnabled = isEnabled,
                             installTime = installTime,
-                            updateTime = updateTime
+                            updateTime = updateTime,
+                            category = readDeclaredCategory(appInfo)
                         )
                     )
                 } catch (e: Exception) {
@@ -139,7 +151,8 @@ object AppListHelper {
                 isSystemApp = isSystemApp,
                 isEnabled = isEnabled,
                 installTime = installTime,
-                updateTime = 0L
+                updateTime = 0L,
+                category = readDeclaredCategory(appInfo)
             )
         } catch (e: Exception) {
             Log.w(TAG, "Error getting app info for package: $packageName", e)

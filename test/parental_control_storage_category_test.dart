@@ -43,6 +43,70 @@ void main() {
 
     expect(categories['com.facebook.katana'], ManagedAppCategory.games);
     expect(categories['com.roblox.client'], ManagedAppCategory.games);
-    expect(categories.containsKey('com.example.unknown'), isFalse);
+    // Unknown apps are still bucketed (quick setup) rather than left unassigned.
+    expect(categories['com.example.unknown'], ManagedAppCategory.other);
+  });
+
+  test('does not overwrite a parent override with the registry default', () async {
+    final ParentalControlStorageService storage = ParentalControlStorageService();
+    // Parent explicitly moves a normally-social app into Others.
+    await storage.setAppCategory('com.instagram.android', ManagedAppCategory.other);
+
+    final Map<String, ManagedAppCategory> categories =
+        await storage.reconcileInstalledAppCategories(<AppInfo>[
+      const AppInfo(
+        packageName: 'com.instagram.android',
+        appName: 'Instagram',
+        isSystemApp: false,
+        isEnabled: true,
+        installTime: 0,
+        updateTime: 0,
+      ),
+    ]);
+
+    expect(categories['com.instagram.android'], ManagedAppCategory.other);
+  });
+
+  test('uses the OS-declared category for an unregistered app during reconciliation', () async {
+    final ParentalControlStorageService storage = ParentalControlStorageService();
+
+    final Map<String, ManagedAppCategory> categories =
+        await storage.reconcileInstalledAppCategories(<AppInfo>[
+      const AppInfo(
+        packageName: 'com.example.indiegame',
+        appName: 'Indie Game',
+        isSystemApp: false,
+        isEnabled: true,
+        installTime: 0,
+        updateTime: 0,
+        androidCategory: 0,
+      ),
+    ]);
+
+    expect(categories['com.example.indiegame'], ManagedAppCategory.games);
+  });
+
+  test('reclassifies an unknown app once the parent clears their override', () async {
+    final ParentalControlStorageService storage = ParentalControlStorageService();
+    const AppInfo unknownApp = AppInfo(
+      packageName: 'com.example.unknown',
+      appName: 'Unknown',
+      isSystemApp: false,
+      isEnabled: true,
+      installTime: 0,
+      updateTime: 0,
+    );
+
+    final Map<String, ManagedAppCategory> firstPass =
+        await storage.reconcileInstalledAppCategories(<AppInfo>[unknownApp]);
+    expect(firstPass['com.example.unknown'], ManagedAppCategory.other);
+
+    await storage.setAppCategory('com.example.unknown', ManagedAppCategory.games);
+    expect((await storage.getAppCategories())['com.example.unknown'], ManagedAppCategory.games);
+
+    await storage.setAppCategory('com.example.unknown', ManagedAppCategory.unassigned);
+    final Map<String, ManagedAppCategory> secondPass =
+        await storage.reconcileInstalledAppCategories(<AppInfo>[unknownApp]);
+    expect(secondPass['com.example.unknown'], ManagedAppCategory.other);
   });
 }

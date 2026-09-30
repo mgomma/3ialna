@@ -201,7 +201,8 @@ class MainActivity : FlutterActivity() {
                                 "isSystemApp" to appInfo.isSystemApp,
                                 "isEnabled" to appInfo.isEnabled,
                                 "installTime" to appInfo.installTime,
-                                "updateTime" to appInfo.updateTime
+                                "updateTime" to appInfo.updateTime,
+                                "category" to appInfo.category
                             )
                         }
                         result.success(appList)
@@ -226,7 +227,8 @@ class MainActivity : FlutterActivity() {
                                 "isSystemApp" to appInfo.isSystemApp,
                                 "isEnabled" to appInfo.isEnabled,
                                 "installTime" to appInfo.installTime,
-                                "updateTime" to appInfo.updateTime
+                                "updateTime" to appInfo.updateTime,
+                                "category" to appInfo.category
                             ))
                         } else {
                             result.error("ERROR", "App not found", null)

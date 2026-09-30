@@ -269,6 +269,29 @@ class _AgeSafetyProfilesScreenState extends State<AgeSafetyProfilesScreen> {
         _budgetTile(label: _ar ? 'الألعاب' : 'Games', minutes: preset.gamesLimitMinutes, max: 240, onChanged: (int minutes) => _save(preset.copyWith(gamesLimitMinutes: minutes, dailyLimitMinutes: minutes + preset.socialMediaLimitMinutes))),
         ListTile(title: Text(_ar ? 'المجموع' : 'Combined budget'), subtitle: Text('${preset.dailyLimitMinutes} $_minuteLabel')),
         const Divider(height: 32),
+        Text(_ar ? 'مكافأة عطلة نهاية الأسبوع والعطلات' : 'Weekend and holiday bonus', style: Theme.of(context).textTheme.titleLarge),
+        Text(_ar
+            ? 'أضف دقائق إضافية للسبت والأحد، أو لأيام محددة مثل العطلات الرسمية من التقويم.'
+            : 'Add extra minutes for Saturdays and Sundays, or for specific days like public holidays from the calendar.'),
+        _budgetTile(
+          label: _ar ? 'مكافأة نهاية الأسبوع' : 'Weekend bonus',
+          minutes: _active!.weekendBonusMinutes,
+          max: 180,
+          onChanged: (int minutes) async {
+            await _service!.setWeekendBonusMinutes(_active!.id, minutes);
+            await _load();
+          },
+        ),
+        ..._specialDayTiles(),
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: TextButton.icon(
+            icon: const Icon(Icons.event_available_outlined),
+            label: Text(_ar ? 'إضافة يوم عطلة من التقويم' : 'Add a holiday from the calendar'),
+            onPressed: _addSpecialDayBonus,
+          ),
+        ),
+        const Divider(height: 32),
         Text(_ar ? 'حماية الصلاة والنوم' : 'Prayer and sleep safeguards', style: Theme.of(context).textTheme.titleLarge),
         Text(_ar ? 'تعمل الصلاة وفق الموقع وطريقة الحساب التي يحددها الوالد. اضبط أوقات النوم بما يناسب الروتين المدرسي والعائلي.' : 'Prayer locks use the location and calculation method configured by the parent. Adjust sleep times for school and family routines.'),
         SwitchListTile(title: Text(_ar ? 'قفل وقت الصلاة' : 'Prayer-time lock'), subtitle: Text(_ar ? '${preset.prayerLockMinutes} دقيقة بعد كل صلاة' : '${preset.prayerLockMinutes} minutes after each prayer'), value: preset.prayerLockEnabled, onChanged: (bool value) => _save(preset.copyWith(prayerLockEnabled: value))),
@@ -291,6 +314,69 @@ class _AgeSafetyProfilesScreenState extends State<AgeSafetyProfilesScreen> {
       subtitle: Text('$minutes $_minuteLabel'),
       trailing: SizedBox(width: 150, child: Slider(min: 0, max: max.toDouble(), divisions: max ~/ 15, value: minutes.toDouble(), onChanged: (double value) => onChanged(value.round()))),
     );
+  }
+
+  List<Widget> _specialDayTiles() {
+    final List<MapEntry<String, int>> entries = _active!.specialDayBonusMinutes.entries.toList()
+      ..sort((MapEntry<String, int> a, MapEntry<String, int> b) => a.key.compareTo(b.key));
+    return entries
+        .map((MapEntry<String, int> entry) {
+          final DateTime date = DateTime.parse(entry.key);
+          return ListTile(
+            leading: const Icon(Icons.event_outlined),
+            title: Text(MaterialLocalizations.of(context).formatMediumDate(date)),
+            subtitle: Text('+${entry.value} $_minuteLabel'),
+            trailing: IconButton(
+              icon: const Icon(Icons.delete_outline),
+              onPressed: () async {
+                await _service!.removeSpecialDayBonus(_active!.id, date);
+                await _load();
+              },
+            ),
+          );
+        })
+        .toList(growable: false);
+  }
+
+  Future<void> _addSpecialDayBonus() async {
+    final DateTime? date = await showDatePicker(
+      context: context,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      initialDate: DateTime.now(),
+    );
+    if (date == null || !mounted) return;
+    int minutes = 60;
+    final int? confirmed = await showDialog<int>(
+      context: context,
+      builder: (BuildContext dialogContext) => StatefulBuilder(
+        builder: (BuildContext context, StateSetter setDialogState) => AlertDialog(
+          title: Text(_ar ? 'دقائق إضافية' : 'Bonus minutes'),
+          content: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Expanded(
+                child: Slider(
+                  min: 15,
+                  max: 240,
+                  divisions: 15,
+                  value: minutes.toDouble(),
+                  onChanged: (double value) => setDialogState(() => minutes = value.round()),
+                ),
+              ),
+              Text('$minutes $_minuteLabel'),
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(_ar ? 'إلغاء' : 'Cancel')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, minutes), child: Text(_ar ? 'حفظ' : 'Save')),
+          ],
+        ),
+      ),
+    );
+    if (confirmed == null) return;
+    await _service!.setSpecialDayBonusMinutes(_active!.id, date, confirmed);
+    await _load();
   }
 
   Future<void> _pickSleepTime({required bool isStart, required AgeSafetyProfilePreset preset}) async {

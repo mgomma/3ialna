@@ -5,14 +5,16 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.preference.PreferenceManager
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import com.ialna.app.MainActivity
 
 /**
- * A parent-controlled Android Quick Settings entry point. Android requires the
- * device owner to add the tile; this service never exposes a child name in the
- * notification shade. Tapping it opens 3ialna's active-child selector.
+ * A parent-controlled Android Quick Settings entry point. The tile label
+ * shows who is currently using the device (a child's name, or "Parent") so
+ * whoever picks up the phone can see the active profile at a glance. Tapping
+ * it opens 3ialna's active-child selector.
  */
 class ActiveChildQuickSettingsTileService : TileService() {
     override fun onStartListening() {
@@ -51,8 +53,10 @@ class ActiveChildQuickSettingsTileService : TileService() {
     }
 
     private fun updateTile() {
+        val activeUserName = PreferenceManager.getDefaultSharedPreferences(this)
+            .getString("flutter.active_user_name", null)
         qsTile?.apply {
-            label = "3ialna"
+            label = if (activeUserName.isNullOrBlank()) "3ialna" else "3ialna · $activeUserName"
             contentDescription = "3ialna active child settings"
             state = Tile.STATE_ACTIVE
             updateTile()

@@ -31,9 +31,12 @@ class OverlayWarningApp extends StatelessWidget {
       supportedLocales: AppLocalizations.supportedLocales,
       theme: ThemeData(
         useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.red, brightness: Brightness.dark),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.red,
+          brightness: Brightness.dark,
+        ),
       ),
-      home: const OverlayWarningScreen(),
+      home: const Scaffold(body: OverlayWarningScreen()),
     );
   }
 }
@@ -54,7 +57,8 @@ class _OverlayWarningScreenState extends State<OverlayWarningScreen> {
   bool _requestPending = false;
   final AppBlockingService _blockingService = AppBlockingService();
   final AppBlockingChannel _blockingChannel = AppBlockingChannel();
-  final AccessibilityServiceHelper _accessibilityHelper = AccessibilityServiceHelper();
+  final AccessibilityServiceHelper _accessibilityHelper =
+      AccessibilityServiceHelper();
   final RewardService _rewardService = const RewardService();
 
   @override
@@ -69,14 +73,17 @@ class _OverlayWarningScreenState extends State<OverlayWarningScreen> {
   /// If not enabled, shows a snackbar to inform user (non-blocking).
   Future<void> _checkAccessibilityServiceOnInit() async {
     try {
-      final isEnabled = await _accessibilityHelper.isAccessibilityServiceEnabled();
+      final isEnabled = await _accessibilityHelper
+          .isAccessibilityServiceEnabled();
       if (!isEnabled && mounted) {
         // Show a non-blocking snackbar to inform user
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: const Text('Enable Accessibility Service for app blocking to work.'),
+                content: const Text(
+                  'Enable Accessibility Service for app blocking to work.',
+                ),
                 action: SnackBarAction(
                   label: 'Open Settings',
                   onPressed: () async {
@@ -135,7 +142,8 @@ class _OverlayWarningScreenState extends State<OverlayWarningScreen> {
 
     try {
       // Check if AccessibilityService is enabled BEFORE blocking
-      final isEnabled = await _accessibilityHelper.isAccessibilityServiceEnabled();
+      final isEnabled = await _accessibilityHelper
+          .isAccessibilityServiceEnabled();
 
       if (!isEnabled) {
         // Show dialog to enable AccessibilityService and open settings
@@ -151,8 +159,14 @@ class _OverlayWarningScreenState extends State<OverlayWarningScreen> {
                 'Tap "Open Settings" to enable it, then return and try again.',
               ),
               actions: [
-                TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
-                FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Open Settings')),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Open Settings'),
+                ),
               ],
             ),
           );
@@ -175,7 +189,10 @@ class _OverlayWarningScreenState extends State<OverlayWarningScreen> {
       // 1. Save block to SharedPreferences
       // 2. Force close the app
       // 3. Return to home screen
-      final success = await _blockingChannel.blockApp(packageName!, durationMinutes: 30);
+      final success = await _blockingChannel.blockApp(
+        packageName!,
+        durationMinutes: 30,
+      );
 
       if (success) {
         // Close overlay after a short delay to ensure app is closed
@@ -196,26 +213,40 @@ class _OverlayWarningScreenState extends State<OverlayWarningScreen> {
 
   Future<void> _loadPendingRequest() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final String childId = prefs.getString('flutter.active_child_id') ?? 'default';
-    final List<ChildExtraTimeRequest> requests = await _rewardService.loadRequests();
-    final bool pending = requests.any((ChildExtraTimeRequest request) => request.status == 'pending' && request.childId == childId && request.packageName == (packageName ?? ''));
+    final String childId =
+        prefs.getString('flutter.active_child_id') ?? 'default';
+    final List<ChildExtraTimeRequest> requests = await _rewardService
+        .loadRequests();
+    final bool pending = requests.any(
+      (ChildExtraTimeRequest request) =>
+          request.status == 'pending' &&
+          request.childId == childId &&
+          request.packageName == (packageName ?? ''),
+    );
     if (mounted) setState(() => _requestPending = pending);
   }
 
   Future<void> _requestMoreTime() async {
     if (_requestPending) return;
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final String childId = prefs.getString('flutter.active_child_id') ?? 'default';
+    final String childId =
+        prefs.getString('flutter.active_child_id') ?? 'default';
     final List<int> durations = await _rewardService.loadRequestDurations();
     if (!mounted) return;
     final int? minutes = durations.length == 1
         ? durations.first
         : await ChildRequestDurationDialog.show(context, durations);
     if (minutes == null) return;
-    await _rewardService.createRequest(childId: childId, minutes: minutes, packageName: packageName ?? '');
+    await _rewardService.createRequest(
+      childId: childId,
+      minutes: minutes,
+      packageName: packageName ?? '',
+    );
     if (mounted) {
       setState(() => _requestPending = true);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).requestSent)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).requestSent)),
+      );
     }
   }
 
@@ -258,19 +289,17 @@ class _OverlayWarningScreenState extends State<OverlayWarningScreen> {
     // Calculate full screen size including system UI
     // Add extra padding to ensure we cover navigation bar
     final fullWidth = screenSize.width;
-    final fullHeight = screenSize.height + padding.top + padding.bottom + 100; // Extra 100px to cover navigation bar
+    final fullHeight =
+        screenSize.height +
+        padding.top +
+        padding.bottom +
+        100; // Extra 100px to cover navigation bar
 
     return GestureDetector(
       // Prevent all dragging gestures
       onPanStart: (_) {},
       onPanUpdate: (_) {},
       onPanEnd: (_) {},
-      onHorizontalDragStart: (_) {},
-      onHorizontalDragUpdate: (_) {},
-      onHorizontalDragEnd: (_) {},
-      onVerticalDragStart: (_) {},
-      onVerticalDragUpdate: (_) {},
-      onVerticalDragEnd: (_) {},
       // Block all taps outside the content area
       onTap: () {},
       behavior: HitTestBehavior.opaque,
@@ -301,34 +330,53 @@ class _OverlayWarningScreenState extends State<OverlayWarningScreen> {
                 child: Container(
                   margin: const EdgeInsets.all(24),
                   padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(color: Colors.red.shade700, borderRadius: BorderRadius.circular(24)),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade700,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
-                      const Icon(Icons.warning_amber_rounded, size: 64, color: Colors.white),
+                      const Icon(
+                        Icons.warning_amber_rounded,
+                        size: 64,
+                        color: Colors.white,
+                      ),
                       const SizedBox(height: 16),
                       Text(
                         context.l10n.timeLimitReachedTitle,
                         textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
                       const SizedBox(height: 12),
                       Text(
                         'Time limit exceeded for $appName',
                         textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         'You\'ve used this app for $usedMinutes minutes today',
                         textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'Daily limit: $limitMinutes minutes',
                         textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white60),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: Colors.white60),
                       ),
                       const SizedBox(height: 24),
                       SizedBox(
@@ -338,16 +386,27 @@ class _OverlayWarningScreenState extends State<OverlayWarningScreen> {
                             backgroundColor: Colors.white,
                             foregroundColor: Colors.red.shade700,
                             padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                           onPressed: _takeABreak,
-                          child: const Text('Take a Break', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          child: const Text(
+                            'Take a Break',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 12),
                       SizedBox(
                         width: double.infinity,
-                        child: ChildRequestPendingBanner(pending: _requestPending, onRequest: _requestMoreTime),
+                        child: ChildRequestPendingBanner(
+                          pending: _requestPending,
+                          onRequest: _requestMoreTime,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       SizedBox(
@@ -355,12 +414,20 @@ class _OverlayWarningScreenState extends State<OverlayWarningScreen> {
                         child: OutlinedButton(
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.white,
-                            side: const BorderSide(color: Colors.white70, width: 1.5),
+                            side: const BorderSide(
+                              color: Colors.white70,
+                              width: 1.5,
+                            ),
                             padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                           onPressed: _addMoreTime,
-                          child: const Text('Parent: Add 5 Minutes', style: TextStyle(fontWeight: FontWeight.bold)),
+                          child: const Text(
+                            'Parent: Add 5 Minutes',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
                         ),
                       ),
                     ],

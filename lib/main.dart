@@ -19,7 +19,15 @@ Future<void> main() async {
   final SharedPreferences prefs = await SharedPreferences.getInstance();
   LocaleController.instance = LocaleController(prefs);
   final NotificationService notifications = NotificationService();
-  await notifications.initialize();
+  try {
+    await notifications.initialize();
+  } catch (error, stackTrace) {
+    await ErrorReportService.recordHandled(
+      source: 'app_startup_notifications',
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
   runApp(const SocialMediaLimiterApp());
   void openVoiceReminder(VoiceReminderAction action) {
     final NavigatorState? navigator = appNavigatorKey.currentState;

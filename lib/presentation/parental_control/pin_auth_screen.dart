@@ -23,10 +23,7 @@ class _PinAuthScreenState extends State<PinAuthScreen> {
     4,
     (_) => TextEditingController(),
   );
-  final List<FocusNode> _focusNodes = List.generate(
-    4,
-    (_) => FocusNode(),
-  );
+  final List<FocusNode> _focusNodes = List.generate(4, (_) => FocusNode());
   String _enteredPin = '';
   String _confirmPin = '';
   bool _isConfirming = false;
@@ -163,8 +160,12 @@ class _PinAuthScreenState extends State<PinAuthScreen> {
           widget.onAuthenticated();
         }
       } else {
+        final Duration lockout = await _pinAuthService.lockoutRemaining();
+        if (!mounted) return;
         setState(() {
-          _errorMessage = 'Incorrect PIN. Please try again.';
+          _errorMessage = lockout > Duration.zero
+              ? 'Too many attempts. Try again in ${_formatLockout(lockout)}.'
+              : 'Incorrect PIN. Please try again.';
           _enteredPin = '';
           for (final controller in _controllers) {
             controller.clear();
@@ -176,6 +177,12 @@ class _PinAuthScreenState extends State<PinAuthScreen> {
     }
   }
 
+  String _formatLockout(Duration lockout) {
+    final int minutes = lockout.inMinutes;
+    if (minutes >= 1) return '$minutes min';
+    return '${lockout.inSeconds + 1}s';
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -183,129 +190,156 @@ class _PinAuthScreenState extends State<PinAuthScreen> {
 
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.lock_outline,
-                size: 64,
-                color: colorScheme.primary,
-              ),
-              const SizedBox(height: 24),
-              Text(
-                widget.isSetupMode
-                    ? (_isConfirming
-                        ? 'Confirm PIN'
-                        : 'Set Parent PIN')
-                    : 'Enter PIN',
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
+        child: LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            final bool compact = constraints.maxHeight < 480;
+            final bool veryCompact = constraints.maxHeight < 260;
+            const EdgeInsets pagePadding = EdgeInsets.all(24);
+
+            return SingleChildScrollView(
+              padding: pagePadding,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: (constraints.maxHeight - pagePadding.vertical)
+                      .clamp(0, double.infinity),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                widget.isSetupMode
-                    ? (_isConfirming
-                        ? 'Re-enter your PIN to confirm'
-                        : 'Create a PIN to protect parental controls')
-                    : 'Enter your PIN to access parental controls',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 48),
-              // PIN input fields
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(4, (index) {
-                  return Container(
-                    width: 56,
-                    height: 56,
-                    margin: const EdgeInsets.symmetric(horizontal: 8),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: _enteredPin.length > index
-                            ? colorScheme.primary
-                            : colorScheme.outline,
-                        width: 2,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: TextField(
-                      controller: _controllers[index],
-                      focusNode: _focusNodes[index],
-                      textAlign: TextAlign.center,
-                      obscureText: true,
-                      maxLength: 1,
-                      autofocus: index == 0,
-                      keyboardType: TextInputType.number,
-                      textInputAction:
-                          index == 3 ? TextInputAction.done : TextInputAction.next,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(_acceptedDigits),
-                      ],
-                      style: theme.textTheme.headlineSmall,
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        counterText: '',
-                      ),
-                      onChanged: (value) => _onPinChanged(index, value),
-                      onSubmitted: (_) {
-                        if (index < 3) {
-                          _focusNodes[index + 1].requestFocus();
-                        } else if (_enteredPin.length == 4) {
-                          _handlePinComplete();
-                        }
-                      },
-                      onTap: () {
-                        _focusNodes[index].requestFocus();
-                      },
-                    ),
-                  );
-                }),
-              ),
-              if (_errorMessage != null) ...[
-                const SizedBox(height: 24),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: colorScheme.errorContainer,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
+                child: Column(
+                  mainAxisAlignment: compact
+                      ? MainAxisAlignment.start
+                      : MainAxisAlignment.center,
+                  children: [
+                    if (!veryCompact) ...[
                       Icon(
-                        Icons.error_outline,
-                        color: colorScheme.onErrorContainer,
+                        Icons.lock_outline,
+                        size: compact ? 40 : 64,
+                        color: colorScheme.primary,
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _errorMessage!,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onErrorContainer,
+                      SizedBox(height: compact ? 12 : 24),
+                    ],
+                    Text(
+                      widget.isSetupMode
+                          ? (_isConfirming ? 'Confirm PIN' : 'Set Parent PIN')
+                          : 'Enter PIN',
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (!veryCompact) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        widget.isSetupMode
+                            ? (_isConfirming
+                                  ? 'Re-enter your PIN to confirm'
+                                  : 'Create a PIN to protect parental controls')
+                            : 'Enter your PIN to access parental controls',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                    SizedBox(height: compact ? 16 : 48),
+                    // PIN input fields
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(4, (index) {
+                        return Container(
+                          width: 56,
+                          height: 56,
+                          margin: const EdgeInsets.symmetric(horizontal: 8),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: _enteredPin.length > index
+                                  ? colorScheme.primary
+                                  : colorScheme.outline,
+                              width: 2,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
                           ),
+                          child: TextField(
+                            controller: _controllers[index],
+                            focusNode: _focusNodes[index],
+                            textAlign: TextAlign.center,
+                            obscureText: true,
+                            maxLength: 1,
+                            autofocus: index == 0,
+                            keyboardType: TextInputType.number,
+                            textInputAction: index == 3
+                                ? TextInputAction.done
+                                : TextInputAction.next,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                _acceptedDigits,
+                              ),
+                            ],
+                            style: theme.textTheme.headlineSmall,
+                            decoration: const InputDecoration(
+                              border: InputBorder.none,
+                              counterText: '',
+                            ),
+                            onChanged: (value) => _onPinChanged(index, value),
+                            onSubmitted: (_) {
+                              if (index < 3) {
+                                _focusNodes[index + 1].requestFocus();
+                              } else if (_enteredPin.length == 4) {
+                                _handlePinComplete();
+                              }
+                            },
+                            onTap: () {
+                              _focusNodes[index].requestFocus();
+                            },
+                          ),
+                        );
+                      }),
+                    ),
+                    if (_errorMessage != null) ...[
+                      const SizedBox(height: 24),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: colorScheme.errorContainer,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              color: colorScheme.onErrorContainer,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _errorMessage!,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.onErrorContainer,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
-                  ),
+                    SizedBox(height: compact ? 16 : 48),
+                    // Biometric authentication button
+                    if (_biometricAvailable && !widget.isSetupMode) ...[
+                      OutlinedButton.icon(
+                        onPressed: _isAuthenticatingBiometrically
+                            ? null
+                            : () => _authenticateWithBiometrics(),
+                        icon: const Icon(Icons.fingerprint),
+                        label: Text(
+                          _isAuthenticatingBiometrically
+                              ? 'Authenticating…'
+                              : 'Use Biometric',
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                  ],
                 ),
-              ],
-              const SizedBox(height: 48),
-              // Biometric authentication button
-              if (_biometricAvailable && !widget.isSetupMode) ...[
-                OutlinedButton.icon(
-                  onPressed: _isAuthenticatingBiometrically ? null : () => _authenticateWithBiometrics(),
-                  icon: const Icon(Icons.fingerprint),
-                  label: Text(_isAuthenticatingBiometrically ? 'Authenticating…' : 'Use Biometric'),
-                ),
-                const SizedBox(height: 16),
-              ],
-            ],
-          ),
+              ),
+            );
+          },
         ),
       ),
     );

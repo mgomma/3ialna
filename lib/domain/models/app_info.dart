@@ -7,6 +7,9 @@ class AppInfo {
   final bool isEnabled;
   final int installTime;
   final int updateTime;
+  /// Android's own declared app category (`ApplicationInfo.CATEGORY_*`), or
+  /// null when undeclared/unavailable (e.g. older OS versions, non-Android).
+  final int? androidCategory;
 
   const AppInfo({
     required this.packageName,
@@ -16,9 +19,11 @@ class AppInfo {
     required this.isEnabled,
     required this.installTime,
     required this.updateTime,
+    this.androidCategory,
   });
 
   factory AppInfo.fromMap(Map<String, dynamic> map) {
+    final int? category = map['category'] as int?;
     return AppInfo(
       packageName: map['packageName'] as String,
       appName: map['appName'] as String,
@@ -27,6 +32,7 @@ class AppInfo {
       isEnabled: map['isEnabled'] as bool? ?? true,
       installTime: map['installTime'] as int? ?? 0,
       updateTime: map['updateTime'] as int? ?? 0,
+      androidCategory: category == null || category < 0 ? null : category,
     );
   }
 
@@ -39,6 +45,7 @@ class AppInfo {
       'isEnabled': isEnabled,
       'installTime': installTime,
       'updateTime': updateTime,
+      'category': androidCategory,
     };
   }
 
@@ -50,6 +57,7 @@ class AppInfo {
     bool? isEnabled,
     int? installTime,
     int? updateTime,
+    int? androidCategory,
   }) {
     return AppInfo(
       packageName: packageName ?? this.packageName,
@@ -59,6 +67,7 @@ class AppInfo {
       isEnabled: isEnabled ?? this.isEnabled,
       installTime: installTime ?? this.installTime,
       updateTime: updateTime ?? this.updateTime,
+      androidCategory: androidCategory ?? this.androidCategory,
     );
   }
 }
