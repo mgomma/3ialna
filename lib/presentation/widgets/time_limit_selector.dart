@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
+
 /// Widget for selecting a time limit in minutes.
 class TimeLimitSelector extends StatefulWidget {
   final int? initialMinutes;
@@ -97,7 +99,7 @@ class _TimeLimitSelectorState extends State<TimeLimitSelector> {
               children: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
+                  child: Text(context.l10n.cancel),
                 ),
                 const SizedBox(width: 8),
                 FilledButton(

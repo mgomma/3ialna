@@ -276,7 +276,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                                 isSetupMode: true,
                                 onAuthenticated: () {
                                   Navigator.of(context).pop();
-                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('PIN updated successfully')));
+                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.pinUpdated)));
                                 },
                               ),
                             ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../domain/models/schedule.dart';
 import '../../data/local/parental_control_storage_service.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Screen for managing schedule settings for app restrictions.
 class ScheduleScreen extends StatefulWidget {
@@ -22,15 +23,20 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   );
   bool _isLoading = true;
 
-  final List<Map<String, dynamic>> _days = [
-    {'value': 1, 'label': 'Mon'},
-    {'value': 2, 'label': 'Tue'},
-    {'value': 3, 'label': 'Wed'},
-    {'value': 4, 'label': 'Thu'},
-    {'value': 5, 'label': 'Fri'},
-    {'value': 6, 'label': 'Sat'},
-    {'value': 0, 'label': 'Sun'},
-  ];
+  final List<int> _dayValues = <int>[1, 2, 3, 4, 5, 6, 0];
+
+  String _dayLabel(BuildContext context, int value) {
+    final AppLocalizations l10n = context.l10n;
+    return switch (value) {
+      1 => l10n.dayMon,
+      2 => l10n.dayTue,
+      3 => l10n.dayWed,
+      4 => l10n.dayThu,
+      5 => l10n.dayFri,
+      6 => l10n.daySat,
+      _ => l10n.daySun,
+    };
+  }
 
   @override
   void initState() {
@@ -50,8 +56,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     await _storage.setSchedule(_schedule);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Schedule saved successfully'),
+        SnackBar(
+          content: Text(context.l10n.scheduleSaved),
         ),
       );
     }
@@ -133,7 +139,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Schedule Settings'),
+        title: Text(context.l10n.scheduleSettings),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -143,9 +149,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             // Enable/Disable Switch
             Card(
               child: SwitchListTile(
-                title: const Text('Enable Schedule'),
-                subtitle: const Text(
-                  'Restrictions will only apply during scheduled hours',
+                title: Text(context.l10n.enableSchedule),
+                subtitle: Text(
+                  context.l10n.scheduleEnableSubtitle,
                 ),
                 value: _schedule.enabled,
                 onChanged: (value) {
@@ -160,7 +166,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             if (_schedule.enabled) ...[
               // Active Days
               Text(
-                'Active Days',
+                context.l10n.activeDays,
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -169,12 +175,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: _days.map((day) {
-                  final isActive = _schedule.activeDays.contains(day['value']);
+                children: _dayValues.map((int day) {
+                  final isActive = _schedule.activeDays.contains(day);
                   return FilterChip(
-                    label: Text(day['label'] as String),
+                    label: Text(_dayLabel(context, day)),
                     selected: isActive,
-                    onSelected: (_) => _toggleDay(day['value'] as int),
+                    onSelected: (_) => _toggleDay(day),
                   );
                 }).toList(),
               ),
@@ -187,7 +193,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Time Range',
+                        context.l10n.timeRange,
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -195,7 +201,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                       const SizedBox(height: 16),
                       ListTile(
                         leading: const Icon(Icons.access_time),
-                        title: const Text('Start Time'),
+                        title: Text(context.l10n.startTime),
                         subtitle: Text(_schedule.startTime),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () => _selectTime(context, true),
@@ -203,7 +209,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                       const Divider(),
                       ListTile(
                         leading: const Icon(Icons.access_time),
-                        title: const Text('End Time'),
+                        title: Text(context.l10n.endTime),
                         subtitle: Text(_schedule.endTime),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () => _selectTime(context, false),
@@ -216,9 +222,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               // Different Weekend Rules
               Card(
                 child: SwitchListTile(
-                  title: const Text('Different Weekend Rules'),
-                  subtitle: const Text(
-                    'Use different time restrictions for weekends',
+                  title: Text(context.l10n.differentWeekendRules),
+                  subtitle: Text(
+                    context.l10n.weekendRulesSubtitle,
                   ),
                   value: _schedule.differentWeekendRules,
                   onChanged: (value) {
@@ -240,7 +246,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Weekend Time Range',
+                          context.l10n.weekendTimeRange,
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -248,7 +254,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                         const SizedBox(height: 16),
                         ListTile(
                           leading: const Icon(Icons.access_time),
-                          title: const Text('Start Time'),
+                          title: Text(context.l10n.startTime),
                           subtitle: Text(
                             _schedule.weekendStartTime ?? _schedule.startTime,
                           ),
@@ -258,7 +264,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                         const Divider(),
                         ListTile(
                           leading: const Icon(Icons.access_time),
-                          title: const Text('End Time'),
+                          title: Text(context.l10n.endTime),
                           subtitle: Text(
                             _schedule.weekendEndTime ?? _schedule.endTime,
                           ),
@@ -295,8 +301,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                           children: [
                             Text(
                               _schedule.isActiveNow()
-                                  ? 'Restrictions Active'
-                                  : 'Restrictions Inactive',
+                                  ? context.l10n.restrictionsActive
+                                  : context.l10n.restrictionsInactive,
                               style: theme.textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: _schedule.isActiveNow()
@@ -307,8 +313,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                             const SizedBox(height: 4),
                             Text(
                               _schedule.isActiveNow()
-                                  ? 'App restrictions are currently enforced'
-                                  : 'App restrictions are not active',
+                                  ? context.l10n.restrictionsEnforced
+                                  : context.l10n.restrictionsNotActive,
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: _schedule.isActiveNow()
                                     ? colorScheme.onErrorContainer

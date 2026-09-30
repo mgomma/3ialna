@@ -632,63 +632,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       decoration: InputDecoration(
                         labelText: context.l10n.countryProfileCountryLabel,
                       ),
-                      items: const <DropdownMenuItem<String>>[
-                        DropdownMenuItem<String>(
-                          value: 'SA',
-                          child: Text('Saudi Arabia'),
-                        ),
-                        DropdownMenuItem<String>(
-                          value: 'EG',
-                          child: Text('Egypt'),
-                        ),
-                        DropdownMenuItem<String>(
-                          value: 'AE',
-                          child: Text('UAE'),
-                        ),
-                        DropdownMenuItem<String>(
-                          value: 'KW',
-                          child: Text('Kuwait'),
-                        ),
-                        DropdownMenuItem<String>(
-                          value: 'QA',
-                          child: Text('Qatar'),
-                        ),
-                        DropdownMenuItem<String>(
-                          value: 'BH',
-                          child: Text('Bahrain'),
-                        ),
-                        DropdownMenuItem<String>(
-                          value: 'IQ',
-                          child: Text('Iraq'),
-                        ),
-                        DropdownMenuItem<String>(
-                          value: 'LB',
-                          child: Text('Lebanon'),
-                        ),
-                        DropdownMenuItem<String>(
-                          value: 'JO',
-                          child: Text('Jordan'),
-                        ),
-                        DropdownMenuItem<String>(
-                          value: 'SY',
-                          child: Text('Syria'),
-                        ),
-                        DropdownMenuItem<String>(
-                          value: 'SD',
-                          child: Text('Sudan'),
-                        ),
-                        DropdownMenuItem<String>(
-                          value: 'TN',
-                          child: Text('Tunisia'),
-                        ),
-                        DropdownMenuItem<String>(
-                          value: 'DZ',
-                          child: Text('Algeria'),
-                        ),
-                        DropdownMenuItem<String>(
-                          value: 'MA',
-                          child: Text('Maroc'),
-                        ),
+                      items: <DropdownMenuItem<String>>[
+                        for (final String code in AppLocalizations.countryCodes)
+                          DropdownMenuItem<String>(
+                            value: code,
+                            child: Text(context.l10n.countryName(code)),
+                          ),
                       ],
                       onChanged: (String? value) {
                         if (value == null) return;
@@ -702,14 +651,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       decoration: InputDecoration(
                         labelText: context.l10n.languageLabel,
                       ),
-                      items: const <DropdownMenuItem<String>>[
+                      items: <DropdownMenuItem<String>>[
                         DropdownMenuItem<String>(
                           value: 'ar',
-                          child: Text('Arabic'),
+                          child: Text(context.l10n.arabic),
                         ),
                         DropdownMenuItem<String>(
                           value: 'en',
-                          child: Text('English'),
+                          child: Text(context.l10n.english),
                         ),
                       ],
                       onChanged: (String? value) {
@@ -1556,7 +1505,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   FilledButton.icon(
                     onPressed: _showUnlockPinAuth,
                     icon: const Icon(Icons.security),
-                    label: const Text('Parent Unlock'),
+                    label: Text(context.l10n.parentUnlock),
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 24,
@@ -1569,7 +1518,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   OutlinedButton.icon(
                     onPressed: _showAdjustLimitPinAuth,
                     icon: const Icon(Icons.edit),
-                    label: const Text('Adjust Limit'),
+                    label: Text(context.l10n.adjustLimit),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 24,
@@ -1618,7 +1567,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final result = await showDialog<int>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Adjust Daily Limit'),
+        title: Text(context.l10n.adjustDailyLimit),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1637,7 +1586,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.cancel),
           ),
         ],
       ),
@@ -2050,7 +1999,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 // Show prominent disclosure first
                 await DisclosureDialog.show(
                   context: context,
-                  title: 'Accessibility Service Required',
+                  title: context.l10n.accessibilityServiceRequired,
                   message:
                       'This app uses Accessibility Services to detect when a restricted app is in the foreground and block it if time limits are exceeded.\n\nThis service is required for the parental control features to work. We do not collect or transmit your personal data.',
                   icon: Icons.accessibility_new,

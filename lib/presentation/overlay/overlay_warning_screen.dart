@@ -152,7 +152,7 @@ class _OverlayWarningScreenState extends State<OverlayWarningScreen> {
             context: context,
             barrierDismissible: false,
             builder: (context) => AlertDialog(
-              title: const Text('Enable App Blocking'),
+              title: Text(context.l10n.enableAppBlocking),
               content: const Text(
                 'To block apps, you need to enable the Accessibility Service.\n\n'
                 'This allows the app to prevent blocked apps from opening.\n\n'
@@ -161,11 +161,11 @@ class _OverlayWarningScreenState extends State<OverlayWarningScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('Cancel'),
+                  child: Text(context.l10n.cancel),
                 ),
                 FilledButton(
                   onPressed: () => Navigator.of(context).pop(true),
-                  child: const Text('Open Settings'),
+                  child: Text(context.l10n.openSettings),
                 ),
               ],
             ),

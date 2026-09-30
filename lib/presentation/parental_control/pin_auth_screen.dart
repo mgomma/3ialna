@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../data/system/pin_auth_service.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Screen for PIN authentication to access parental controls.
 class PinAuthScreen extends StatefulWidget {
@@ -142,7 +143,7 @@ class _PinAuthScreenState extends State<PinAuthScreen> {
           }
         } else {
           setState(() {
-            _errorMessage = 'PINs do not match. Please try again.';
+            _errorMessage = context.l10n.pinsDoNotMatch;
             _isConfirming = false;
             _enteredPin = '';
             _confirmPin = '';
@@ -164,8 +165,8 @@ class _PinAuthScreenState extends State<PinAuthScreen> {
         if (!mounted) return;
         setState(() {
           _errorMessage = lockout > Duration.zero
-              ? 'Too many attempts. Try again in ${_formatLockout(lockout)}.'
-              : 'Incorrect PIN. Please try again.';
+              ? _formatLockout(context, lockout)
+              : context.l10n.incorrectPin;
           _enteredPin = '';
           for (final controller in _controllers) {
             controller.clear();
@@ -177,10 +178,10 @@ class _PinAuthScreenState extends State<PinAuthScreen> {
     }
   }
 
-  String _formatLockout(Duration lockout) {
+  String _formatLockout(BuildContext context, Duration lockout) {
     final int minutes = lockout.inMinutes;
-    if (minutes >= 1) return '$minutes min';
-    return '${lockout.inSeconds + 1}s';
+    if (minutes >= 1) return context.l10n.pinLockedMinutes(minutes);
+    return context.l10n.pinLockedSeconds(lockout.inSeconds + 1);
   }
 
   @override

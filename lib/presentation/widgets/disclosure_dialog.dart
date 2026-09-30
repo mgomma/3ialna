@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
+
 /// A reusable dialog for showing prominent disclosures as required by Google Play Policy.
 ///
 /// This dialog explains "What data is accessed" and "How it is used" before
@@ -9,8 +11,9 @@ class DisclosureDialog extends StatelessWidget {
   final String message;
   final IconData icon;
   final VoidCallback onAgree;
-  final String agreeLabel;
-  final String cancelLabel;
+  /// Falls back to the active locale when omitted.
+  final String? agreeLabel;
+  final String? cancelLabel;
   final Color? iconColor;
 
   const DisclosureDialog({
@@ -19,8 +22,8 @@ class DisclosureDialog extends StatelessWidget {
     required this.message,
     required this.icon,
     required this.onAgree,
-    this.agreeLabel = 'Agree',
-    this.cancelLabel = 'No thanks',
+    this.agreeLabel,
+    this.cancelLabel,
     this.iconColor,
   });
 
@@ -40,13 +43,13 @@ class DisclosureDialog extends StatelessWidget {
         ),
       ),
       actions: <Widget>[
-        TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(cancelLabel)),
+        TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(cancelLabel ?? context.l10n.noThanks)),
         FilledButton(
           onPressed: () {
             Navigator.of(context).pop(true);
             onAgree();
           },
-          child: Text(agreeLabel),
+          child: Text(agreeLabel ?? context.l10n.agree),
         ),
       ],
     );

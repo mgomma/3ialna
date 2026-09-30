@@ -110,6 +110,56 @@ class AppLocalizations {
             'Could not complete social sign-in. Please try again or use email registration.',
           'socialMissingEmail':
             'This social account did not provide email. Please register with email/password.',
+          'cancel': 'Cancel',
+          'openSettings': 'Open Settings',
+          'noThanks': 'No thanks',
+          'agree': 'Agree',
+          'parentUnlock': 'Parent Unlock',
+          'adjustLimit': 'Adjust Limit',
+          'adjustDailyLimit': 'Adjust Daily Limit',
+          'accessibilityServiceRequired': 'Accessibility Service Required',
+          'enableAppBlocking': 'Enable App Blocking',
+          'pinUpdated': 'PIN updated successfully',
+          'pinsDoNotMatch': 'PINs do not match. Please try again.',
+          'incorrectPin': 'Incorrect PIN. Please try again.',
+          'pinLockedMinutes': 'Too many attempts. Try again in {value} min.',
+          'pinLockedSeconds': 'Too many attempts. Try again in {value}s.',
+          'scheduleSaved': 'Schedule saved successfully',
+          'scheduleSettings': 'Schedule Settings',
+          'enableSchedule': 'Enable Schedule',
+          'startTime': 'Start Time',
+          'endTime': 'End Time',
+          'differentWeekendRules': 'Different Weekend Rules',
+          'scheduleEnableSubtitle': 'Restrictions will only apply during scheduled hours',
+          'activeDays': 'Active Days',
+          'timeRange': 'Time Range',
+          'weekendTimeRange': 'Weekend Time Range',
+          'weekendRulesSubtitle': 'Use different time restrictions for weekends',
+          'restrictionsActive': 'Restrictions Active',
+          'restrictionsInactive': 'Restrictions Inactive',
+          'restrictionsEnforced': 'App restrictions are currently enforced',
+          'restrictionsNotActive': 'App restrictions are not active',
+          'dayMon': 'Mon',
+          'dayTue': 'Tue',
+          'dayWed': 'Wed',
+          'dayThu': 'Thu',
+          'dayFri': 'Fri',
+          'daySat': 'Sat',
+          'daySun': 'Sun',
+          'country_SA': 'Saudi Arabia',
+          'country_EG': 'Egypt',
+          'country_AE': 'UAE',
+          'country_KW': 'Kuwait',
+          'country_QA': 'Qatar',
+          'country_BH': 'Bahrain',
+          'country_IQ': 'Iraq',
+          'country_LB': 'Lebanon',
+          'country_JO': 'Jordan',
+          'country_SY': 'Syria',
+          'country_SD': 'Sudan',
+          'country_TN': 'Tunisia',
+          'country_DZ': 'Algeria',
+          'country_MA': 'Morocco',
     },
     'ar': <String, String>{
       'appTitle': 'عيالنا',
@@ -193,6 +243,56 @@ class AppLocalizations {
             'تعذر إكمال تسجيل الدخول الاجتماعي. حاول مرة أخرى أو استخدم التسجيل بالبريد الإلكتروني.',
           'socialMissingEmail':
             'هذا الحساب الاجتماعي لم يزوّد بريدا إلكترونيا. يرجى التسجيل بالبريد وكلمة المرور.',
+          'cancel': 'إلغاء',
+          'openSettings': 'فتح الإعدادات',
+          'noThanks': 'لا، شكرًا',
+          'agree': 'موافق',
+          'parentUnlock': 'فتح القفل بواسطة الوالد',
+          'adjustLimit': 'تعديل الحد',
+          'adjustDailyLimit': 'تعديل الحد اليومي',
+          'accessibilityServiceRequired': 'مطلوب تفعيل خدمة إمكانية الوصول',
+          'enableAppBlocking': 'تفعيل حظر التطبيقات',
+          'pinUpdated': 'تم تحديث الرمز السري بنجاح',
+          'pinsDoNotMatch': 'الرمزان غير متطابقين. حاول مرة أخرى.',
+          'incorrectPin': 'الرمز السري غير صحيح. حاول مرة أخرى.',
+          'pinLockedMinutes': 'محاولات كثيرة. أعد المحاولة بعد {value} دقيقة.',
+          'pinLockedSeconds': 'محاولات كثيرة. أعد المحاولة بعد {value} ثانية.',
+          'scheduleSaved': 'تم حفظ الجدول بنجاح',
+          'scheduleSettings': 'إعدادات الجدول',
+          'enableSchedule': 'تفعيل الجدول',
+          'startTime': 'وقت البداية',
+          'endTime': 'وقت النهاية',
+          'differentWeekendRules': 'قواعد مختلفة لعطلة نهاية الأسبوع',
+          'scheduleEnableSubtitle': 'تُطبّق القيود خلال الساعات المجدولة فقط',
+          'activeDays': 'الأيام النشطة',
+          'timeRange': 'الفترة الزمنية',
+          'weekendTimeRange': 'فترة عطلة نهاية الأسبوع',
+          'weekendRulesSubtitle': 'استخدم قيودًا زمنية مختلفة لعطلة نهاية الأسبوع',
+          'restrictionsActive': 'القيود مفعّلة',
+          'restrictionsInactive': 'القيود غير مفعّلة',
+          'restrictionsEnforced': 'قيود التطبيقات مطبّقة الآن',
+          'restrictionsNotActive': 'قيود التطبيقات غير نشطة',
+          'dayMon': 'الإثنين',
+          'dayTue': 'الثلاثاء',
+          'dayWed': 'الأربعاء',
+          'dayThu': 'الخميس',
+          'dayFri': 'الجمعة',
+          'daySat': 'السبت',
+          'daySun': 'الأحد',
+          'country_SA': 'السعودية',
+          'country_EG': 'مصر',
+          'country_AE': 'الإمارات',
+          'country_KW': 'الكويت',
+          'country_QA': 'قطر',
+          'country_BH': 'البحرين',
+          'country_IQ': 'العراق',
+          'country_LB': 'لبنان',
+          'country_JO': 'الأردن',
+          'country_SY': 'سوريا',
+          'country_SD': 'السودان',
+          'country_TN': 'تونس',
+          'country_DZ': 'الجزائر',
+          'country_MA': 'المغرب',
     },
   };
 
@@ -270,6 +370,52 @@ class AppLocalizations {
   String get registerWithApple => _text('registerWithApple');
   String get socialSignInFailed => _text('socialSignInFailed');
   String get socialMissingEmail => _text('socialMissingEmail');
+  String get cancel => _text('cancel');
+  String get openSettings => _text('openSettings');
+  String get noThanks => _text('noThanks');
+  String get agree => _text('agree');
+  String get parentUnlock => _text('parentUnlock');
+  String get adjustLimit => _text('adjustLimit');
+  String get adjustDailyLimit => _text('adjustDailyLimit');
+  String get accessibilityServiceRequired => _text('accessibilityServiceRequired');
+  String get enableAppBlocking => _text('enableAppBlocking');
+  String get pinUpdated => _text('pinUpdated');
+  String get pinsDoNotMatch => _text('pinsDoNotMatch');
+  String get incorrectPin => _text('incorrectPin');
+  String pinLockedMinutes(int value) => _text('pinLockedMinutes').replaceAll('{value}', '$value');
+  String pinLockedSeconds(int value) => _text('pinLockedSeconds').replaceAll('{value}', '$value');
+  String get scheduleSaved => _text('scheduleSaved');
+  String get scheduleSettings => _text('scheduleSettings');
+  String get enableSchedule => _text('enableSchedule');
+  String get startTime => _text('startTime');
+  String get endTime => _text('endTime');
+  String get differentWeekendRules => _text('differentWeekendRules');
+  String get scheduleEnableSubtitle => _text('scheduleEnableSubtitle');
+  String get activeDays => _text('activeDays');
+  String get timeRange => _text('timeRange');
+  String get weekendTimeRange => _text('weekendTimeRange');
+  String get weekendRulesSubtitle => _text('weekendRulesSubtitle');
+  String get restrictionsActive => _text('restrictionsActive');
+  String get restrictionsInactive => _text('restrictionsInactive');
+  String get restrictionsEnforced => _text('restrictionsEnforced');
+  String get restrictionsNotActive => _text('restrictionsNotActive');
+  String get dayMon => _text('dayMon');
+  String get dayTue => _text('dayTue');
+  String get dayWed => _text('dayWed');
+  String get dayThu => _text('dayThu');
+  String get dayFri => _text('dayFri');
+  String get daySat => _text('daySat');
+  String get daySun => _text('daySun');
+  /// Country codes offered in the registration dialog, in display order.
+  static const List<String> countryCodes = <String>[
+    'SA', 'EG', 'AE', 'KW', 'QA', 'BH', 'IQ', 'LB', 'JO', 'SY', 'SD', 'TN', 'DZ', 'MA',
+  ];
+
+  @visibleForTesting
+  static Map<String, String> valuesFor(String languageCode) =>
+      Map<String, String>.unmodifiable(_localizedValues[languageCode] ?? const <String, String>{});
+
+  String countryName(String code) => _text('country_$code');
 
   String timeLimitReachedMessage({
     required String appName,
