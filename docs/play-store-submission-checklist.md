@@ -30,6 +30,10 @@ flutter build appbundle --release
 
 ## Privacy and data safety
 
+- [x] Publish a bilingual privacy policy at `https://mgomma.github.io/3ialna/privacy.html` and expose it from the app and website without requiring sign-in.
+- [x] Provide an in-app account-deletion request path for authenticated parents and a public web resource at `https://mgomma.github.io/3ialna/account-deletion.html`; requests are verified and processed by support, and the copy distinguishes server data from local device data.
+- [ ] Enter the privacy-policy URL and account-deletion URL in their designated Play Console fields and verify both links in the final listing.
+- [ ] Ensure support monitors and fulfills deletion requests, including any required server-side deletion and confirmation; no account-deletion API is currently implemented in the app.
 - [ ] Confirm the Data safety answers match the implementation: child names, birth dates, gender, PINs, recordings, app rules, domains, requests, tokens, and usage history are local-only unless the product scope explicitly changes.
 - [ ] Confirm crash diagnostics contain only sanitized error categories and stack locations; never upload recordings, child identity, usage, rules, or credentials.
 - [ ] Confirm the privacy policy explains local storage, deletion, export/import sanitization, permissions, notifications, accessibility, VPN/DNS filtering, and parent-controlled data removal.

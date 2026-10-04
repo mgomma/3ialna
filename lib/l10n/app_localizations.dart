@@ -89,6 +89,18 @@ class AppLocalizations {
       'arabic': 'العربية',
       'languageChanged': 'Language updated',
       'parentalControls': 'Parental Controls',
+        'privacyPolicy': 'Privacy policy',
+        'privacyAccountTitle': 'Privacy & account',
+        'privacyAccountSummary':
+          'Review how 3ialna handles your information and manage account deletion requests.',
+        'accountDeletionTitle': 'Delete a registered account',
+        'accountDeletionBody':
+          'To request deletion of your registered account and associated server data, send a request from the email address on the account. Support will verify and process it. This does not erase local app data from this device.',
+        'requestAccountDeletion': 'Request account deletion',
+        'accountDeletionEmailSubject': '3ialna account and data deletion request',
+        'accountDeletionEmailBody':
+          'Please delete my registered 3ialna account and associated server-side data. I am sending this request from the email address registered to the account. Please tell me if you need any further verification. I have not included child information.',
+        'externalLinkFailed': 'Could not open the link. Please try again.',
       'changePin': 'Change PIN',
       'accessibilitySettings': 'Accessibility Settings',
       'close': 'Close',
@@ -222,6 +234,18 @@ class AppLocalizations {
         'arabic': 'العربية',
         'languageChanged': 'تم تحديث اللغة',
         'parentalControls': 'الرقابة الأبوية',
+        'privacyPolicy': 'سياسة الخصوصية',
+        'privacyAccountTitle': 'الخصوصية والحساب',
+        'privacyAccountSummary':
+          'راجع كيفية تعامل عيالنا مع معلوماتك وقدّم طلب حذف الحساب.',
+        'accountDeletionTitle': 'حذف حساب مسجّل',
+        'accountDeletionBody':
+          'لطلب حذف حسابك المسجّل والبيانات المرتبطة به على الخادم، أرسل الطلب من البريد الإلكتروني المسجّل للحساب. سيتحقق فريق الدعم من الطلب ويعالجه. لا يؤدي ذلك إلى حذف بيانات التطبيق المحلية من هذا الجهاز.',
+        'requestAccountDeletion': 'طلب حذف الحساب',
+        'accountDeletionEmailSubject': 'طلب حذف حساب وبيانات عيالنا',
+        'accountDeletionEmailBody':
+          'أرجو حذف حساب عيالنا المسجّل والبيانات المرتبطة به على الخادم. أرسل هذا الطلب من البريد الإلكتروني المسجّل للحساب. يرجى إخباري إذا لزم أي تحقق إضافي. لم أرفق معلومات عن الأطفال.',
+        'externalLinkFailed': 'تعذر فتح الرابط. يرجى المحاولة مرة أخرى.',
         'changePin': 'تغيير الرقم السري',
         'accessibilitySettings': 'إعدادات إمكانية الوصول',
         'close': 'إغلاق',
@@ -355,6 +379,16 @@ class AppLocalizations {
   String get arabic => _text('arabic');
   String get languageChanged => _text('languageChanged');
   String get parentalControls => _text('parentalControls');
+  String get privacyPolicy => _text('privacyPolicy');
+  String get privacyAccountTitle => _text('privacyAccountTitle');
+  String get privacyAccountSummary => _text('privacyAccountSummary');
+  String get accountDeletionTitle => _text('accountDeletionTitle');
+  String get accountDeletionBody => _text('accountDeletionBody');
+  String get requestAccountDeletion => _text('requestAccountDeletion');
+  String get accountDeletionEmailSubject =>
+      _text('accountDeletionEmailSubject');
+  String get accountDeletionEmailBody => _text('accountDeletionEmailBody');
+  String get externalLinkFailed => _text('externalLinkFailed');
   String get changePin => _text('changePin');
   String get accessibilitySettings => _text('accessibilitySettings');
   String get close => _text('close');

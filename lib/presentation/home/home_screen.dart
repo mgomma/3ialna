@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/social_media_apps.dart';
 import '../../data/local/settings_service.dart';
@@ -37,6 +38,7 @@ import '../parental_control/pin_auth_screen.dart';
 import '../onboarding/feature_walkthrough_screen.dart';
 import '../prayer_settings/prayer_lock_settings_screen.dart';
 import '../reports/parent_usage_report_screen.dart';
+import '../support/privacy_account_screen.dart';
 import '../support/educational_expert_contact_screen.dart';
 import '../widgets/disclosure_dialog.dart';
 
@@ -1266,6 +1268,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (_isParentMode) ...<Widget>[
       _buildMonitorToggle(),
       const SizedBox(height: 16),
+      OutlinedButton.icon(
+        key: const ValueKey<String>('privacy-account-action'),
+        onPressed: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => const PrivacyAccountScreen(),
+          ),
+        ),
+        icon: const Icon(Icons.privacy_tip_outlined),
+        label: Text(context.l10n.privacyAccountTitle),
+      ),
+      const SizedBox(height: 16),
     ],
     if (_isParentMode) ...<Widget>[
       OutlinedButton.icon(
@@ -1359,6 +1372,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       title: Text(context.l10n.appTitle),
       centerTitle: true,
       actions: <Widget>[
+        IconButton(
+          icon: const Icon(Icons.policy_outlined),
+          onPressed: () => launchUrl(
+            Uri.parse(PrivacyAccountScreen.privacyPolicyUrl),
+            mode: LaunchMode.externalApplication,
+          ),
+          tooltip: context.l10n.privacyPolicy,
+        ),
         IconButton(
           icon: const Icon(Icons.family_restroom),
           onPressed: () {

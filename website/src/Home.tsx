@@ -445,7 +445,7 @@ export default function Home() {
 
         <section className="final-cta"><div><span className="cta-stamp" aria-hidden="true">3ialna / عيالنا · READY</span><Sparkles size={22} /><h2>{t.finalCta}</h2><p>{t.finalBody}</p></div><a className={`button primary light download-button ${downloadState === "opening" ? "is-opening" : ""}`} href={preferredDownloadUrl} target="_blank" rel="noreferrer" onClick={handleDownloadClick} aria-busy={downloadState === "opening"} aria-describedby="release-download-feedback">{downloadState === "opening" ? <LoaderCircle className="download-spinner" size={18} aria-hidden="true" /> : <Download size={18} aria-hidden="true" />}{downloadState === "opening" ? t.releaseOpening : t.download}</a></section>
       </main>
-      <footer><div className="brand footer-brand"><span className="brand-mark" aria-hidden="true" /><span>3ialna</span><small>عيالنا</small></div><span>{t.footer}</span><a href="privacy.html">{isArabic ? "سياسة الخصوصية" : "Privacy Policy"}</a><span>© 2026</span></footer>
+      <footer><div className="brand footer-brand"><span className="brand-mark" aria-hidden="true" /><span>3ialna</span><small>عيالنا</small></div><span>{t.footer}</span><a href="privacy.html">{isArabic ? "سياسة الخصوصية" : "Privacy Policy"}</a><a href="account-deletion.html">{isArabic ? "حذف الحساب" : "Account deletion"}</a><span>© 2026</span></footer>
     </div>
   );
 }
