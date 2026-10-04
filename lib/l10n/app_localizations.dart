@@ -101,6 +101,30 @@ class AppLocalizations {
         'accountDeletionEmailBody':
           'Please delete my registered 3ialna account and associated server-side data. I am sending this request from the email address registered to the account. Please tell me if you need any further verification. I have not included child information.',
         'externalLinkFailed': 'Could not open the link. Please try again.',
+          'firstChildSetupTitle': 'Set up your child',
+          'firstChildSetupIntro':
+            'Enter your child’s details. 3ialna will select the age-matched starting profile; you can review and change every setting.',
+          'childName': 'Child name',
+          'birthDate': 'Date of birth',
+          'gender': 'Gender',
+          'chooseBirthDate': 'Choose date of birth',
+          'chooseGender': 'Choose gender',
+          'boy': 'Boy',
+          'girl': 'Girl',
+          'unspecified': 'Prefer not to say',
+          'recommendedProfile': 'Recommended starting profile',
+          'dailyBudget': 'Daily recreational budget',
+          'socialBudget': 'Social media',
+          'gamesBudget': 'Games',
+          'sleepSchedule': 'Sleep schedule',
+          'prayerLock': 'Prayer lock',
+          'matureContentBlock': 'Block mature content',
+          'parentApproval': 'Require parent approval for requests',
+          'parentVoiceReminders': 'Parent voice reminders',
+          'enabled': 'On',
+          'disabled': 'Off',
+          'saveChildProfile': 'Save child profile',
+          'completeRequiredFields': 'Enter a name, date of birth, and gender to continue.',
       'changePin': 'Change PIN',
       'accessibilitySettings': 'Accessibility Settings',
       'close': 'Close',
@@ -246,6 +270,30 @@ class AppLocalizations {
         'accountDeletionEmailBody':
           'أرجو حذف حساب عيالنا المسجّل والبيانات المرتبطة به على الخادم. أرسل هذا الطلب من البريد الإلكتروني المسجّل للحساب. يرجى إخباري إذا لزم أي تحقق إضافي. لم أرفق معلومات عن الأطفال.',
         'externalLinkFailed': 'تعذر فتح الرابط. يرجى المحاولة مرة أخرى.',
+        'firstChildSetupTitle': 'إعداد ملف الطفل',
+        'firstChildSetupIntro':
+          'أدخل بيانات طفلك. سيختار عيالنا إعداد البداية المناسب لعمره، ويمكنك مراجعة كل إعداد وتغييره.',
+        'childName': 'اسم الطفل',
+        'birthDate': 'تاريخ الميلاد',
+        'gender': 'النوع',
+        'chooseBirthDate': 'اختر تاريخ الميلاد',
+        'chooseGender': 'اختر النوع',
+        'boy': 'ولد',
+        'girl': 'بنت',
+        'unspecified': 'أفضل عدم التحديد',
+        'recommendedProfile': 'إعداد البداية المقترح',
+        'dailyBudget': 'الميزانية الترفيهية اليومية',
+        'socialBudget': 'وسائل التواصل الاجتماعي',
+        'gamesBudget': 'الألعاب',
+        'sleepSchedule': 'جدول النوم',
+        'prayerLock': 'قفل الصلاة',
+        'matureContentBlock': 'حظر المحتوى غير المناسب',
+        'parentApproval': 'طلب موافقة الوالد على الطلبات',
+        'parentVoiceReminders': 'تذكيرات بصوت الوالدين',
+        'enabled': 'مفعّل',
+        'disabled': 'متوقف',
+        'saveChildProfile': 'حفظ ملف الطفل',
+        'completeRequiredFields': 'أدخل الاسم وتاريخ الميلاد والنوع للمتابعة.',
         'changePin': 'تغيير الرقم السري',
         'accessibilitySettings': 'إعدادات إمكانية الوصول',
         'close': 'إغلاق',
@@ -389,6 +437,29 @@ class AppLocalizations {
       _text('accountDeletionEmailSubject');
   String get accountDeletionEmailBody => _text('accountDeletionEmailBody');
   String get externalLinkFailed => _text('externalLinkFailed');
+  String get firstChildSetupTitle => _text('firstChildSetupTitle');
+  String get firstChildSetupIntro => _text('firstChildSetupIntro');
+  String get childName => _text('childName');
+  String get birthDate => _text('birthDate');
+  String get gender => _text('gender');
+  String get chooseBirthDate => _text('chooseBirthDate');
+  String get chooseGender => _text('chooseGender');
+  String get boy => _text('boy');
+  String get girl => _text('girl');
+  String get unspecified => _text('unspecified');
+  String get recommendedProfile => _text('recommendedProfile');
+  String get dailyBudget => _text('dailyBudget');
+  String get socialBudget => _text('socialBudget');
+  String get gamesBudget => _text('gamesBudget');
+  String get sleepSchedule => _text('sleepSchedule');
+  String get prayerLock => _text('prayerLock');
+  String get matureContentBlock => _text('matureContentBlock');
+  String get parentApproval => _text('parentApproval');
+  String get parentVoiceReminders => _text('parentVoiceReminders');
+  String get enabled => _text('enabled');
+  String get disabled => _text('disabled');
+  String get saveChildProfile => _text('saveChildProfile');
+  String get completeRequiredFields => _text('completeRequiredFields');
   String get changePin => _text('changePin');
   String get accessibilitySettings => _text('accessibilitySettings');
   String get close => _text('close');

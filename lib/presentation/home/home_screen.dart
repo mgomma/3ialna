@@ -35,6 +35,7 @@ import '../../l10n/app_localizations.dart';
 import '../parental_control/parent_dashboard_screen.dart';
 import '../parental_control/age_safety_profiles_screen.dart';
 import '../parental_control/pin_auth_screen.dart';
+import '../onboarding/first_child_setup_screen.dart';
 import '../onboarding/feature_walkthrough_screen.dart';
 import '../prayer_settings/prayer_lock_settings_screen.dart';
 import '../reports/parent_usage_report_screen.dart';
@@ -116,7 +117,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _homeSettingsInitialized = true;
 
     _childProfiles = AgeSafetyProfileService(prefs);
-    await _childProfiles.ensureDefaultChild();
+    if (_childProfiles.loadChildren().isNotEmpty ||
+        _settings.firstRunSetupComplete ||
+        _childProfiles.hasLegacyPreset) {
+      await _childProfiles.ensureDefaultChild();
+    }
     AgeSafetyProfileService.changes.addListener(_onChildProfileChanged);
     ChildShortcutService.listen((String childId) async {
       await _captureOutgoingChildUsage();
@@ -213,6 +218,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         return;
       }
       _openSettingsAfterFirstRun = false;
+      if (_childProfiles.loadChildren().isEmpty) {
+        final bool? createdFirstChild = await Navigator.of(context).push<bool>(
+          MaterialPageRoute<bool>(
+            builder: (_) => const FirstChildSetupScreen(),
+          ),
+        );
+        if (!mounted || createdFirstChild != true) {
+          _setupFlowScheduled = false;
+          return;
+        }
+        _loadSettings();
+      }
       await Navigator.of(context).push(
         MaterialPageRoute<void>(builder: (_) => const ParentDashboardScreen()),
       );

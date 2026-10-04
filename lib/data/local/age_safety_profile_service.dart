@@ -43,6 +43,8 @@ class AgeSafetyProfileService {
     }
   }
 
+  bool get hasLegacyPreset => _prefs.containsKey(_key);
+
   ChildProfile? activeChild() {
     final List<ChildProfile> children = loadChildren();
     if (children.isEmpty) return null;
@@ -156,7 +158,6 @@ class AgeSafetyProfileService {
     AgeSafetyProfile? profile,
     bool? profileFollowsBirthDate,
   }) async {
-    await ensureDefaultChild();
     final bool followsBirthDate = profileFollowsBirthDate ?? profile == null;
     final AgeSafetyProfile resolvedProfile = followsBirthDate
         ? AgeSafetyProfileRecommendation.forBirthDate(birthDate)

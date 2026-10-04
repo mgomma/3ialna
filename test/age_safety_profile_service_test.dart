@@ -5,6 +5,45 @@ import 'package:mu_super_app/domain/models/age_safety_profile.dart';
 import 'package:mu_super_app/domain/models/child_profile.dart';
 
 void main() {
+  test('keeps the parent-approved defaults for every age profile', () {
+    final Map<AgeSafetyProfile, List<Object>> expected =
+        <AgeSafetyProfile, List<Object>>{
+      AgeSafetyProfile.underFive: <Object>[
+        30, 0, 30, 19 * 60 + 30, 7 * 60, 10, true, true, true,
+      ],
+      AgeSafetyProfile.agesFiveToNine: <Object>[
+        45, 0, 45, 20 * 60 + 30, 7 * 60, 15, true, true, true,
+      ],
+      AgeSafetyProfile.agesNineToThirteen: <Object>[
+        90, 30, 60, 21 * 60 + 30, 7 * 60, 15, true, false, true,
+      ],
+      AgeSafetyProfile.teenagers: <Object>[
+        150, 60, 90, 22 * 60 + 30, 7 * 60, 15, true, false, false,
+      ],
+    };
+
+    for (final MapEntry<AgeSafetyProfile, List<Object>> entry
+        in expected.entries) {
+      final AgeSafetyProfilePreset preset =
+          AgeSafetyProfilePreset.defaults[entry.key]!;
+      expect(
+        <Object>[
+          preset.dailyLimitMinutes,
+          preset.socialMediaLimitMinutes,
+          preset.gamesLimitMinutes,
+          preset.sleepLockStartMinutes,
+          preset.sleepLockEndMinutes,
+          preset.prayerLockMinutes,
+          preset.blockMatureContent,
+          preset.requireParentApproval,
+          preset.voiceNotifications,
+        ],
+        entry.value,
+        reason: entry.key.name,
+      );
+    }
+  });
+
   test('selects a ready-made teenage profile and persists edits', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -76,6 +115,25 @@ void main() {
         .loadChildren()
         .firstWhere((ChildProfile item) => item.id == child.id);
     expect(updated.preset.profile, AgeSafetyProfile.teenagers);
+  });
+
+  test('adding the first child does not create a placeholder profile', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final AgeSafetyProfileService service = AgeSafetyProfileService(prefs);
+
+    final ChildProfile child = await service.addChild(
+      name: 'Maha',
+      birthDate: DateTime(2014, 1, 1),
+      gender: ChildGender.girl,
+    );
+
+    expect(service.loadChildren(), hasLength(1));
+    expect(service.activeChild()?.id, child.id);
+    expect(child.name, 'Maha');
+    expect(child.gender, ChildGender.girl);
+    expect(child.preset.profile, AgeSafetyProfile.agesNineToThirteen);
+    expect(child.profileFollowsBirthDate, isTrue);
   });
 
   test('does not overwrite a parent-selected profile during automatic refresh',

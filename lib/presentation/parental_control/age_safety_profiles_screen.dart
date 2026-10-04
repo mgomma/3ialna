@@ -9,6 +9,7 @@ import '../../data/system/pin_auth_service.dart';
 import '../../domain/models/age_safety_profile.dart';
 import '../../domain/models/child_profile.dart';
 import 'pin_auth_screen.dart';
+import 'widgets/age_profile_preview.dart';
 import 'widgets/children_management_list.dart';
 
 class AgeSafetyProfilesScreen extends StatefulWidget {
@@ -103,9 +104,10 @@ class _AgeSafetyProfilesScreenState extends State<AgeSafetyProfilesScreen> {
 
   Future<void> _editChild({ChildProfile? child}) async {
     final TextEditingController name = TextEditingController(text: child?.name ?? '');
-    DateTime birthDate = child?.birthDate ?? DateTime.now();
-    ChildGender gender = child?.gender ?? ChildGender.unspecified;
+    DateTime? birthDate = child?.birthDate;
+    ChildGender? gender = child?.gender;
     bool profileFollowsBirthDate = child?.profileFollowsBirthDate ?? true;
+    AgeSafetyProfile selectedProfile = child?.preset.profile ?? AgeSafetyProfile.underFive;
     final ChildProfile? result = await showDialog<ChildProfile>(
       context: context,
       builder: (BuildContext dialogContext) => StatefulBuilder(
@@ -117,11 +119,22 @@ class _AgeSafetyProfilesScreenState extends State<AgeSafetyProfilesScreen> {
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text(_ar ? 'تاريخ الميلاد' : 'Birth date'),
-                subtitle: Text(MaterialLocalizations.of(context).formatMediumDate(birthDate)),
+                subtitle: Text(birthDate == null
+                    ? (_ar ? 'اختر تاريخ الميلاد' : 'Choose date of birth')
+                    : MaterialLocalizations.of(context).formatMediumDate(birthDate!)),
                 trailing: const Icon(Icons.calendar_today_outlined),
                 onTap: () async {
-                  final DateTime? selected = await showDatePicker(context: context, firstDate: DateTime(DateTime.now().year - 18), lastDate: DateTime.now(), initialDate: birthDate);
-                  if (selected != null) setDialogState(() => birthDate = selected);
+                  final DateTime today = DateTime.now();
+                  final DateTime initial = birthDate ?? DateTime(today.year - 8, today.month, today.day);
+                  final DateTime? selected = await showDatePicker(context: context, firstDate: DateTime(today.year - 18), lastDate: today, initialDate: initial);
+                  if (selected != null) {
+                    setDialogState(() {
+                      birthDate = selected;
+                      if (profileFollowsBirthDate) {
+                        selectedProfile = AgeSafetyProfileRecommendation.forBirthDate(selected);
+                      }
+                    });
+                  }
                 },
               ),
               SwitchListTile(
@@ -130,40 +143,88 @@ class _AgeSafetyProfilesScreenState extends State<AgeSafetyProfilesScreen> {
                     ? 'اختيار الملف حسب تاريخ الميلاد'
                     : 'Choose profile from birth date'),
                 subtitle: Text(profileFollowsBirthDate
-                    ? (_ar
-                        ? 'الملف المقترح: ${AgeSafetyProfilePreset.defaults[AgeSafetyProfileRecommendation.forBirthDate(birthDate)]!.nameAr}'
-                        : 'Recommended: ${AgeSafetyProfilePreset.defaults[AgeSafetyProfileRecommendation.forBirthDate(birthDate)]!.nameEn}')
-                    : (_ar
-                        ? 'يبقى اختيار الوالد وتعديلاته محفوظين.'
-                        : 'The parent-selected profile and edits remain protected.')),
+                    ? (_ar ? 'يُحدّد تلقائيًا حسب تاريخ الميلاد.' : 'Selected automatically from date of birth.')
+                    : (_ar ? 'اختر الملف يدويًا.' : 'Choose the profile manually.')),
                 value: profileFollowsBirthDate,
-                onChanged: (bool value) => setDialogState(
-                  () => profileFollowsBirthDate = value,
-                ),
+                onChanged: (bool value) => setDialogState(() {
+                  profileFollowsBirthDate = value;
+                  if (value && birthDate != null) {
+                    selectedProfile = AgeSafetyProfileRecommendation.forBirthDate(birthDate!);
+                  }
+                }),
               ),
+              if (!profileFollowsBirthDate)
+                DropdownButtonFormField<AgeSafetyProfile>(
+                  key: ValueKey<AgeSafetyProfile>(selectedProfile),
+                  initialValue: selectedProfile,
+                  decoration: InputDecoration(labelText: _ar ? 'الملف العمري' : 'Age profile'),
+                  items: AgeSafetyProfile.values.map((AgeSafetyProfile profile) {
+                    final AgeSafetyProfilePreset preset = AgeSafetyProfilePreset.defaults[profile]!;
+                    return DropdownMenuItem<AgeSafetyProfile>(
+                      value: profile,
+                      child: Text(_ar ? preset.nameAr : preset.nameEn),
+                    );
+                  }).toList(growable: false),
+                  onChanged: (AgeSafetyProfile? value) {
+                    if (value != null) setDialogState(() => selectedProfile = value);
+                  },
+                ),
+              if (birthDate != null) ...<Widget>[
+                const SizedBox(height: 8),
+                AgeProfilePreview(
+                  preset: AgeSafetyProfilePreset.defaults[
+                    profileFollowsBirthDate
+                        ? AgeSafetyProfileRecommendation.forBirthDate(birthDate!)
+                        : selectedProfile
+                  ]!,
+                ),
+              ],
               DropdownButtonFormField<ChildGender>(
-                key: ValueKey<ChildGender>(gender),
+                key: ValueKey<ChildGender?>(gender),
                 initialValue: gender,
                 decoration: InputDecoration(labelText: _ar ? 'النوع' : 'Gender'),
                 items: <DropdownMenuItem<ChildGender>>[
-                  DropdownMenuItem(value: ChildGender.unspecified, child: Text(_ar ? 'غير محدد' : 'Not specified')),
+                  DropdownMenuItem(value: ChildGender.unspecified, child: Text(_ar ? 'أفضل عدم التحديد' : 'Prefer not to say')),
                   DropdownMenuItem(value: ChildGender.boy, child: Text(_ar ? 'ولد' : 'Boy')),
                   DropdownMenuItem(value: ChildGender.girl, child: Text(_ar ? 'بنت' : 'Girl')),
                 ],
-                onChanged: (ChildGender? value) => setDialogState(() => gender = value ?? ChildGender.unspecified),
+                onChanged: (ChildGender? value) => setDialogState(() => gender = value),
               ),
             ]),
           ),
           actions: <Widget>[
             TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(_ar ? 'إلغاء' : 'Cancel')),
-            FilledButton(onPressed: () => Navigator.pop(dialogContext, ChildProfile(id: child?.id ?? '', name: name.text, birthDate: birthDate, gender: gender, preset: child?.preset ?? AgeSafetyProfilePreset.defaults[AgeSafetyProfile.underFive]!, profileFollowsBirthDate: profileFollowsBirthDate)), child: Text(_ar ? 'حفظ' : 'Save')),
+            FilledButton(
+              onPressed: name.text.trim().isEmpty || birthDate == null || gender == null
+                  ? null
+                  : () {
+                      final AgeSafetyProfile profile = profileFollowsBirthDate
+                          ? AgeSafetyProfileRecommendation.forBirthDate(birthDate!)
+                          : selectedProfile;
+                      Navigator.pop(dialogContext, ChildProfile(
+                        id: child?.id ?? '',
+                        name: name.text.trim(),
+                        birthDate: birthDate!,
+                        gender: gender!,
+                        preset: AgeSafetyProfilePreset.defaults[profile]!,
+                        profileFollowsBirthDate: profileFollowsBirthDate,
+                      ));
+                    },
+              child: Text(_ar ? 'حفظ' : 'Save'),
+            ),
           ],
         ),
       ),
     );
     if (result == null) return;
     if (child == null) {
-      await _service!.addChild(name: result.name, birthDate: result.birthDate, gender: result.gender, profileFollowsBirthDate: result.profileFollowsBirthDate);
+      await _service!.addChild(
+        name: result.name,
+        birthDate: result.birthDate,
+        gender: result.gender,
+        profile: result.preset.profile,
+        profileFollowsBirthDate: result.profileFollowsBirthDate,
+      );
     } else {
       await _service!.updateChild(result);
     }
