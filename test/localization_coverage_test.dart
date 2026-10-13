@@ -50,6 +50,25 @@ void main() {
         reason: 'Arabic entries without Arabic script: $suspicious');
   });
 
+  test('Arabic translations do not contain untranslated Latin text', () {
+    final RegExp latinScript = RegExp(r'[A-Za-z]{2,}');
+    final Map<String, String> arabic = AppLocalizations.valuesFor('ar');
+
+    final List<String> suspicious = arabic.entries
+        .where(
+          (MapEntry<String, String> entry) =>
+              !intentionallyShared.contains(entry.key) &&
+              latinScript.hasMatch(
+                entry.value.replaceAll(RegExp(r'\{[^}]+\}'), ''),
+              ),
+        )
+        .map((MapEntry<String, String> entry) => entry.key)
+        .toList();
+
+    expect(suspicious, isEmpty,
+        reason: 'Arabic entries contain Latin text: $suspicious');
+  });
+
   test('screens resolve newly localized strings in both locales', () {
     expect(en.scheduleSettings, 'Schedule Settings');
     expect(ar.scheduleSettings, isNot(en.scheduleSettings));
@@ -57,6 +76,10 @@ void main() {
     expect(ar.cancel, isNot(en.cancel));
     expect(ar.countryName('SA'), isNot(en.countryName('SA')));
     expect(ar.pinLockedMinutes(3), contains('3'));
+    expect(ar.displayChildName('Child 1'), 'الطفل 1');
+    expect(ar.displayChildName('Child'), 'الطفل');
+    expect(ar.displayChildName('ليلى'), 'ليلى');
+    expect(en.displayChildName('Child 1'), 'Child 1');
   });
 
   test('every offered country code has a name in both locales', () {

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
+
 /// Parent-facing reminder for a shared device. It deliberately routes through
 /// Kids Management instead of switching profiles directly so Parent mode
 /// remains protected by the established PIN or biometric flow.
@@ -28,7 +30,7 @@ class ActiveChildHandoverReminderCard extends StatelessWidget {
     final String currentUser = isParentModeActive
         ? (isArabic ? 'وضع الوالدين' : 'Parent mode')
         : (activeChildName?.trim().isNotEmpty == true
-            ? activeChildName!.trim()
+          ? context.l10n.displayChildName(activeChildName)
             : (isArabic ? 'طفل محدد' : 'a child profile'));
 
     return Card(

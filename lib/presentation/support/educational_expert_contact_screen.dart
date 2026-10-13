@@ -8,6 +8,7 @@ import '../../data/local/settings_service.dart';
 import '../../data/system/educational_expert_mailto.dart';
 import '../../domain/models/child_profile.dart';
 import '../../domain/validation/country_mobile_phone_validator.dart';
+import '../../l10n/app_localizations.dart';
 import '../parental_control/age_safety_profiles_screen.dart';
 
 class EducationalExpertContactScreen extends StatefulWidget {
@@ -76,8 +77,8 @@ class _EducationalExpertContactScreenState
     }
     return _definedChildren
         .map((ChildProfile child) => _ar
-            ? '- ${child.name}: ${child.ageYears} سنة'
-            : '- ${child.name}: ${child.ageYears} years')
+          ? '- ${context.l10n.displayChildName(child.name)}: ${child.ageYears} سنة'
+          : '- ${context.l10n.displayChildName(child.name)}: ${child.ageYears} years')
         .join('\n');
   }
 

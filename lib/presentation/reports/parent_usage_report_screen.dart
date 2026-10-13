@@ -8,6 +8,7 @@ import '../../data/local/locale_controller.dart';
 import '../../data/system/app_usage_service.dart';
 import '../../data/system/pin_auth_service.dart';
 import '../../domain/models/child_profile.dart';
+import '../../l10n/app_localizations.dart';
 import '../parental_control/pin_auth_screen.dart';
 
 enum _ReportRange { today, sevenDays, custom }
@@ -168,7 +169,9 @@ class _ParentUsageReportScreenState extends State<ParentUsageReportScreen> {
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (BuildContext dialogContext) => AlertDialog(
-        title: Text(_ar ? 'حذف سجل ${child.name}؟' : 'Delete ${child.name} history?'),
+        title: Text(_ar
+          ? 'حذف سجل ${context.l10n.displayChildName(child.name)}؟'
+          : 'Delete ${context.l10n.displayChildName(child.name)} history?'),
         content: Text(_ar
             ? 'سيُحذف سجل الاستخدام المحلي لهذا الطفل فقط ولا يمكن التراجع عن ذلك.'
             : 'Only this child’s local usage history will be deleted. This cannot be undone.'),
@@ -192,8 +195,8 @@ class _ParentUsageReportScreenState extends State<ParentUsageReportScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(_ar
-            ? 'تم حذف سجل ${child.name} من هذا الجهاز.'
-            : '${child.name} history was deleted from this device.'),
+            ? 'تم حذف سجل ${context.l10n.displayChildName(child.name)} من هذا الجهاز.'
+            : '${context.l10n.displayChildName(child.name)} history was deleted from this device.'),
       ),
     );
   }
@@ -272,7 +275,7 @@ class _ParentUsageReportScreenState extends State<ParentUsageReportScreen> {
                 ..._children.map(
                   (ChildProfile child) => DropdownMenuItem<String>(
                     value: child.id,
-                    child: Text(child.name),
+                    child: Text(context.l10n.displayChildName(child.name)),
                   ),
                 ),
               ],

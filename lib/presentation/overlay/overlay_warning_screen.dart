@@ -55,6 +55,7 @@ class _OverlayWarningScreenState extends State<OverlayWarningScreen> {
   int limitMinutes = 0;
   String? packageName;
   bool _requestPending = false;
+  bool? _accessibilityEnabled;
   final AppBlockingService _blockingService = AppBlockingService();
   final AppBlockingChannel _blockingChannel = AppBlockingChannel();
   final AccessibilityServiceHelper _accessibilityHelper =
@@ -70,32 +71,11 @@ class _OverlayWarningScreenState extends State<OverlayWarningScreen> {
   }
 
   /// Checks if AccessibilityService is enabled when overlay first shows.
-  /// If not enabled, shows a snackbar to inform user (non-blocking).
   Future<void> _checkAccessibilityServiceOnInit() async {
     try {
       final isEnabled = await _accessibilityHelper
           .isAccessibilityServiceEnabled();
-      if (!isEnabled && mounted) {
-        // Show a non-blocking snackbar to inform user
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text(
-                  'Enable Accessibility Service for app blocking to work.',
-                ),
-                action: SnackBarAction(
-                  label: 'Open Settings',
-                  onPressed: () async {
-                    await _accessibilityHelper.openAccessibilitySettings();
-                  },
-                ),
-                duration: const Duration(seconds: 5),
-              ),
-            );
-          }
-        });
-      }
+      if (mounted) setState(() => _accessibilityEnabled = isEnabled);
     } catch (e) {
       // Ignore errors
       debugPrint('Error checking AccessibilityService: $e');
@@ -354,7 +334,11 @@ class _OverlayWarningScreenState extends State<OverlayWarningScreen> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'Time limit exceeded for $appName',
+                        context.l10n.timeLimitReachedMessage(
+                          appName: appName,
+                          usedMinutes: usedMinutes,
+                          limitMinutes: limitMinutes,
+                        ),
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(
@@ -364,20 +348,31 @@ class _OverlayWarningScreenState extends State<OverlayWarningScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'You\'ve used this app for $usedMinutes minutes today',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Daily limit: $limitMinutes minutes',
+                        '${context.l10n.dailyTimeLimit}: $limitMinutes '
+                        '${context.l10n.minutesSuffix}',
                         textAlign: TextAlign.center,
                         style: Theme.of(
                           context,
                         ).textTheme.bodySmall?.copyWith(color: Colors.white60),
                       ),
+                      if (_accessibilityEnabled == false) ...<Widget>[
+                        const SizedBox(height: 12),
+                        Text(
+                          context.l10n.appBlockingDisabledSubtitle,
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: Colors.white70),
+                        ),
+                        TextButton.icon(
+                          onPressed:
+                              _accessibilityHelper.openAccessibilitySettings,
+                          icon: const Icon(Icons.settings_accessibility),
+                          label: Text(context.l10n.accessibilitySettings),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 24),
                       SizedBox(
                         width: double.infinity,
@@ -391,8 +386,8 @@ class _OverlayWarningScreenState extends State<OverlayWarningScreen> {
                             ),
                           ),
                           onPressed: _takeABreak,
-                          child: const Text(
-                            'Take a Break',
+                          child: Text(
+                            context.l10n.takeABreak,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,

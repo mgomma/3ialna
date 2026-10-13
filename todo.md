@@ -74,7 +74,7 @@
 - [x] Preserve country verbal settings immediately without an unnecessary save action or reset on returning to the screen.
 - [x] Implement a resilient first-run sequence for location and usage access, with clear rationale, Android settings redirects, and app-resume validation rather than abrupt closure.
 - [x] Add coverage for default settings and the first-run permission state transitions.
-- [ ] Configure the four stable evaluation-signing repository secrets so future GitHub evaluation APKs use one persistent certificate and can upgrade in place.
+- [x] Configure the four stable evaluation-signing repository secrets so future GitHub evaluation APKs use one persistent certificate and can upgrade in place.
 - [x] Replace separate dashboard child edit/add shortcuts with one children-management entry that lists existing children and provides an add-child control.
 - [x] Enable default schedule settings for new profiles while preserving parent editability and existing choices.
 - [x] Add focused kids-management tests for an empty list and a newly added child.
@@ -107,7 +107,7 @@
 
 - [ ] Add a privacy-safe mobile device-frame preview for each public website feature-tour step.
 - [x] Visually verify that all five website device previews match the family, protection, voice, reports/privacy, and quick-actions tour steps without showing child data.
-- [ ] Translate prayer-lock settings, protection and hard-lock controls, and quick actions into Arabic.
+- [x] Translate prayer-lock settings, protection and hard-lock controls, and quick actions into Arabic.
 
 > Validation status: commit `79bb6c8` triggered website deployment `32736242340` and Flutter CI `32736242265`; both are in progress.
 
@@ -300,7 +300,7 @@ The latest `dev` pull was applied before source changes. Commit `4d45d27` is ali
 - [ ] Pull latest dev before editing and verify current prayer-lock title/row structure.
 - [ ] Find and document a free, redistributable Azan recording; bundle it only if licensing and asset-size limits are clear.
 - [ ] Show the calculated prayer time beside every prayer-lock title and use the verified local Azan as the default automatic prayer audio.
-- [ ] Localize remaining Manage Apps controls and empty states in Arabic/English.
+- [x] Localize remaining Manage Apps controls and empty states in Arabic/English.
 - [ ] Add automated coverage for prayer-time labels and defaults; document Android 13+ Quick Settings, permission-return, and OEM testing steps.
 - [ ] Update and verify the landing page, push the app, monitor CI, and checkpoint the website.
 

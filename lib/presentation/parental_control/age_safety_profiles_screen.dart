@@ -8,6 +8,7 @@ import '../../data/system/child_shortcut_service.dart';
 import '../../data/system/pin_auth_service.dart';
 import '../../domain/models/age_safety_profile.dart';
 import '../../domain/models/child_profile.dart';
+import '../../l10n/app_localizations.dart';
 import 'pin_auth_screen.dart';
 import 'widgets/age_profile_preview.dart';
 import 'widgets/children_management_list.dart';
@@ -281,7 +282,7 @@ class _AgeSafetyProfilesScreenState extends State<AgeSafetyProfilesScreen> {
             ..._children.map(
               (ChildProfile child) => DropdownMenuItem<String>(
                 value: child.id,
-                child: Text(child.name),
+                child: Text(context.l10n.displayChildName(child.name)),
               ),
             ),
           ],

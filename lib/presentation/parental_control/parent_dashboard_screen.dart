@@ -40,9 +40,11 @@ class ParentDashboardScreen extends StatefulWidget {
 
 class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
   final KioskService _kioskService = KioskService();
-  final ParentalControlStorageService _storage = ParentalControlStorageService();
+  final ParentalControlStorageService _storage =
+      ParentalControlStorageService();
   final PinAuthService _pinAuthService = PinAuthService();
-  final AccessibilityServiceHelper _accessibilityHelper = AccessibilityServiceHelper();
+  final AccessibilityServiceHelper _accessibilityHelper =
+      AccessibilityServiceHelper();
 
   bool _isAuthenticated = false;
   bool _isDeviceAdminEnabled = false;
@@ -65,22 +67,34 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
     final Uri email = Uri(
       scheme: 'mailto',
       path: '3ialna.app@gmail.com',
-      queryParameters: <String, String>{
-        'subject': '3ialna Help & Support',
-      },
+      queryParameters: <String, String>{'subject': '3ialna Help & Support'},
     );
-    if (!await launchUrl(email, mode: LaunchMode.externalApplication) && mounted) {
+    if (!await launchUrl(email, mode: LaunchMode.externalApplication) &&
+        mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_isArabic ? 'تعذر فتح تطبيق البريد. اكتب إلى 3ialna.app@gmail.com' : 'Could not open email. Write to 3ialna.app@gmail.com')),
+        SnackBar(
+          content: Text(
+            _isArabic
+                ? 'تعذر فتح تطبيق البريد. اكتب إلى 3ialna.app@gmail.com'
+                : 'Could not open email. Write to 3ialna.app@gmail.com',
+          ),
+        ),
       );
     }
   }
 
   Future<void> _openAboutWebsite() async {
     final Uri website = Uri.parse('https://mgomma.github.io/3ialna/');
-    if (!await launchUrl(website, mode: LaunchMode.externalApplication) && mounted) {
+    if (!await launchUrl(website, mode: LaunchMode.externalApplication) &&
+        mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_isArabic ? 'تعذر فتح موقع عيالنا.' : 'Could not open the 3ialna website.')),
+        SnackBar(
+          content: Text(
+            _isArabic
+                ? 'تعذر فتح موقع عيالنا.'
+                : 'Could not open the 3ialna website.',
+          ),
+        ),
       );
     }
   }
@@ -102,7 +116,11 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
             builder: (context) => PinAuthScreen(
               isSetupMode: true,
               onAuthenticated: () {
-                Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => const ParentDashboardScreen()));
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (context) => const ParentDashboardScreen(),
+                  ),
+                );
               },
             ),
           ),
@@ -137,13 +155,17 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
 
     final isDeviceAdmin = await _kioskService.isDeviceAdminEnabled();
     final isKioskActive = await _kioskService.isKioskModeActive();
-    final isAccessibilityEnabled = await _accessibilityHelper.isAccessibilityServiceEnabled();
+    final isAccessibilityEnabled = await _accessibilityHelper
+        .isAccessibilityServiceEnabled();
     final blockedApps = await _storage.getBlockedApps();
     final timeLimits = await _storage.getTimeLimits();
-    final AgeSafetyProfileService profileService = AgeSafetyProfileService(prefs);
+    final AgeSafetyProfileService profileService = AgeSafetyProfileService(
+      prefs,
+    );
     final List<ChildProfile> children = profileService.loadChildren();
     final RewardService rewardService = const RewardService();
-    final List<ChildExtraTimeRequest> requests = await rewardService.loadRequests();
+    final List<ChildExtraTimeRequest> requests = await rewardService
+        .loadRequests();
     final ChildProfile? activeChild = profileService.activeChild();
     final bool isParentModeActive = profileService.isParentModeActive();
 
@@ -155,7 +177,9 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
       _isStrictMode = _settings.isStrictMode;
       _blockedAppsCount = blockedApps.length;
       _appsWithTimeLimits = timeLimits.length;
-      _pendingRequestCount = requests.where((ChildExtraTimeRequest item) => item.status == 'pending').length;
+      _pendingRequestCount = requests
+          .where((ChildExtraTimeRequest item) => item.status == 'pending')
+          .length;
       _children = children;
       _activeChild = activeChild;
       _isParentModeActive = isParentModeActive;
@@ -165,9 +189,8 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
   Future<void> _confirmActiveUserForHandover() async {
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (BuildContext context) => const AgeSafetyProfilesScreen(
-          openChildManagerOnStart: true,
-        ),
+        builder: (BuildContext context) =>
+            const AgeSafetyProfilesScreen(openChildManagerOnStart: true),
       ),
     );
     if (mounted) await _loadSettings();
@@ -250,7 +273,11 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                       ListTile(
                         leading: const Icon(Icons.language),
                         title: Text(l10n.languageSettings),
-                        subtitle: Text(LocaleController.instance.isArabic ? l10n.arabic : l10n.english),
+                        subtitle: Text(
+                          LocaleController.instance.isArabic
+                              ? l10n.arabic
+                              : l10n.english,
+                        ),
                         onTap: () {
                           Navigator.of(context).pop();
                           _showLanguageDialog();
@@ -258,11 +285,24 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                       ),
                       ListTile(
                         leading: const Icon(Icons.record_voice_over),
-                        title: Text(LocaleController.instance.isArabic ? 'صوت الوالدين' : 'Parent voice notifications'),
-                        subtitle: Text(LocaleController.instance.isArabic ? 'تسجيل محفوظ على هذا الجهاز' : 'A recording stored on this device'),
+                        title: Text(
+                          LocaleController.instance.isArabic
+                              ? 'صوت الوالدين'
+                              : 'Parent voice notifications',
+                        ),
+                        subtitle: Text(
+                          LocaleController.instance.isArabic
+                              ? 'تسجيل محفوظ على هذا الجهاز'
+                              : 'A recording stored on this device',
+                        ),
                         onTap: () {
                           Navigator.of(context).pop();
-                          Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ParentVoiceNotificationScreen()));
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  const ParentVoiceNotificationScreen(),
+                            ),
+                          );
                         },
                       ),
                       ListTile(
@@ -276,7 +316,11 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                                 isSetupMode: true,
                                 onAuthenticated: () {
                                   Navigator.of(context).pop();
-                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.pinUpdated)));
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(context.l10n.pinUpdated),
+                                    ),
+                                  );
                                 },
                               ),
                             ),
@@ -286,14 +330,23 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                       ListTile(
                         leading: const Icon(Icons.accessibility_new),
                         title: Text(l10n.accessibilitySettings),
-                        subtitle: Text(_isAccessibilityServiceEnabled ? l10n.enabledAppBlocking : l10n.disabledAppBlocking),
+                        subtitle: Text(
+                          _isAccessibilityServiceEnabled
+                              ? l10n.enabledAppBlocking
+                              : l10n.disabledAppBlocking,
+                        ),
                         trailing: Icon(
-                          _isAccessibilityServiceEnabled ? Icons.check_circle : Icons.error_outline,
-                          color: _isAccessibilityServiceEnabled ? Colors.green : Colors.orange,
+                          _isAccessibilityServiceEnabled
+                              ? Icons.check_circle
+                              : Icons.error_outline,
+                          color: _isAccessibilityServiceEnabled
+                              ? Colors.green
+                              : Colors.orange,
                         ),
                         onTap: () async {
                           Navigator.of(context).pop();
-                          await _accessibilityHelper.openAccessibilitySettings();
+                          await _accessibilityHelper
+                              .openAccessibilitySettings();
                           // Refresh status after returning
                           await Future.delayed(const Duration(seconds: 1));
                           await _loadSettings();
@@ -301,7 +354,12 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                       ),
                     ],
                   ),
-                  actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(l10n.close))],
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: Text(l10n.close),
+                    ),
+                  ],
                 ),
               );
             },
@@ -335,14 +393,28 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                         children: [
                           Icon(Icons.security, color: colorScheme.primary),
                           const SizedBox(width: 8),
-                      Text(_isArabic ? 'الحماية والقفل المشدد' : 'Protection & Hard Lock', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                          Text(
+                            _isArabic
+                                ? 'الحماية والقفل المشدد'
+                                : 'Protection & Hard Lock',
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 16),
-                      Text(_isArabic ? 'حالة مشرف الجهاز: ${_isDeviceAdminEnabled ? "مفعّل" : "غير مفعّل"}' : 'Device Admin status: ${_isDeviceAdminEnabled ? "Enabled" : "Disabled"}', style: theme.textTheme.titleSmall),
+                      Text(
+                        _isArabic
+                            ? 'حالة مشرف الجهاز: ${_isDeviceAdminEnabled ? "مفعّل" : "غير مفعّل"}'
+                            : 'Device Admin status: ${_isDeviceAdminEnabled ? "Enabled" : "Disabled"}',
+                        style: theme.textTheme.titleSmall,
+                      ),
                       const SizedBox(height: 8),
                       Text(
-                        _isArabic ? 'يساعد تفعيل مشرف الجهاز على الحماية من إزالة التطبيق ويمكّن القفل المشدد.' : 'Enabled device admin prevents the app from being uninstalled and allows Hard Locking.',
+                        _isArabic
+                            ? 'يساعد تفعيل مشرف الجهاز على الحماية من إزالة التطبيق ويمكّن القفل المشدد.'
+                            : 'Enabled device admin prevents the app from being uninstalled and allows Hard Locking.',
                         style: theme.textTheme.bodyMedium,
                       ),
                       const SizedBox(height: 16),
@@ -354,9 +426,11 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                             color: colorScheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Text(_isArabic
-                              ? 'قيد في iOS: وضع الكشك وحظر التطبيقات عبر إمكانية الوصول والحماية من إزالة التطبيق متاحة على Android فقط. استخدم Screen Time / Family Controls على iOS.'
-                              : 'iOS limitation: Kiosk mode, accessibility-based blocking, and anti-uninstall protection are Android-only. On iOS, use Screen Time / Family Controls for stronger enforcement.'),
+                          child: Text(
+                            _isArabic
+                                ? 'قيد في iOS: وضع الكشك وحظر التطبيقات عبر إمكانية الوصول والحماية من إزالة التطبيق متاحة على Android فقط. استخدم Screen Time / Family Controls على iOS.'
+                                : 'iOS limitation: Kiosk mode, accessibility-based blocking, and anti-uninstall protection are Android-only. On iOS, use Screen Time / Family Controls for stronger enforcement.',
+                          ),
                         ),
                       ] else if (!_isDeviceAdminEnabled)
                         FilledButton.icon(
@@ -365,20 +439,43 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                             await _loadSettings();
                           },
                           icon: const Icon(Icons.admin_panel_settings),
-                          label: Text(_isArabic ? 'تفعيل الحماية من إزالة التطبيق' : 'Enable Anti-Uninstall Protection'),
+                          label: Text(
+                            _isArabic
+                                ? 'تفعيل الحماية من إزالة التطبيق'
+                                : 'Enable Anti-Uninstall Protection',
+                          ),
                         )
                       else ...[
                         const Divider(),
                         SwitchListTile(
-                          title: Text(_isArabic ? 'الوضع المشدد (قفل محكم)' : 'Strict Mode (Hard Lock)'),
-                          subtitle: Text(_isArabic ? 'يستخدم وضع الكشك لتقليل تجاوز شاشة القفل من دون رقم الوالد السري.' : 'Uses Kiosk Mode to make the lock screen difficult to bypass without a PIN.'),
+                          title: Text(
+                            _isArabic
+                                ? 'الوضع المشدد (قفل محكم)'
+                                : 'Strict Mode (Hard Lock)',
+                          ),
+                          subtitle: Text(
+                            _isArabic
+                                ? 'يستخدم وضع الكشك لتقليل تجاوز شاشة القفل من دون رقم الوالد السري.'
+                                : 'Uses Kiosk Mode to make the lock screen difficult to bypass without a PIN.',
+                          ),
                           value: _isStrictMode,
                           onChanged: _toggleStrictMode,
-                          secondary: Icon(Icons.gpp_maybe, color: _isStrictMode ? Colors.red : Colors.grey),
+                          secondary: Icon(
+                            Icons.gpp_maybe,
+                            color: _isStrictMode ? Colors.red : Colors.grey,
+                          ),
                         ),
                         SwitchListTile(
-                          title: Text(_isArabic ? 'وضع الكشك (قفل يدوي)' : 'Kiosk Mode (Manual Lock)'),
-                          subtitle: Text(_isArabic ? 'اقفل الجهاز يدويًا داخل هذا التطبيق الآن.' : 'Manually lock the entire device into this app right now.'),
+                          title: Text(
+                            _isArabic
+                                ? 'وضع الكشك (قفل يدوي)'
+                                : 'Kiosk Mode (Manual Lock)',
+                          ),
+                          subtitle: Text(
+                            _isArabic
+                                ? 'اقفل الجهاز يدويًا داخل هذا التطبيق الآن.'
+                                : 'Manually lock the entire device into this app right now.',
+                          ),
                           value: _isKioskModeActive,
                           onChanged: (_) => _toggleKioskMode(),
                           secondary: const Icon(Icons.screen_lock_portrait),
@@ -398,25 +495,45 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.accessibility_new, color: _isAccessibilityServiceEnabled ? Colors.green : Colors.orange),
+                          Icon(
+                            Icons.accessibility_new,
+                            color: _isAccessibilityServiceEnabled
+                                ? Colors.green
+                                : Colors.orange,
+                          ),
                           const SizedBox(width: 8),
-                          Text(_isArabic ? 'خدمة حظر التطبيقات' : 'App Blocking Service', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                          Text(
+                            _isArabic
+                                ? 'خدمة حظر التطبيقات'
+                                : 'App Blocking Service',
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 16),
                       Row(
                         children: [
                           Icon(
-                            _isAccessibilityServiceEnabled ? Icons.check_circle : Icons.error_outline,
-                            color: _isAccessibilityServiceEnabled ? Colors.green : Colors.orange,
+                            _isAccessibilityServiceEnabled
+                                ? Icons.check_circle
+                                : Icons.error_outline,
+                            color: _isAccessibilityServiceEnabled
+                                ? Colors.green
+                                : Colors.orange,
                             size: 20,
                           ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               _isAccessibilityServiceEnabled
-                                  ? (_isArabic ? 'خدمة إمكانية الوصول مفعّلة. حظر التطبيقات نشط.' : 'Accessibility Service is enabled. App blocking is active.')
-                                  : (_isArabic ? 'خدمة إمكانية الوصول غير مفعّلة. فعّلها لحظر التطبيقات عند تجاوز الحدود الزمنية.' : 'Accessibility Service is disabled. Enable it to block apps when time limits are exceeded.'),
+                                  ? (_isArabic
+                                        ? 'خدمة إمكانية الوصول مفعّلة. حظر التطبيقات نشط.'
+                                        : 'Accessibility Service is enabled. App blocking is active.')
+                                  : (_isArabic
+                                        ? 'خدمة إمكانية الوصول غير مفعّلة. فعّلها لحظر التطبيقات عند تجاوز الحدود الزمنية.'
+                                        : 'Accessibility Service is disabled. Enable it to block apps when time limits are exceeded.'),
                               style: theme.textTheme.bodyMedium,
                             ),
                           ),
@@ -427,18 +544,33 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                         onPressed: _isIos
                             ? null
                             : () async {
-                                await _accessibilityHelper.openAccessibilitySettings();
+                                await _accessibilityHelper
+                                    .openAccessibilitySettings();
                                 // Refresh status after returning
-                                await Future.delayed(const Duration(seconds: 1));
+                                await Future.delayed(
+                                  const Duration(seconds: 1),
+                                );
                                 await _loadSettings();
                               },
                         icon: const Icon(Icons.settings),
                         label: Text(
                           _isIos
-                              ? (_isArabic ? 'ميزة متاحة على Android فقط' : 'Android-only feature')
-                              : (_isAccessibilityServiceEnabled ? (_isArabic ? 'فتح إعدادات إمكانية الوصول' : 'Open Accessibility Settings') : (_isArabic ? 'تفعيل خدمة إمكانية الوصول' : 'Enable Accessibility Service')),
+                              ? (_isArabic
+                                    ? 'ميزة متاحة على Android فقط'
+                                    : 'Android-only feature')
+                              : (_isAccessibilityServiceEnabled
+                                    ? (_isArabic
+                                          ? 'فتح إعدادات إمكانية الوصول'
+                                          : 'Open Accessibility Settings')
+                                    : (_isArabic
+                                          ? 'تفعيل خدمة إمكانية الوصول'
+                                          : 'Enable Accessibility Service')),
                         ),
-                        style: FilledButton.styleFrom(backgroundColor: _isAccessibilityServiceEnabled ? Colors.green : colorScheme.primary),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: _isAccessibilityServiceEnabled
+                              ? Colors.green
+                              : colorScheme.primary,
+                        ),
                       ),
                     ],
                   ),
@@ -449,17 +581,32 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
               Row(
                 children: [
                   Expanded(
-                    child: _StatCard(icon: Icons.block, label: _isArabic ? 'التطبيقات المحظورة' : 'Blocked Apps', value: '$_blockedAppsCount', color: colorScheme.error),
+                    child: _StatCard(
+                      icon: Icons.block,
+                      label: _isArabic ? 'التطبيقات المحظورة' : 'Blocked Apps',
+                      value: '$_blockedAppsCount',
+                      color: colorScheme.error,
+                    ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: _StatCard(icon: Icons.timer, label: _isArabic ? 'الحدود الزمنية' : 'Time Limits', value: '$_appsWithTimeLimits', color: colorScheme.primary),
+                    child: _StatCard(
+                      icon: Icons.timer,
+                      label: _isArabic ? 'الحدود الزمنية' : 'Time Limits',
+                      value: '$_appsWithTimeLimits',
+                      color: colorScheme.primary,
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
               // Quick Actions
-              Text(_isArabic ? 'إجراءات سريعة' : 'Quick Actions', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+              Text(
+                _isArabic ? 'إجراءات سريعة' : 'Quick Actions',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(height: 8),
               GridView.count(
                 crossAxisCount: 2,
@@ -467,35 +614,58 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
-                childAspectRatio: 2.5,
+                mainAxisExtent: 112,
                 children: [
                   _ActionCard(
                     icon: Icons.pause_circle_outline,
-                    label: _isArabic ? 'إيقاف مؤقت للحماية' : 'Pause safeguards',
+                    label: _isArabic
+                        ? 'إيقاف مؤقت للحماية'
+                        : 'Pause safeguards',
                     color: colorScheme.error,
                     onTap: _activeChild == null
                         ? null
-                        : () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => PauseControlScreen(childId: _activeChild!.id, childName: _activeChild!.name))),
+                        : () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => PauseControlScreen(
+                                childId: _activeChild!.id,
+                                childName: _activeChild!.name,
+                              ),
+                            ),
+                          ),
                   ),
                   _ActionCard(
                     icon: Icons.insights_outlined,
                     label: _isArabic ? 'ملخص الاستخدام' : 'Usage summary',
                     color: colorScheme.primary,
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const ParentUsageReportScreen())),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const ParentUsageReportScreen(),
+                      ),
+                    ),
                   ),
                   _ActionCard(
                     icon: Icons.health_and_safety_outlined,
                     label: _isArabic ? 'مركز الموثوقية' : 'Reliability Center',
                     color: colorScheme.secondary,
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const ReliabilityCenterScreen())),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const ReliabilityCenterScreen(),
+                      ),
+                    ),
                   ),
                   _ActionCard(
                     icon: Icons.card_giftcard_outlined,
-                    label: _isArabic ? 'المكافآت والتوكنات' : 'Rewards and tokens',
+                    label: _isArabic
+                        ? 'المكافآت والتوكنات'
+                        : 'Rewards and tokens',
                     color: colorScheme.tertiary,
                     badge: _pendingRequestCount,
                     onTap: () async {
-                      await Navigator.of(context).push(MaterialPageRoute(builder: (context) => const RewardCenterScreen()));
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const RewardCenterScreen(),
+                        ),
+                      );
                       if (mounted) await _loadSettings();
                     },
                   ),
@@ -504,7 +674,11 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                     label: _isArabic ? 'إدارة التطبيقات' : 'Manage Apps',
                     color: colorScheme.primary,
                     onTap: () {
-                      Navigator.of(context).push(MaterialPageRoute(builder: (context) => const AppManagementScreen()));
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const AppManagementScreen(),
+                        ),
+                      );
                     },
                   ),
                   _ActionCard(
@@ -512,7 +686,11 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                     label: _isArabic ? 'الجدول' : 'Schedule',
                     color: colorScheme.secondary,
                     onTap: () {
-                      Navigator.of(context).push(MaterialPageRoute(builder: (context) => const ScheduleScreen()));
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const ScheduleScreen(),
+                        ),
+                      );
                     },
                   ),
                   _ActionCard(
@@ -520,7 +698,11 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                     label: _isArabic ? 'المحتوى الآمن' : 'Safe Content',
                     color: colorScheme.tertiary,
                     onTap: () {
-                      Navigator.of(context).push(MaterialPageRoute(builder: (context) => const SafeContentScreen()));
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const SafeContentScreen(),
+                        ),
+                      );
                     },
                   ),
                   if (_isIos)
@@ -530,7 +712,10 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                       color: colorScheme.primary,
                       onTap: () {
                         Navigator.of(context).push(
-                          MaterialPageRoute(builder: (context) => const IosAuthorizationOnboardingScreen()),
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const IosAuthorizationOnboardingScreen(),
+                          ),
                         );
                       },
                     ),
@@ -538,7 +723,11 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                     icon: Icons.ios_share_outlined,
                     label: _isArabic ? 'مشاركة الإعداد' : 'Share Setup',
                     color: colorScheme.primary,
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const ProfilePackScreen())),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const ProfilePackScreen(),
+                      ),
+                    ),
                   ),
                   _ActionCard(
                     icon: Icons.manage_accounts_outlined,
@@ -554,9 +743,15 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                   ),
                   _ActionCard(
                     icon: Icons.record_voice_over_outlined,
-                    label: _isArabic ? 'مهام وتذكيرات الطفل' : 'Child tasks and reminders',
+                    label: _isArabic
+                        ? 'مهام وتذكيرات الطفل'
+                        : 'Child tasks and reminders',
                     color: colorScheme.secondary,
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const TaskVoiceReminderScreen())),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const TaskVoiceReminderScreen(),
+                      ),
+                    ),
                   ),
                   _ActionCard(
                     icon: Icons.mark_email_unread_outlined,
@@ -572,9 +767,15 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                   ),
                   _ActionCard(
                     icon: Icons.bug_report_outlined,
-                    label: _isArabic ? 'إرسال تقرير الأعطال' : 'Send diagnostic report',
+                    label: _isArabic
+                        ? 'إرسال تقرير الأعطال'
+                        : 'Send diagnostic report',
                     color: colorScheme.error,
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const DiagnosticReportScreen())),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const DiagnosticReportScreen(),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -592,7 +793,12 @@ class _StatCard extends StatelessWidget {
   final String value;
   final Color color;
 
-  const _StatCard({required this.icon, required this.label, required this.value, required this.color});
+  const _StatCard({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -606,9 +812,16 @@ class _StatCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               value,
-              style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold, color: color),
+              style: theme.textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
             ),
-            Text(label, style: theme.textTheme.bodySmall, textAlign: TextAlign.center),
+            Text(
+              label,
+              style: theme.textTheme.bodySmall,
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),
@@ -623,7 +836,13 @@ class _ActionCard extends StatelessWidget {
   final VoidCallback? onTap;
   final int badge;
 
-  const _ActionCard({required this.icon, required this.label, required this.color, required this.onTap, this.badge = 0});
+  const _ActionCard({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+    this.badge = 0,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -639,14 +858,22 @@ class _ActionCard extends StatelessWidget {
               Icon(icon, color: color),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(label, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                child: Text(
+                  label,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
               if (badge > 0)
                 Padding(
                   padding: const EdgeInsetsDirectional.only(end: 8),
                   child: PendingRequestBadge(count: badge),
                 ),
-              Icon(Icons.chevron_right, color: theme.colorScheme.onSurfaceVariant),
+              Icon(
+                Icons.chevron_right,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ],
           ),
         ),

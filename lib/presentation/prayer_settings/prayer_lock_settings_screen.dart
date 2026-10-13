@@ -207,7 +207,7 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
           SnackBar(
             content: Text(_text(
               'Allow notifications in iPhone Settings so the scheduled prayer sound can play while 3ialna is closed.',
-              'اسمح بالإشعارات في إعدادات iPhone ليعمل صوت تذكير الصلاة المجدول حتى عند إغلاق عيالنا.',
+              'اسمح بالإشعارات في إعدادات آيفون ليعمل صوت تذكير الصلاة المجدول حتى عند إغلاق عيالنا.',
             )),
           ),
         );
@@ -679,7 +679,7 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.mic_none_outlined),
               title: Text(_text('Prayer reminder voice note', 'ملاحظة صوتية لتذكير الصلاة')),
-              subtitle: Text(_text('Recorded locally. Android can play it from a scheduled reminder; iPhone delivers it as a notification sound.', 'تُسجل محليًا. يمكن لـ Android تشغيلها من التذكير المجدول، ويقدّمها iPhone كصوت إشعار.')),
+              subtitle: Text(_text('Recorded locally. Android can play it from a scheduled reminder; iPhone delivers it as a notification sound.', 'تُسجل محليًا. يمكن لـ أندرويد تشغيلها من التذكير المجدول، ويقدّمها آيفون كصوت إشعار.')),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Navigator.of(context).push(
@@ -698,7 +698,7 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.volume_up_outlined),
                 title: Text(_text('Automatic Azan recording', 'تسجيل الأذان التلقائي')),
-                subtitle: Text(_text('Record a short Azan locally. Android plays it at the prayer start; iPhone delivers it as a notification sound shorter than 29 seconds.', 'سجّل أذانًا قصيرًا محليًا. يشغّله Android عند دخول وقت الصلاة، ويقدّمه iPhone كصوت إشعار أقصر من 29 ثانية.')),
+                subtitle: Text(_text('Record a short Azan locally. Android plays it at the prayer start; iPhone delivers it as a notification sound shorter than 29 seconds.', 'سجّل أذانًا قصيرًا محليًا. يشغّله أندرويد عند دخول وقت الصلاة، ويقدّمه آيفون كصوت إشعار أقصر من 29 ثانية.')),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
                   Navigator.of(context).push(
@@ -731,7 +731,7 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
                 )),
                 subtitle: Text(_text(
                   'Step 2 (optional): exact alarms already work through Android Doze. Open the system list only if this phone delays reminders; 3ialna never requests automatic whitelisting.',
-                  'الخطوة 2 (اختيارية): تعمل المنبهات الدقيقة خلال وضع السكون في Android. افتح قائمة النظام فقط إذا كان الهاتف يؤخر التذكيرات؛ لا يطلب عيالنا إضافة تلقائية إلى القائمة البيضاء.',
+                  'الخطوة 2 (اختيارية): تعمل المنبهات الدقيقة خلال وضع السكون في أندرويد. افتح قائمة النظام فقط إذا كان الهاتف يؤخر التذكيرات؛ لا يطلب عيالنا إضافة تلقائية إلى القائمة البيضاء.',
                 )),
                 trailing: const Icon(Icons.open_in_new),
                 onTap: _reviewBatteryOptimization,
@@ -777,7 +777,7 @@ class _PrayerLockSettingsScreenState extends State<PrayerLockSettingsScreen> {
                     : _scheduleAutomaticAzanVerification,
               ),
             const SizedBox(height: 8),
-            Text(_text('The next seven days are scheduled locally and refreshed when 3ialna opens. Android uses an exact reminder alarm; iPhone uses notification sounds shorter than 29 seconds. When both prayer audio options are enabled on iPhone, 30 events each are scheduled to stay within the system pending-notification limit.', 'تُجدول الأيام السبعة القادمة محليًا وتُحدّث عند فتح عيالنا. يستخدم Android منبّهًا دقيقًا، ويستخدم iPhone أصوات إشعار أقصر من 29 ثانية. عند تفعيل خياري صوت الصلاة معًا على iPhone، يُجدول 30 موعدًا لكل منهما للبقاء ضمن حد الإشعارات المعلّقة في النظام.'), style: const TextStyle(color: Colors.grey)),
+            Text(_text('The next seven days are scheduled locally and refreshed when 3ialna opens. Android uses an exact reminder alarm; iPhone uses notification sounds shorter than 29 seconds. When both prayer audio options are enabled on iPhone, 30 events each are scheduled to stay within the system pending-notification limit.', 'تُجدول الأيام السبعة القادمة محليًا وتُحدّث عند فتح عيالنا. يستخدم أندرويد منبّهًا دقيقًا، ويستخدم آيفون أصوات إشعار أقصر من 29 ثانية. عند تفعيل خياري صوت الصلاة معًا على آيفون، يُجدول 30 موعدًا لكل منهما للبقاء ضمن حد الإشعارات المعلّقة في النظام.'), style: const TextStyle(color: Colors.grey)),
             const SizedBox(height: 16),
             ...Prayer.values.map(
               (Prayer prayer) => Padding(

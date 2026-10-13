@@ -479,7 +479,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             (ChildProfile child) => SimpleDialogOption(
               onPressed: () => Navigator.of(dialogContext).pop(child.id),
               child: Text(
-                '${child.name} · ${child.ageYears} '
+                '${context.l10n.displayChildName(child.name)} · ${child.ageYears} '
                 '${_isArabic ? 'سنة' : 'years'}',
               ),
             ),
@@ -835,7 +835,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         .map(
                           (String country) => DropdownMenuItem<String>(
                             value: country,
-                            child: Text(country),
+                            child: Text(context.l10n.countryDisplayName(country)),
                           ),
                         )
                         .toList(),
@@ -1321,6 +1321,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
       const SizedBox(height: 16),
     ],
+    OutlinedButton.icon(
+      key: const ValueKey<String>('privacy-account-action'),
+      onPressed: () => Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => const PrivacyAccountScreen(),
+        ),
+      ),
+      icon: const Icon(Icons.privacy_tip_outlined),
+      label: Text(context.l10n.privacyAccountTitle),
+    ),
+    const SizedBox(height: 16),
   ];
 
   @override
@@ -1406,7 +1417,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             );
           },
-          tooltip: 'Parental Controls',
+          tooltip: context.l10n.parentalControls,
         ),
         IconButton(
           icon: const Icon(Icons.app_registration),
@@ -1442,7 +1453,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         IconButton(
           icon: const Icon(Icons.settings),
           onPressed: _navigateToPrayerSettings,
-          tooltip: 'Prayer Lock Settings',
+          tooltip: context.l10n.prayerLockSettings,
         ),
       ],
     );
@@ -1468,7 +1479,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               spacing: 8,
               runSpacing: 8,
               children: <Widget>[
-                Chip(label: Text(profile.country)),
+                Chip(label: Text(context.l10n.countryDisplayName(profile.country))),
                 Chip(label: Text(profile.welcomeWord)),
                 Chip(label: Text(profile.childWord)),
                 Chip(label: Text(profile.praiseWord)),
@@ -1699,7 +1710,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         ? (_isArabic
                               ? 'لا توجد حدود زمنية أو قيود للأطفال.'
                               : 'No child time limits or restrictions apply.')
-                        : '${_activeChild?.name ?? (_isArabic ? 'الطفل النشط' : 'Active child')}: '
+                        : '${context.l10n.displayChildName(_activeChild?.name ?? (_isArabic ? 'الطفل النشط' : 'Active child'))}: '
                               '${_isArabic ? 'استخدم اليوم' : 'Used today'} $totalUsageMinutes '
                               '${context.l10n.minutesSuffix}',
                     style: Theme.of(context).textTheme.bodySmall,
@@ -1895,9 +1906,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             children: <Widget>[
               const Icon(Icons.location_off, color: Colors.grey),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Location not set for prayer times',
+                  context.l10n.locationNotSetForPrayer,
                   style: TextStyle(color: Colors.grey),
                 ),
               ),
@@ -2010,11 +2021,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ? Icons.check_circle
         : Icons.warning_amber;
     final String statusText = isEnabled
-        ? 'App Blocking Enabled'
-        : 'App Blocking Disabled';
+        ? context.l10n.appBlockingEnabled
+        : context.l10n.appBlockingDisabled;
     final String subtitleText = isEnabled
-        ? 'Apps can be blocked when limits are exceeded'
-        : 'Tap to enable Accessibility Service for app blocking';
+        ? context.l10n.appBlockingEnabledSubtitle
+        : context.l10n.appBlockingDisabledSubtitle;
 
     return Card(
       elevation: isEnabled ? 2 : 4,

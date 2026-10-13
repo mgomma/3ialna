@@ -8,6 +8,22 @@ class AppLocalizations {
 
   final Locale locale;
 
+  String displayChildName(String? name) {
+    final String normalized = name?.trim() ?? '';
+    final RegExpMatch? defaultName = RegExp(
+      r'^Child(?:\s+(\d+))?$',
+      caseSensitive: false,
+    ).firstMatch(normalized);
+    if (defaultName == null) return normalized;
+
+    final String? number = defaultName.group(1);
+    return locale.languageCode == 'ar'
+        ? number == null
+            ? 'الطفل'
+            : 'الطفل $number'
+        : normalized;
+  }
+
   static const List<Locale> supportedLocales = <Locale>[
     Locale('en'),
     Locale('ar'),
@@ -89,6 +105,7 @@ class AppLocalizations {
       'arabic': 'العربية',
       'languageChanged': 'Language updated',
       'parentalControls': 'Parental Controls',
+      'prayerLockSettings': 'Prayer Lock Settings',
         'privacyPolicy': 'Privacy policy',
         'privacyAccountTitle': 'Privacy & account',
         'privacyAccountSummary':
@@ -158,6 +175,20 @@ class AppLocalizations {
           'pinUpdated': 'PIN updated successfully',
           'pinsDoNotMatch': 'PINs do not match. Please try again.',
           'incorrectPin': 'Incorrect PIN. Please try again.',
+          'setParentPin': 'Set Parent PIN',
+          'confirmPin': 'Confirm PIN',
+          'enterPin': 'Enter PIN',
+          'createPinSubtitle': 'Create a PIN to protect parental controls',
+          'reenterPinSubtitle': 'Re-enter your PIN to confirm',
+          'enterPinSubtitle': 'Enter your PIN to access parental controls',
+          'useBiometric': 'Use Biometric',
+          'timeLimitExceeded': 'Time limit exceeded',
+          'appBlockingEnabled': 'App Blocking Enabled',
+          'appBlockingDisabled': 'App Blocking Disabled',
+          'appBlockingEnabledSubtitle': 'Apps can be blocked when limits are exceeded',
+          'appBlockingDisabledSubtitle': 'Tap to enable Accessibility Service for app blocking',
+          'locationNotSetForPrayer': 'Location not set for prayer times',
+          'authenticating': 'Authenticating…',
           'pinLockedMinutes': 'Too many attempts. Try again in {value} min.',
           'pinLockedSeconds': 'Too many attempts. Try again in {value}s.',
           'scheduleSaved': 'Schedule saved successfully',
@@ -205,7 +236,7 @@ class AppLocalizations {
       'stopMonitoring': 'إيقاف المراقبة',
       'noUsageTitle': 'لا توجد بيانات استخدام بعد',
       'noUsageSubtitle':
-          'ابدأ المراقبة لتتبع وقتك على تطبيقات التواصل الاجتماعي.',
+          'ابدأ المراقبة لتتبع وقتك على تطبيقات التواصل.',
       'timeLimitReachedTitle': 'تم تجاوز الحد الزمني!',
       'timeLimitReachedMessage':
           'لقد استخدمت {appName} لمدة {used} دقيقة اليوم، '
@@ -258,6 +289,7 @@ class AppLocalizations {
         'arabic': 'العربية',
         'languageChanged': 'تم تحديث اللغة',
         'parentalControls': 'الرقابة الأبوية',
+        'prayerLockSettings': 'إعدادات قفل الصلاة',
         'privacyPolicy': 'سياسة الخصوصية',
         'privacyAccountTitle': 'الخصوصية والحساب',
         'privacyAccountSummary':
@@ -308,9 +340,9 @@ class AppLocalizations {
           'تم إرسال التقرير (أو وضعه في الانتظار عند عدم الاتصال).',
         'reportSavedLocally':
           'تم حفظ التقرير محليا. سجل لاحقا لمزامنته مع حسابك.',
-          'registerWithGoogle': 'المتابعة باستخدام Google',
-          'registerWithFacebook': 'المتابعة باستخدام Facebook',
-          'registerWithApple': 'المتابعة باستخدام Apple',
+          'registerWithGoogle': 'المتابعة باستخدام جوجل',
+          'registerWithFacebook': 'المتابعة باستخدام فيسبوك',
+          'registerWithApple': 'المتابعة باستخدام آبل',
           'socialSignInFailed':
             'تعذر إكمال تسجيل الدخول الاجتماعي. حاول مرة أخرى أو استخدم التسجيل بالبريد الإلكتروني.',
           'socialMissingEmail':
@@ -327,6 +359,20 @@ class AppLocalizations {
           'pinUpdated': 'تم تحديث الرمز السري بنجاح',
           'pinsDoNotMatch': 'الرمزان غير متطابقين. حاول مرة أخرى.',
           'incorrectPin': 'الرمز السري غير صحيح. حاول مرة أخرى.',
+          'setParentPin': 'تعيين رمز الوالد',
+          'confirmPin': 'تأكيد الرمز',
+          'enterPin': 'أدخل الرمز',
+          'createPinSubtitle': 'أنشئ رمزًا سريًا لحماية أدوات الرقابة الأبوية',
+          'reenterPinSubtitle': 'أعد إدخال الرمز للتأكيد',
+          'enterPinSubtitle': 'أدخل الرمز السري للوصول إلى أدوات الرقابة الأبوية',
+          'useBiometric': 'استخدم البصمة',
+          'timeLimitExceeded': 'تم تجاوز الحد الزمني',
+          'appBlockingEnabled': 'حظر التطبيقات مفعّل',
+          'appBlockingDisabled': 'حظر التطبيقات معطّل',
+          'appBlockingEnabledSubtitle': 'يمكن حظر التطبيقات عند تجاوز الحدود',
+          'appBlockingDisabledSubtitle': 'اضغط لتفعيل خدمة إمكانية الوصول لحظر التطبيقات',
+          'locationNotSetForPrayer': 'لم يتم تحديد الموقع لمواقيت الصلاة',
+          'authenticating': 'جارٍ التحقق…',
           'pinLockedMinutes': 'محاولات كثيرة. أعد المحاولة بعد {value} دقيقة.',
           'pinLockedSeconds': 'محاولات كثيرة. أعد المحاولة بعد {value} ثانية.',
           'scheduleSaved': 'تم حفظ الجدول بنجاح',
@@ -427,6 +473,7 @@ class AppLocalizations {
   String get arabic => _text('arabic');
   String get languageChanged => _text('languageChanged');
   String get parentalControls => _text('parentalControls');
+  String get prayerLockSettings => _text('prayerLockSettings');
   String get privacyPolicy => _text('privacyPolicy');
   String get privacyAccountTitle => _text('privacyAccountTitle');
   String get privacyAccountSummary => _text('privacyAccountSummary');
@@ -487,6 +534,20 @@ class AppLocalizations {
   String get pinUpdated => _text('pinUpdated');
   String get pinsDoNotMatch => _text('pinsDoNotMatch');
   String get incorrectPin => _text('incorrectPin');
+  String get setParentPin => _text('setParentPin');
+  String get confirmPin => _text('confirmPin');
+  String get enterPin => _text('enterPin');
+  String get createPinSubtitle => _text('createPinSubtitle');
+  String get reenterPinSubtitle => _text('reenterPinSubtitle');
+  String get enterPinSubtitle => _text('enterPinSubtitle');
+  String get useBiometric => _text('useBiometric');
+  String get timeLimitExceeded => _text('timeLimitExceeded');
+  String get appBlockingEnabled => _text('appBlockingEnabled');
+  String get appBlockingDisabled => _text('appBlockingDisabled');
+  String get appBlockingEnabledSubtitle => _text('appBlockingEnabledSubtitle');
+  String get appBlockingDisabledSubtitle => _text('appBlockingDisabledSubtitle');
+  String get locationNotSetForPrayer => _text('locationNotSetForPrayer');
+  String get authenticating => _text('authenticating');
   String pinLockedMinutes(int value) => _text('pinLockedMinutes').replaceAll('{value}', '$value');
   String pinLockedSeconds(int value) => _text('pinLockedSeconds').replaceAll('{value}', '$value');
   String get scheduleSaved => _text('scheduleSaved');
@@ -521,6 +582,20 @@ class AppLocalizations {
       Map<String, String>.unmodifiable(_localizedValues[languageCode] ?? const <String, String>{});
 
   String countryName(String code) => _text('country_$code');
+
+  /// Maps the English country key stored with a word profile to its ISO code,
+  /// so saved data keeps working while the label follows the active locale.
+  static const Map<String, String> _countryKeyToCode = <String, String>{
+    'Saudi Arabia': 'SA', 'Egypt': 'EG', 'UAE': 'AE', 'Kuwait': 'KW',
+    'Qatar': 'QA', 'Bahrain': 'BH', 'Iraq': 'IQ', 'Lebanon': 'LB',
+    'Jordan': 'JO', 'Syria': 'SY', 'Sudan': 'SD', 'Tunisia': 'TN',
+    'Algeria': 'DZ', 'Maroc': 'MA', 'Morocco': 'MA',
+  };
+
+  String countryDisplayName(String storedKey) {
+    final String? code = _countryKeyToCode[storedKey.trim()];
+    return code == null ? storedKey : countryName(code);
+  }
 
   String timeLimitReachedMessage({
     required String appName,

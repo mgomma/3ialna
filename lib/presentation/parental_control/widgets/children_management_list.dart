@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../domain/models/child_profile.dart';
+import '../../../l10n/app_localizations.dart';
 
 /// Lists the children configured on this device and exposes parent-only actions.
 ///
@@ -65,9 +66,22 @@ class ChildrenManagementList extends StatelessWidget {
             key: ValueKey<String>('child-row-${child.id}'),
             selected: child.id == activeChildId,
             leading: CircleAvatar(
-              child: Text(child.name.isEmpty ? '?' : child.name.substring(0, 1).toUpperCase()),
+              child: Text(
+                child.name.isEmpty
+                    ? '?'
+                    : context.l10n
+                        .displayChildName(child.name)
+                        .substring(0, 1)
+                        .toUpperCase(),
+              ),
             ),
-            title: Text(child.name.isEmpty ? (isArabic ? 'طفل بلا اسم' : 'Unnamed child') : child.name),
+            title: Text(
+              context.l10n.displayChildName(
+                child.name.isEmpty
+                    ? (isArabic ? 'طفل بلا اسم' : 'Unnamed child')
+                    : child.name,
+              ),
+            ),
             subtitle: Text(detailsFor(child)),
             onTap: () => onSelect(child),
             trailing: Wrap(

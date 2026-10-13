@@ -46,7 +46,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  test('deletion request contains no child data', () {
+  test('deletion email requests only account deletion, not child data', () {
     final Uri request = PrivacyAccountScreen.accountDeletionRequestUri(
       subject: 'Account deletion',
       body: 'Please delete my registered account. No child details attached.',

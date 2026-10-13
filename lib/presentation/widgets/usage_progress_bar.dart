@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
+
 /// Widget displaying a progress bar for app usage vs time limit.
 class UsageProgressBar extends StatelessWidget {
   final int usedMinutes;
@@ -70,7 +72,7 @@ class UsageProgressBar extends StatelessWidget {
               ),
               const SizedBox(width: 4),
               Text(
-                'Time limit exceeded',
+                context.l10n.timeLimitExceeded,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: colorScheme.error,
                 ),

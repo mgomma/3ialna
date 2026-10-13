@@ -219,8 +219,8 @@ class _PinAuthScreenState extends State<PinAuthScreen> {
                     ],
                     Text(
                       widget.isSetupMode
-                          ? (_isConfirming ? 'Confirm PIN' : 'Set Parent PIN')
-                          : 'Enter PIN',
+                          ? (_isConfirming ? context.l10n.confirmPin : context.l10n.setParentPin)
+                          : context.l10n.enterPin,
                       style: theme.textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -230,9 +230,9 @@ class _PinAuthScreenState extends State<PinAuthScreen> {
                       Text(
                         widget.isSetupMode
                             ? (_isConfirming
-                                  ? 'Re-enter your PIN to confirm'
-                                  : 'Create a PIN to protect parental controls')
-                            : 'Enter your PIN to access parental controls',
+                                  ? context.l10n.reenterPinSubtitle
+                                  : context.l10n.createPinSubtitle)
+                            : context.l10n.enterPinSubtitle,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),
@@ -330,8 +330,8 @@ class _PinAuthScreenState extends State<PinAuthScreen> {
                         icon: const Icon(Icons.fingerprint),
                         label: Text(
                           _isAuthenticatingBiometrically
-                              ? 'Authenticating…'
-                              : 'Use Biometric',
+                              ? context.l10n.authenticating
+                              : context.l10n.useBiometric,
                         ),
                       ),
                       const SizedBox(height: 16),

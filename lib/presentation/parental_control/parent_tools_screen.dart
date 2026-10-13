@@ -10,6 +10,7 @@ import '../../data/system/notification_service.dart';
 import '../../data/system/first_run_permission_service.dart';
 import '../../data/system/overlay_service.dart';
 import '../../data/system/parent_voice_notification_service.dart';
+import '../../l10n/app_localizations.dart';
 
 class PauseControlScreen extends StatefulWidget {
   const PauseControlScreen({super.key, required this.childId, required this.childName});
@@ -78,7 +79,7 @@ class _PauseControlScreenState extends State<PauseControlScreen> {
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
-                Text(_ar ? 'الطفل الحالي: ${widget.childName}' : 'Current child: ${widget.childName}', style: Theme.of(context).textTheme.titleMedium),
+                Text(_ar ? 'الطفل الحالي: ${context.l10n.displayChildName(widget.childName)}' : 'Current child: ${context.l10n.displayChildName(widget.childName)}', style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 8),
                 Text(_ar ? 'أوقف قيود الوقت والتطبيقات مؤقتًا لسبب واضح، ثم استأنفها يدويًا أو اتركها تعود بعد المدة.' : 'Temporarily pause time and app safeguards for a clear reason, then resume them manually or let them return after the duration.'),
                 const SizedBox(height: 16),

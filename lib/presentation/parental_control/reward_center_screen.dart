@@ -5,6 +5,7 @@ import '../../data/local/age_safety_profile_service.dart';
 import '../../data/local/reward_service.dart';
 import '../../data/system/parent_voice_notification_service.dart';
 import '../../domain/models/child_profile.dart';
+import '../../l10n/app_localizations.dart';
 import 'pin_auth_screen.dart';
 import 'widgets/request_approval_components.dart';
 
@@ -76,7 +77,9 @@ class _RewardCenterScreenState extends State<RewardCenterScreen> {
 
   String _childName(String childId) {
     for (final ChildProfile child in _children) {
-      if (child.id == childId) return child.name;
+      if (child.id == childId) {
+        return context.l10n.displayChildName(child.name);
+      }
     }
     return childId;
   }
@@ -153,7 +156,7 @@ class _RewardCenterScreenState extends State<RewardCenterScreen> {
                 for (final ChildProfile child in _children)
                   ListTile(
                     leading: const Icon(Icons.stars_outlined),
-                    title: Text(child.name),
+                    title: Text(context.l10n.displayChildName(child.name)),
                     subtitle: Text(_ar ? 'المتاح: ${_balances[child.id]?.available ?? 0}' : 'Available: ${_balances[child.id]?.available ?? 0}'),
                     trailing: TextButton(onPressed: () => _issueToken(child), child: Text(_ar ? 'إصدار توكن' : 'Issue token')),
                   ),
