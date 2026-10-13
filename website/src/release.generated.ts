@@ -3,12 +3,12 @@
 export const currentRelease = {
   platform: "Android",
   version: "0.1.0",
-  build: "5",
+  build: "6",
   distribution: "GitHub optimized stable-signed evaluation release",
-  downloadUrl: "https://github.com/mgomma/3ialna/releases/download/optimized-v0.1.0-b5-run37222166014-a1/app-arm64-v8a-release.apk",
+  downloadUrl: "https://github.com/mgomma/3ialna/releases/download/optimized-v0.1.0-b6-run38399568845-a1/app-arm64-v8a-release.apk",
   downloadUrls: {
-    arm64: "https://github.com/mgomma/3ialna/releases/download/optimized-v0.1.0-b5-run37222166014-a1/app-arm64-v8a-release.apk",
-    armv7: "https://github.com/mgomma/3ialna/releases/download/optimized-v0.1.0-b5-run37222166014-a1/app-armeabi-v7a-release.apk",
+    arm64: "https://github.com/mgomma/3ialna/releases/download/optimized-v0.1.0-b6-run38399568845-a1/app-arm64-v8a-release.apk",
+    armv7: "https://github.com/mgomma/3ialna/releases/download/optimized-v0.1.0-b6-run38399568845-a1/app-armeabi-v7a-release.apk",
   },
-  publishedAt: "2026-10-04T17:59:42.000Z",
+  publishedAt: "2026-10-13T12:53:26.000Z",
 } as const;
