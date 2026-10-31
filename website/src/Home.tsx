@@ -2,32 +2,23 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, ArrowUpRight, Check, ChevronDown, CircleHelp, Clock3, Download, ExternalLink, Globe2, LoaderCircle, LockKeyhole, Mail, MessageCircle, Mic2, RotateCcw, Send, Share2, ShieldCheck, Smartphone, Sparkles } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { currentRelease } from "./release.generated";
+import { beginAutomaticDownload, selectAndroidDownload } from "./android-download";
+import type { AndroidAbi, AndroidDownload, AndroidRelease } from "./android-download";
 
 const heroImage = "./assets/3ialna-hero-family.jpg";
 const profileImage = "linear-gradient(135deg, rgba(23,74,59,.96), rgba(30,103,82,.72)), radial-gradient(circle at 72% 28%, rgba(231,184,104,.85) 0 9%, transparent 10%), linear-gradient(140deg, #c9b18a, #547b63 58%, #174a3b)";
 const voiceImage = "linear-gradient(145deg, rgba(23,74,59,.9), rgba(23,74,59,.22)), radial-gradient(circle at 70% 30%, rgba(231,184,104,.92) 0 12%, transparent 13%), linear-gradient(35deg, #d9c7a9, #547b63 55%, #174a3b)";
 const privacyIcons = [LockKeyhole, Mic2, RotateCcw, Clock3];
 const publicSiteUrl = "https://mgomma.github.io/3ialna/";
+const downloadPageUrl = `${publicSiteUrl}#download`;
 
 type Language = "ar" | "en";
-type AndroidAbi = "arm64" | "armv7";
-type DetectionState = "checking" | AndroidAbi | "unknown";
-
-type UserAgentData = {
-  platform?: string;
-  getHighEntropyValues?: (hints: string[]) => Promise<{
-    architecture?: string;
-    bitness?: string;
-  }>;
-};
-
-type NavigatorWithUserAgentData = Navigator & {
-  userAgentData?: UserAgentData;
-};
+type DetectionState = "checking" | AndroidAbi | "unknown" | "unsupported";
+const release: AndroidRelease = currentRelease;
 
 const copy = {
   ar: {
-    nav: ["جولة الخصائص", "تنزيل", "الإعداد", "الملفات العمرية", "المقارنة", "الخصوصية", "الأسئلة", "تواصل"],
+    nav: ["جولة الخصائص", "تنزيل", "الإعداد", "الملفات العمرية", "المقارنة", "سلامة الأطفال", "الخصوصية", "الأسئلة", "تواصل"],
     badge: "دليل الإعداد الرسمي · عيالنا",
     title: "احمِ وقت العائلة، لا خصوصيتها.",
     intro: "عيالنا يساعد الوالدين على بناء روتين رقمي هادئ يناسب عمر الطفل، مع رسائل صوتية بصوت الوالدين وإعدادات يمكن الرجوع عنها في أي وقت.",
@@ -48,14 +39,14 @@ const copy = {
     install: "التثبيت والإعداد",
     installIntro: "اتبع هذه الخطوات بالترتيب على هاتف الوالد أو الجهاز الذي ستديره. يحدد الوالد ملف الطفل قبل منح أذونات الحماية.",
     steps: [
-      ["نزّل وثبّت Android", "استخدم زر التنزيل أو رمز QR، وافتح الملف على هاتف Android. اسمح بالتثبيت من المتصفح أو مدير الملفات لهذا التثبيت فقط، مع إبقاء Play Protect مفعّلًا."],
+      ["نزّل وثبّت Android", "استخدم زر التنزيل أو رمز QR، وافتح الملف على هاتف Android. إذا طلب Android الإذن، اختر الإعدادات وفعّل «السماح من هذا المصدر» للمتصفح أو مدير الملفات الذي فتح APK فقط، ثم أوقفه بعد التثبيت. عطّل Google Play Protect مؤقتًا لإكمال التثبيت، ثم أعد تفعيله فورًا بعده."],
       ["أدخل بيانات الطفل", "بعد الجولة، أدخل اسم الطفل وتاريخ ميلاده ونوعه. يعرض التطبيق ملف العمر المطابق وكل الحدود المقترحة قبل حفظه؛ يمكنك تعديلها لاحقًا."],
       ["أنشئ حماية الوالدين", "أنشئ PIN للوالد وفعّل البصمة اختياريًا. بعد حفظ ملف الطفل، افتح لوحة الوالد لمنح الأذونات اللازمة."],
-      ["امنح الأذونات واختبر", "اسمح بالموقع لمواقيت الصلاة ووصول الاستخدام للحدود الزمنية. امنح Overlay وAccessibility عند تفعيل الحماية. أضف أطفالًا آخرين بالطريقة نفسها، ثم اختبر التبديل والحدود."],
+      ["امنح الأذونات واختبر", "اسمح بالموقع لمواقيت الصلاة. لوصول الاستخدام، افتح إعدادات Android وابحث عن «وصول الاستخدام» أو Usage access، ثم اختر عيالنا وفعّل السماح بوصول الاستخدام. امنح Overlay وAccessibility عند تفعيل الحماية. أضف أطفالًا آخرين بالطريقة نفسها، ثم اختبر التبديل والحدود."],
       ["اختبر ثم أضف التذكيرات", "صنّف التطبيقات وجرّب الحماية قبل تسليم الجهاز. عند إنشاء تذكير، اسمح بالإشعارات والمنبّهات الدقيقة وسجّل صوت الوالد محليًا إذا رغبت."],
     ],
     androidInstallTitle: "تفصيل التثبيت على Android",
-    androidInstallSteps: ["حمّل APK التجريبي من زر التنزيل أو QR على هاتف Android، ثم افتح الملف.", "اسمح بالتثبيت من المتصفح أو مدير الملفات لهذا التثبيت فقط، وأبقِ Play Protect مفعّلًا. إذا ظهر تعارض في الحزمة، فهذه النسخة موقعة بمفتاح مختلف؛ صدّر الإعداد قبل إزالة النسخة القديمة لأن بيانات الجهاز المحلية قد تُحذف.", "أنشئ PIN للوالد، ثم أدخل اسم الطفل وتاريخ ميلاده ونوعه في خطوة الإعداد الأولى. يختار عيالنا تلقائيًا ملف العمر ويعرض الميزانيات والنوم والصلاة وحماية المحتوى وموافقة الوالد والتذكيرات الصوتية قبل الحفظ.", "راجع الملف المقترح: أقل من 5 سنوات (30 دقيقة إجماليًا، تواصل 0، ألعاب 30، نوم 19:30–07:00، صلاة 10 دقائق، حظر المحتوى وموافقة الوالد والتذكيرات الصوتية مفعّلة)؛ 5–9 سنوات (45/0/45 دقيقة، نوم 20:30–07:00، صلاة 15 دقيقة، الثلاثة مفعّلة)؛ 9–13 سنة (90/30/60 دقيقة، نوم 21:30–07:00، صلاة 15 دقيقة، حظر المحتوى والصوت مفعّلان والموافقة متوقفة)؛ 13–18 سنة (150/60/90 دقيقة، نوم 22:30–07:00، صلاة 15 دقيقة، حظر المحتوى مفعّل والموافقة والصوت متوقفان). كل القيم قابلة للتعديل، وليست توصية طبية.", "بعد حفظ ملف الطفل، افتح لوحة الوالد وامنح الموقع لمواقيت الصلاة ووصول الاستخدام للحدود الزمنية. عند تفعيل الحماية، فعّل Accessibility وOverlay عند الطلب؛ سيعيدك Android إلى عيالنا ليتحقق التطبيق من الحالة.", "أضف كل طفل آخر من إدارة الأطفال؛ أدخل بياناته وراجع ملف العمر المقترح بالطريقة نفسها. فعّل الإشعارات والمنبّهات الدقيقة عند إنشاء تذكيرات أو أذان. يفتح الإشعار عيالنا لتشغيل التسجيل محليًا ولا يعمل تلقائيًا في الخلفية.", "فعّل Device Admin فقط إذا أردت تجربة القفل الصارم، وراجع تحسين البطارية إذا احتجت إلى موثوقية التذكيرات. كلاهما اختياري ويظل الحاجب المرئي بديلًا عند عدم توفره.", "صنّف التطبيقات المثبتة، راجع قواعد الفئات، نفّذ اختبارًا قصيرًا للحظر وتبديل الطفل، ثم سلّم الجهاز."],
+    androidInstallSteps: ["حمّل APK التجريبي من زر التنزيل أو QR على هاتف Android، ثم افتح الملف.", "إذا طلب Android الإذن، اختر الإعدادات وفعّل «السماح من هذا المصدر» للمتصفح أو مدير الملفات الذي فتح APK فقط، ثم أوقفه بعد التثبيت. عطّل Google Play Protect مؤقتًا لإكمال التثبيت ثم أعد تفعيله فورًا. إذا كان خيار السماح غير متاح أو معطّلًا، فقد يكون الجهاز مُدارًا؛ تواصل مع الوالد أو مسؤول الجهاز. إذا ظهر تعارض في الحزمة، فهذه النسخة موقعة بمفتاح مختلف؛ صدّر الإعداد قبل إزالة النسخة القديمة لأن بيانات الجهاز المحلية قد تُحذف.", "أنشئ PIN للوالد، ثم أدخل اسم الطفل وتاريخ ميلاده ونوعه في خطوة الإعداد الأولى. يختار عيالنا تلقائيًا ملف العمر ويعرض الميزانيات والنوم والصلاة وحماية المحتوى وموافقة الوالد والتذكيرات الصوتية قبل الحفظ.", "راجع الملف المقترح: أقل من 5 سنوات (30 دقيقة إجماليًا، تواصل 0، ألعاب 30، نوم 19:30–07:00، صلاة 10 دقائق، حظر المحتوى وموافقة الوالد والتذكيرات الصوتية مفعّلة)؛ 5–9 سنوات (45/0/45 دقيقة، نوم 20:30–07:00، صلاة 15 دقيقة، الثلاثة مفعّلة)؛ 9–13 سنة (90/30/60 دقيقة، نوم 21:30–07:00، صلاة 15 دقيقة، حظر المحتوى والصوت مفعّلان والموافقة متوقفة)؛ 13–18 سنة (150/60/90 دقيقة، نوم 22:30–07:00، صلاة 15 دقيقة، حظر المحتوى مفعّل والموافقة والصوت متوقفان). كل القيم قابلة للتعديل، وليست توصية طبية.", "بعد حفظ ملف الطفل، افتح لوحة الوالد وامنح الموقع لمواقيت الصلاة. لوصول الاستخدام، افتح إعدادات Android وابحث عن «وصول الاستخدام» أو Usage access، ثم اختر عيالنا وفعّل السماح بوصول الاستخدام. عند تفعيل الحماية، فعّل Accessibility وOverlay عند الطلب؛ سيعيدك Android إلى عيالنا ليتحقق التطبيق من الحالة.", "أضف كل طفل آخر من إدارة الأطفال؛ أدخل بياناته وراجع ملف العمر المقترح بالطريقة نفسها. فعّل الإشعارات والمنبّهات الدقيقة عند إنشاء تذكيرات أو أذان. يفتح الإشعار عيالنا لتشغيل التسجيل محليًا ولا يعمل تلقائيًا في الخلفية.", "فعّل Device Admin فقط إذا أردت تجربة القفل الصارم، وراجع تحسين البطارية إذا احتجت إلى موثوقية التذكيرات. كلاهما اختياري ويظل الحاجب المرئي بديلًا عند عدم توفره.", "صنّف التطبيقات المثبتة، راجع قواعد الفئات، نفّذ اختبارًا قصيرًا للحظر وتبديل الطفل، ثم سلّم الجهاز."],
     iosInstallTitle: "مسار iPhone وiPad",
     iosInstallSteps: ["تتطلب قيود iOS نظام iOS 16 أو أحدث، وحساب مطور Apple وإذن Family Controls للتوزيع.", "من داخل عيالنا افتح إعداد رقابة iOS، امنح إذن Screen Time، ثم اختر التطبيقات أو الفئات التي تريد Apple حمايتها.", "تطبق قواعد النوم والصلاة كشاشات حماية للتطبيقات أو الفئات التي اخترتها، وليست قفلًا ماديًا شاملًا للجهاز.", "تظهر تذكيرات المهام والصلاة كإشعارات محلية. يفتح زر تشغيل صوت الوالدين عيالنا لتشغيل التسجيل المحلي؛ لا يَعِد التطبيق بالتشغيل التلقائي في الخلفية على iPhone.", "تحتاج حماية الويب إلى Network Extension مسجلة وموافق عليها من Apple. لا تنشر نسخة iOS للمستخدمين قبل إكمال هذه المتطلبات في Apple Developer وTestFlight أو App Store."],
     packTitle: "مشاركة إعدادات بلا بيانات الأطفال",
@@ -65,6 +56,16 @@ const copy = {
     comparisonHeaders: ["الخاصية", "عيالنا", "Google Family Link", "Qustodio", "Bark", "Norton Family"],
     comparisonRows: [["حدود الوقت والجداول", "نعم", "نعم", "نعم", "نعم", "نعم"], ["حظر/تصنيف التطبيقات", "نعم؛ فئات مشتركة", "نعم؛ حدود لكل تطبيق", "نعم", "نعم", "محدود حسب المنصة"], ["قفل النوم", "نعم؛ قابل للتعديل", "وقت التوقف", "روتين/وقت نوم", "جداول", "جداول"], ["قفل الصلاة", "نعم؛ وفق موقع الوالد", "—", "—", "—", "—"], ["رسائل الوالد الصوتية", "نعم؛ محلية", "—", "—", "—", "—"], ["حزم إعداد مجهولة هوية الأطفال", "نعم", "غير موثق", "غير موثق", "غير موثق", "غير موثق"], ["إرشاد iOS", "Screen Time؛ إعداد Apple مطلوب", "تختلف بحسب الجهاز", "قائمة iOS منشورة", "قيود iOS موثقة", "تختلف بحسب المنصة"]],
     comparisonSources: "مصادر المقارنة",
+    familySafetyKicker: "القواعد تتغير، ووعي الأسرة مهم",
+    familySafetyTitle: "حماية الأطفال على الإنترنت تبدأ من المنصات والبيت",
+    familySafetyIntro: "تتجه قوانين وسياسات حديثة إلى مطالبة المنصات بتقليل مخاطر الإنترنت على القاصرين. هذه أمثلة على نطاقات مختلفة من التنظيم، وليست حظرًا عالميًا موحدًا على التواصل الاجتماعي.",
+    familySafetyExamples: [["أيرلندا · 2022", "فرضت مفوضية حماية البيانات الأيرلندية غرامة قدرها 405 ملايين يورو على Meta Platforms Ireland بسبب معالجة Instagram بيانات مستخدمين أطفال. شمل القرار Instagram، وهي خدمة تابعة لـ Meta."], ["أستراليا · من 10 ديسمبر 2025", "يلزم قانون الحد الأدنى للعمر المنصات المشمولة باتخاذ خطوات معقولة لمنع من هم دون 16 عامًا من إنشاء حساب أو الاحتفاظ به على تلك المنصات."], ["المملكة المتحدة · 2025", "يفرض قانون السلامة على الإنترنت واجبات قانونية على الخدمات لحماية الأطفال من المحتوى غير القانوني والضار؛ وبدأت واجبات حماية الأطفال في 25 يوليو 2025."], ["الاتحاد الأوروبي · 2025", "يفرض قانون الخدمات الرقمية واجبات على المنصات لحماية القاصرين. ونشرت المفوضية الأوروبية إرشادات غير ملزمة لتوضيح حماية الخصوصية والسلامة وتقليل مخاطر التصميم الإدماني والتنمر والمحتوى الضار والتواصل غير المرغوب."]],
+    familySafetyDisclaimer: "معلومات عامة وليست استشارة قانونية. تختلف القواعد بحسب البلد والمنصة، وتستهدف كثير من الواجبات الشركات المقدمة للخدمة لا الأسر مباشرة.",
+    familySupportTitle: "كيف تساعد عيالنا الأسرة في البيت",
+    familySupportIntro: "تمنح عيالنا الوالدين أدوات عملية للاتفاق على حدود وروتين رقمي مناسب للطفل، مع إبقاء الإعدادات قابلة للمراجعة والتعديل.",
+    familySupportPoints: ["ملفات عمرية قابلة للتعديل وميزانيات يومية مشتركة للتواصل والألعاب.", "تصنيف التطبيقات وجدولة النوم وروتين الصلاة ضمن إعدادات يحددها الوالد.", "تقارير الاستخدام والحظر الزمني عند منح أذونات Android المطلوبة؛ يوضح التطبيق الوضع المحدود إذا منعت إعدادات الجهاز الوصول.", "إعدادات وتسجيلات محلية، من دون قراءة رسائل الطفل أو محادثاته."],
+    familySupportLimit: "عيالنا لا يتحقق من عمر حسابات المنصات ولا يزيل المحتوى الضار ولا يحل محل قوانين السلامة أو التزامات المنصات. يحتاج تتبع الاستخدام إلى إذن Usage Access، وقد تقيده الرقابة الأبوية أو إدارة الجهاز.",
+    familySafetySources: "مصادر رسمية",
     profiles: "إعدادات جاهزة حسب العمر",
     profilesIntro: "في الإعداد الأول أدخل اسم الطفل وتاريخ ميلاده ونوعه؛ يختار التطبيق ملف العمر ويعرض إعداداته قبل الحفظ. تُحتسب تطبيقات التواصل والألعاب من ميزانيات يومية مشتركة، وكل قيمة قابلة للتعديل أو إعادة الضبط.",
     profileNames: ["دون 5 سنوات", "من 5 إلى 9", "من 9 إلى 13", "المراهقون 13–18"],
@@ -82,13 +83,13 @@ const copy = {
     faq: "أسئلة شائعة",
     faqSupportBody: "لم تجد ما تبحث عنه؟ اكتب لنا وسنساعدك في الإعداد.",
     contactSupport: "تواصل مع الدعم",
-    faqItems: [["هل يقرأ عيالنا رسائل الطفل؟", "لا. يعتمد التطبيق على حدود الوقت، التطبيقات، النطاقات، والأذونات المطلوبة للتنفيذ."], ["هل يمكن تغيير الملف العمري؟", "نعم. يمكن اختيار أي ملف، تعديل قيمه، أو إعادة الملف الحالي إلى الإعداد الافتراضي."], ["أين يُحفظ التسجيل الصوتي؟", "محليًا على الجهاز الذي سجّله الوالد. لا يتم رفعه إلى خادم من خلال هذه الميزة."], ["ماذا أفعل إذا ظهر تعارض مع حزمة موجودة؟", "هذا يعني غالبًا أن النسخة المثبتة موقعة بمفتاح مختلف. صدّر الإعداد القابل للمشاركة أولًا، ثم احذف النسخة القديمة وثبّت النسخة المستقرة الجديدة؛ قد تُحذف البيانات المحلية بعد الإزالة."], ["هل يجب تعطيل Google Play Protect؟", "لا. اترك Play Protect مفعّلًا. اسمح بالتثبيت من مصدر غير معروف للتطبيق الذي فتح ملف APK فقط، ثم أوقف الإذن بعد التثبيت."], ["أي أذونات يحتاجها التطبيق؟", "الموقع لمواقيت الصلاة، ووصول الاستخدام للحدود الزمنية، وOverlay وAccessibility عند تشغيل الحماية. Device Admin اختياري للقفل الصارم فقط."], ["لماذا لا تعمل الحماية بعد الرجوع من الإعدادات؟", "ارجع إلى عيالنا بعد تفعيل الإذن وانتظر بطاقة التحقق. إذا بقيت غير جاهزة، افتح مركز الموثوقية وراجع الإذن المطلوب قبل الضغط على بدء المراقبة."], ["لماذا فشل تثبيت النسخة الأولى؟", "استخدم الاختيار التلقائي أولًا. إذا لم ينجح، جرّب arm64 للهواتف الحديثة أو armv7 للهواتف الأقدم، ولا تثبّت نسخة موقعة من مصدر آخر فوق النسخة الحالية."], ["هل يعمل iPhone بنفس الطريقة؟", "تختلف أذونات iOS عن Android. استخدم Family Controls وNetwork Extension وفق دليل iOS داخل المشروع." ]],
+    faqItems: [["هل يقرأ عيالنا رسائل الطفل؟", "لا. يعتمد التطبيق على حدود الوقت، التطبيقات، النطاقات، والأذونات المطلوبة للتنفيذ."], ["هل يمكن تغيير الملف العمري؟", "نعم. يمكن اختيار أي ملف، تعديل قيمه، أو إعادة الملف الحالي إلى الإعداد الافتراضي."], ["أين يُحفظ التسجيل الصوتي؟", "محليًا على الجهاز الذي سجّله الوالد. لا يتم رفعه إلى خادم من خلال هذه الميزة."], ["ماذا أفعل إذا ظهر تعارض مع حزمة موجودة؟", "هذا يعني غالبًا أن النسخة المثبتة موقعة بمفتاح مختلف. صدّر الإعداد القابل للمشاركة أولًا، ثم احذف النسخة القديمة وثبّت النسخة المستقرة الجديدة؛ قد تُحذف البيانات المحلية بعد الإزالة."], ["هل يجب تعطيل Google Play Protect؟", "نعم. عطّل Google Play Protect مؤقتًا قبل تثبيت APK، ثم أعد تفعيله فورًا بعد التثبيت. اسمح أيضًا بالتثبيت من مصدر غير معروف للتطبيق الذي فتح الملف فقط، وأوقف هذا الإذن بعد التثبيت."], ["ماذا أفعل إذا لم أستطع السماح بالتثبيت من هذا المصدر؟", "افتح إعدادات Android من رسالة التثبيت وفعّل السماح من هذا المصدر للمتصفح أو مدير الملفات الذي فتح APK فقط. إذا كان الخيار غير متاح أو معطّلًا، فقد يكون الجهاز مُدارًا؛ تواصل مع الوالد أو مسؤول الجهاز بدلًا من تجاوز القيد."], ["ماذا أفعل إذا كان وصول الاستخدام معطّلًا؟", "افتح إعدادات Android وابحث عن «وصول الاستخدام» أو Usage access، ثم اختر عيالنا وفعّل السماح بوصول الاستخدام. إذا ظهرت رسالة “controlled by selected settings” أو كان الخيار غير متاح أو معطّلًا، فإعدادات الرقابة الأبوية أو مسؤول الجهاز يقيّد هذا الإذن؛ اطلب منهم السماح به بدلًا من محاولة تجاوز القيد."], ["أي أذونات يحتاجها التطبيق؟", "الموقع لمواقيت الصلاة، ووصول الاستخدام للحدود الزمنية، وOverlay وAccessibility عند تشغيل الحماية. Device Admin اختياري للقفل الصارم فقط."], ["لماذا لا تعمل الحماية بعد الرجوع من الإعدادات؟", "ارجع إلى عيالنا بعد تفعيل الإذن وانتظر بطاقة التحقق. إذا بقيت غير جاهزة، افتح مركز الموثوقية وراجع الإذن المطلوب قبل الضغط على بدء المراقبة."], ["لماذا فشل تثبيت النسخة الأولى؟", "استخدم الاختيار التلقائي أولًا. إذا لم ينجح، جرّب arm64 للهواتف الحديثة أو armv7 للهواتف الأقدم، ولا تثبّت نسخة موقعة من مصدر آخر فوق النسخة الحالية."], ["هل يعمل iPhone بنفس الطريقة؟", "تختلف أذونات iOS عن Android. استخدم Family Controls وNetwork Extension وفق دليل iOS داخل المشروع." ]],
     finalCta: "اجعل الإعداد مفهومًا من اليوم الأول.",
     finalBody: "شارك هذه الصفحة مع العائلة، ثم افتح التطبيق واختر الملف الذي يناسب طفلك.",
     download: "تنزيل APK للاختبار",
     releaseKicker: "03 / إصدار Android التجريبي",
-    releaseTitle: "نسخة Android التجريبية متاحة للتنزيل المباشر",
-    releaseBody: "ابدأ بالنسخة الأصغر المناسبة للتجربة على هاتف Android. إذا لم يقبل الهاتف تثبيتها، استخدم بديل arm64 المدرج أدناه. لا تحتاج إلى دعوة اختبار أو تسجيل الدخول إلى Firebase.",
+    releaseTitle: "تنزيل عيالنا لأجهزة Android 7 أو أحدث",
+    releaseBody: "نفس الخصائص في نسخ أخف حسب المعالج: ARM64 أو ARMv7، ونسخة لجميع المعالجات عند عدم توفر معلومات الجهاز. يبدأ تنزيل النسخة المناسبة تلقائيًا عندما يسمح المتصفح، وتظل خيارات التنزيل اليدوي متاحة. لا تحتاج إلى دعوة اختبار أو تسجيل الدخول إلى Firebase.",
     releasePlatform: "Android",
     releaseVersion: "0.1.0 · البنية 1",
     releaseChannel: "إصدار تقييم عام",
@@ -103,13 +104,15 @@ const copy = {
     shareWhatsApp: "واتساب",
     shareTelegram: "تيليجرام",
     releaseNotice: "هذه نسخة تقييم وليست إصدار متجر. قد يطلب Android السماح بالتثبيت من المتصفح أو مدير الملفات. إذا ظهرت رسالة «يتعارض مع حزمة موجودة»، فالتطبيق القديم موقّع بمفتاح مختلف. لا تحذفه قبل تصدير إعداد قابل للمشاركة؛ الحذف يمسح بيانات الأطفال وPIN والتسجيلات والاستخدام المحلية.",
-    apkChoiceTitle: "إذا لم يتم التثبيت، جرّب البديل المناسب لهاتفك",
-    apkChoiceArm64: "بديل للهواتف الحديثة التي لا تقبل النسخة الأصغر · arm64",
-    apkChoiceArmv7: "النسخة الأصغر للتجربة أولاً · armv7",
+    apkChoiceTitle: "اختر نسخة التنزيل",
+    apkChoiceArm64: "للأجهزة التي تدعم ARM ‏64 بت · arm64",
+    apkChoiceArmv7: "للأجهزة التي تدعم ARM ‏32 بت · armv7",
+    apkChoiceUniversal: "نسخة لجميع المعالجات · Android 7 أو أحدث",
+    autoChoiceUnsupported: "هذا الإصدار يتطلب Android 7 أو أحدث.",
     autoChoiceChecking: "يتم فحص توافق المعالج محليًا…",
     autoChoiceArm64: "اكتشف المتصفح ARM64؛ تم اختيار arm64 تلقائيًا.",
-    autoChoiceArmv7: "اكتشف المتصفح معالجًا غير ARM64؛ تم اختيار armv7 الأصغر تلقائيًا.",
-    autoChoiceUnknown: "لم يشارك المتصفح معمارية المعالج؛ أبقينا armv7 الأصغر. اختر arm64 يدويًا إذا لم يتم التثبيت.",
+    autoChoiceArmv7: "اكتشف المتصفح ARM ‏32 بت؛ تم اختيار armv7 تلقائيًا.",
+    autoChoiceUnknown: "نسخة جميع المعالجات عند توفرها، أو خيارات الإصدار المنشور.",
     requestInvite: "تحتاج إلى مساعدة؟ تواصل معنا",
     testerQrTitle: "امسح لتنزيل النسخة المستقرة",
     testerQrBody: "يفتح تنزيل arm64 المباشر على هاتف Android دون تسجيل دخول.",
@@ -130,7 +133,7 @@ const copy = {
     contactError: "تعذر إرسال الرسالة الآن. حاول مرة أخرى لاحقًا.",
   },
   en: {
-    nav: ["Feature tour", "Download", "Setup", "Age profiles", "Comparison", "Privacy", "FAQ", "Contact"],
+    nav: ["Feature tour", "Download", "Setup", "Age profiles", "Comparison", "Child safety", "Privacy", "FAQ", "Contact"],
     badge: "Official setup guide · 3ialna",
     title: "Protect family time, not private conversations.",
     intro: "3ialna helps parents build a calmer digital routine by age, with parent-recorded voice messages and settings they can edit or reset at any time.",
@@ -150,9 +153,9 @@ const copy = {
     privacyBody: "Controls are based on time, apps, domains, and prayer-aware routines. The app does not need to read a child’s conversations or analyze what they type.",
     install: "Install and configure",
     installIntro: "Follow these steps in order on the parent phone or managed device. Set up the child profile before granting protection permissions.",
-    steps: [["Download and install Android", "Use the download button or QR code, then open the file on an Android phone. Allow installation from the browser or file manager for this install only, and keep Play Protect enabled."], ["Enter the child’s details", "After the tour, enter the child’s name, birth date, and gender. 3ialna selects the matching age profile and previews every starting setting before saving; parents can edit them later."], ["Create parent protection", "Create a parent PIN and optionally enable biometrics. After saving the child profile, open the parent dashboard to grant required permissions."], ["Grant permissions and test", "Allow Location for prayer times and Usage Access for limits. Grant Overlay and Accessibility when enabling protection. Add each additional child the same way, then test switching and limits."], ["Add reminders", "When creating reminders, allow notifications and exact alarms, and record a parent voice note locally if desired."]],
+    steps: [["Download and install Android", "Use the download button or QR code, then open the file on an Android phone. If prompted, tap Settings and enable Allow from this source only for the browser or file manager that opened the APK; turn it off after installation. Temporarily disable Google Play Protect to complete installation, then re-enable it immediately."], ["Enter the child’s details", "After the tour, enter the child’s name, birth date, and gender. 3ialna selects the matching age profile and previews every starting setting before saving; parents can edit them later."], ["Create parent protection", "Create a parent PIN and optionally enable biometrics. After saving the child profile, open the parent dashboard to grant required permissions."], ["Grant permissions and test", "Allow Location for prayer times. For Usage Access, open Android Settings, search for Usage access, select 3ialna, and turn on Allow usage access. If the setting is unavailable or disabled, contact the parent or device administrator. Grant Overlay and Accessibility when enabling protection. Add each additional child the same way, then test switching and limits."], ["Add reminders", "When creating reminders, allow notifications and exact alarms, and record a parent voice note locally if desired."]],
     androidInstallTitle: "Detailed Android installation",
-    androidInstallSteps: ["Download the evaluation APK from the download button or QR code on an Android phone, then open the file.", "Allow installation from the browser or file manager for this install only, and keep Play Protect enabled. If Android reports a package conflict, this build has a different signing key; export setup before uninstalling because local device data may be removed.", "Create a parent PIN, then enter the child’s name, birth date, and gender in first setup. 3ialna selects the matching age profile and previews budgets, sleep, prayer, content blocking, approval, and voice defaults before saving.", "Review the starting profiles: under 5 (30m total, social 0, games 30, sleep 19:30–07:00, prayer 10m; mature block, parent approval, and voice on); ages 5–9 (45/0/45m, sleep 20:30–07:00, prayer 15m; all three on); ages 9–13 (90/30/60m, sleep 21:30–07:00, prayer 15m; mature block and voice on, approval off); ages 13–18 (150/60/90m, sleep 22:30–07:00, prayer 15m; mature block on, approval and voice off). Every value is editable and these are not medical recommendations.", "After saving the child profile, open the parent dashboard and grant Location for prayer times and Usage Access for limits. Grant Accessibility and Overlay when enabling protection; Android returns to 3ialna so it can re-check the status.", "Add each additional child from Kids management using the same details and age-profile preview. Grant Notifications and exact alarms when creating reminders or prayer alerts. The notification opens 3ialna to play a local parent recording; it does not autoplay in the background.", "Enable Device Admin only if you want to try hard lock, and review battery optimization if reminder reliability needs it. Both are optional, and the visual blocker remains the fallback when unavailable.", "Categorize installed apps, review category rules, run a short blocking and child-switch test, then hand over the device."],
+    androidInstallSteps: ["Download the evaluation APK from the download button or QR code on an Android phone, then open the file.", "If prompted, tap Settings and enable Allow from this source only for the browser or file manager that opened the APK; turn it off after installation. Temporarily disable Google Play Protect to complete installation, then re-enable it immediately. If the setting is unavailable or disabled, the device may be managed; contact the parent or device administrator. If Android reports a package conflict, this build has a different signing key; export setup before uninstalling because local device data may be removed.", "Create a parent PIN, then enter the child’s name, birth date, and gender in first setup. 3ialna selects the matching age profile and previews budgets, sleep, prayer, content blocking, approval, and voice defaults before saving.", "Review the starting profiles: under 5 (30m total, social 0, games 30, sleep 19:30–07:00, prayer 10m; mature block, parent approval, and voice on); ages 5–9 (45/0/45m, sleep 20:30–07:00, prayer 15m; all three on); ages 9–13 (90/30/60m, sleep 21:30–07:00, prayer 15m; mature block and voice on, approval off); ages 13–18 (150/60/90m, sleep 22:30–07:00, prayer 15m; mature block on, approval and voice off). Every value is editable and these are not medical recommendations.", "After saving the child profile, open the parent dashboard and grant Location for prayer times. For Usage Access, open Android Settings, search for Usage access, select 3ialna, and turn on Allow usage access. If the setting is unavailable or disabled, contact the parent or device administrator. Grant Accessibility and Overlay when enabling protection; Android returns to 3ialna so it can re-check the status.", "Add each additional child from Kids management using the same details and age-profile preview. Grant Notifications and exact alarms when creating reminders or prayer alerts. The notification opens 3ialna to play a local parent recording; it does not autoplay in the background.", "Enable Device Admin only if you want to try hard lock, and review battery optimization if reminder reliability needs it. Both are optional, and the visual blocker remains the fallback when unavailable.", "Categorize installed apps, review category rules, run a short blocking and child-switch test, then hand over the device."],
     iosInstallTitle: "iPhone and iPad path",
     iosInstallSteps: ["iOS safeguards require iOS 16 or later, an Apple Developer account, and the Family Controls distribution entitlement.", "In 3ialna, open iOS parental setup, grant Screen Time authorization, then use the Apple picker to select the apps or categories to protect.", "Sleep and prayer rules shield the selected apps or categories during their windows; they are not a universal physical device lock.", "Task and prayer reminders are local notifications. The Play parent voice action opens 3ialna to play the local recording; the app does not promise automatic background playback on iPhone.", "Web protection also requires a registered and Apple-approved Network Extension. Do not distribute an iOS build until these Apple Developer and TestFlight/App Store requirements are complete."],
     packTitle: "Share settings, not children’s data",
@@ -162,6 +165,16 @@ const copy = {
     comparisonHeaders: ["Feature", "3ialna", "Google Family Link", "Qustodio", "Bark", "Norton Family"],
     comparisonRows: [["Time limits and schedules", "Yes", "Yes", "Yes", "Yes", "Yes"], ["App blocking / categories", "Yes; shared categories", "Yes; per-app limits", "Yes", "Yes", "Platform-limited"], ["Sleep protection", "Yes; editable", "Downtime", "Routines / bedtime", "Schedules", "Schedules"], ["Prayer-aware lock", "Yes; parent location", "—", "—", "—", "—"], ["Parent-recorded voice", "Yes; on-device", "—", "—", "—", "—"], ["Child-identity-free setup packs", "Yes", "Not documented", "Not documented", "Not documented", "Not documented"], ["iOS path", "Screen Time; Apple setup required", "Device-dependent", "Published iOS list", "Documented iOS limits", "Platform-dependent"]],
     comparisonSources: "Comparison sources",
+    familySafetyKicker: "Rules are changing. Family awareness matters.",
+    familySafetyTitle: "Child online safety starts with platforms and families",
+    familySafetyIntro: "Recent laws and policies increasingly ask platforms to reduce online risks for minors. These examples have different scopes; they do not amount to one global social-media ban.",
+    familySafetyExamples: [["Ireland · 2022", "Ireland’s Data Protection Commission imposed a €405 million fine on Meta Platforms Ireland over Instagram’s processing of children’s personal data. Instagram is a Meta service; the decision concerned Instagram, not the Facebook service."], ["Australia · from 10 December 2025", "The Social Media Minimum Age Act requires covered platforms to take reasonable steps to prevent under-16s from creating or keeping accounts on those services."], ["United Kingdom · 2025", "The Online Safety Act places legal duties on services to protect children from illegal and harmful content. Child-safety duties took effect on 25 July 2025."], ["European Union · 2025", "The Digital Services Act places duties on platforms to protect minors. The European Commission published non-binding guidance in July 2025 on privacy, safety, and reducing risks such as addictive design, cyberbullying, harmful content, and unwanted contact."]],
+    familySafetyDisclaimer: "General information, not legal advice. Rules vary by country and service, and many duties apply to companies providing platforms rather than directly to families.",
+    familySupportTitle: "How 3ialna helps families at home",
+    familySupportIntro: "3ialna gives parents practical tools to agree on age-appropriate digital boundaries and routines, with settings they can review and change.",
+    familySupportPoints: ["Editable age profiles and shared daily budgets for social apps and games.", "Parent-managed app categories, sleep schedules, and prayer routines.", "Usage reports and time-based blocking when required Android permissions are granted; the app discloses limited mode if device controls deny access.", "On-device settings and recordings, without reading a child’s messages or conversations."],
+    familySupportLimit: "3ialna does not verify platform account ages, remove harmful content, or replace safety laws or platforms’ duties. Usage tracking requires Usage Access, which parental controls or device management may restrict.",
+    familySafetySources: "Official sources",
     profiles: "Ready-made age profiles",
     profilesIntro: "In first setup, enter the child’s name, birth date, and gender; the app selects the age band and previews its settings before saving. Social media and games use shared daily budgets; parents can edit or reset every value.",
     profileNames: ["Under 5", "Ages 5–9", "Ages 9–13", "Teenagers 13–18"],
@@ -179,13 +192,13 @@ const copy = {
     faq: "Common questions",
     faqSupportBody: "Still need a hand? Send us a message and we’ll help with setup.",
     contactSupport: "Contact support",
-    faqItems: [["Does 3ialna read a child’s messages?", "No. It uses time, app, domain, and permission-based controls."], ["Can I change the age profile?", "Yes. Choose another profile, edit values, or reset the current profile to its defaults."], ["Where is the voice recording stored?", "Locally on the device where the parent records it. This feature does not upload it to a server."], ["What should I do if Android says the package conflicts?", "The installed copy is usually signed with a different certificate. Export a shareable setup first, then uninstall the old copy and install the stable-signed release; removing the old app may delete local data."], ["Should I disable Google Play Protect?", "No. Keep Play Protect enabled. Allow unknown-app installation only for the browser or file manager that opened the APK, then revoke that permission after installation."], ["Which permissions does the app need?", "Location for prayer times, Usage Access for time limits, and Overlay plus Accessibility when protection is enabled. Device Admin is optional for hard lock only."], ["Why is protection still unavailable after returning from Settings?", "Return to 3ialna after enabling the permission and wait for the verification card. If it is still not ready, open Reliability Center and review the remaining permission before pressing Start monitoring."], ["Why did the first APK choice fail to install?", "Try the automatic choice first. If it fails, try arm64 on newer phones or armv7 on older phones, and do not install an APK signed by another source over the current package."], ["Does iPhone work the same way?", "iOS permissions differ from Android. Use Family Controls and Network Extension according to the project’s iOS guide."]],
+    faqItems: [["Does 3ialna read a child’s messages?", "No. It uses time, app, domain, and permission-based controls."], ["Can I change the age profile?", "Yes. Choose another profile, edit values, or reset the current profile to its defaults."], ["Where is the voice recording stored?", "Locally on the device where the parent records it. This feature does not upload it to a server."], ["What should I do if Android says the package conflicts?", "The installed copy is usually signed with a different certificate. Export a shareable setup first, then uninstall the old copy and install the stable-signed release; removing the old app may delete local data."], ["Should I disable Google Play Protect?", "Yes. Temporarily disable Google Play Protect before installing the APK, then re-enable it immediately afterward. Also allow unknown-app installation only for the browser or file manager that opened the APK, and revoke that permission after installation."], ["What if I can’t allow installation from this source?", "Open Android Settings from the installation prompt and enable Allow from this source only for the browser or file manager that opened the APK. If the setting is unavailable or disabled, the device may be managed; contact the parent or device administrator instead of bypassing the restriction."], ["What if Usage Access is disabled?", "Open Android Settings, search for Usage access, select 3ialna, and turn on Allow usage access. If Android says “controlled by selected settings” or the option is unavailable or disabled, parental controls or the device administrator are restricting the permission; ask them to allow it instead of trying to bypass the restriction."], ["Which permissions does the app need?", "Location for prayer times, Usage Access for time limits, and Overlay plus Accessibility when protection is enabled. Device Admin is optional for hard lock only."], ["Why is protection still unavailable after returning from Settings?", "Return to 3ialna after enabling the permission and wait for the verification card. If it is still not ready, open Reliability Center and review the remaining permission before pressing Start monitoring."], ["Why did the first APK choice fail to install?", "Try the automatic choice first. If it fails, try arm64 on newer phones or armv7 on older phones, and do not install an APK signed by another source over the current package."], ["Does iPhone work the same way?", "iOS permissions differ from Android. Use Family Controls and Network Extension according to the project’s iOS guide."]],
     finalCta: "Make setup understandable from day one.",
     finalBody: "Share this page with your family, then open the app and choose the profile that fits your child.",
     download: "Download test APK",
     releaseKicker: "03 / Android test release",
-    releaseTitle: "The Android evaluation build is ready for direct download",
-    releaseBody: "Start with the smaller evaluation APK on an Android phone. If the phone cannot install it, use the arm64 fallback listed below. No Firebase sign-in or tester invitation is required.",
+    releaseTitle: "Download 3ialna for Android 7 or newer",
+    releaseBody: "All features, in smaller ARM64 and ARMv7 downloads, with an all-processor APK when device information is unavailable. The compatible download starts automatically when your browser allows it; manual choices remain available. No Firebase sign-in or tester invitation is required.",
     releasePlatform: "Android",
     releaseVersion: "0.1.0 · Build 1",
     releaseChannel: "Public evaluation release",
@@ -200,13 +213,15 @@ const copy = {
     shareWhatsApp: "WhatsApp",
     shareTelegram: "Telegram",
     releaseNotice: "This is an evaluation build, not a store release. Android may ask you to allow installation from your browser or file manager. If Android says the package conflicts with an existing package, the installed copy has a different signing key. Do not uninstall before exporting a shareable setup; uninstalling removes local child data, PINs, recordings, and usage.",
-    apkChoiceTitle: "If installation fails, try the compatible alternative",
-    apkChoiceArm64: "Fallback for modern phones that cannot install the smaller build · arm64",
-    apkChoiceArmv7: "Smaller build to try first · armv7",
+    apkChoiceTitle: "Choose a download",
+    apkChoiceArm64: "For devices supporting 64-bit ARM · arm64",
+    apkChoiceArmv7: "For devices supporting 32-bit ARM · armv7",
+    apkChoiceUniversal: "All processors · Android 7 or newer",
+    autoChoiceUnsupported: "This release requires Android 7 or newer.",
     autoChoiceChecking: "Checking processor compatibility on this device…",
     autoChoiceArm64: "The browser reported ARM64; arm64 was selected automatically.",
-    autoChoiceArmv7: "The browser reported a non-ARM64 processor; the smaller armv7 build was selected automatically.",
-    autoChoiceUnknown: "The browser did not share CPU architecture; the smaller armv7 build remains selected. Choose arm64 manually if installation fails.",
+    autoChoiceArmv7: "The browser reported 32-bit ARM; armv7 was selected automatically.",
+    autoChoiceUnknown: "All-processor APK when available, or published release choices.",
     requestInvite: "Need help? Contact us",
     testerQrTitle: "Scan to download the stable APK",
     testerQrBody: "Opens the direct arm64 Android download without sign-in.",
@@ -262,7 +277,7 @@ export default function Home() {
   });
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [closingFaq, setClosingFaq] = useState<number | null>(null);
-  const [detectedAbi, setDetectedAbi] = useState<AndroidAbi>("armv7");
+  const [deviceDownload, setDeviceDownload] = useState<AndroidDownload | null>(null);
   const [detectionState, setDetectionState] = useState<DetectionState>("checking");
   const [downloadState, setDownloadState] = useState<"idle" | "opening">("idle");
   const [shareState, setShareState] = useState<"idle" | "shared" | "copied" | "error">("idle");
@@ -309,35 +324,32 @@ export default function Home() {
     try { window.sessionStorage.setItem("3ialna-language", language); } catch { /* storage may be unavailable */ }
   }, [isArabic, language, t]);
 
-  const preferredDownloadUrl = currentRelease.downloadUrls[detectedAbi];
+  const preferredDownloadUrl = deviceDownload?.supported === false
+    ? "https://github.com/mgomma/3ialna/releases"
+    : deviceDownload?.url ?? release.downloadUrls.universal ?? "https://github.com/mgomma/3ialna/releases";
   const shareText = isArabic ? "شارك رابط تنزيل تطبيق عيالنا مع عائلتك." : "Share the 3ialna Android download with your family.";
-  const whatsappShareUrl = useMemo(() => `https://wa.me/?text=${encodeURIComponent(`${shareText} ${preferredDownloadUrl}`)}`, [shareText, preferredDownloadUrl]);
-  const telegramShareUrl = useMemo(() => `https://t.me/share/url?url=${encodeURIComponent(preferredDownloadUrl)}&text=${encodeURIComponent(shareText)}`, [shareText, preferredDownloadUrl]);
+  const whatsappShareUrl = useMemo(() => `https://wa.me/?text=${encodeURIComponent(`${shareText} ${downloadPageUrl}`)}`, [shareText]);
+  const telegramShareUrl = useMemo(() => `https://t.me/share/url?url=${encodeURIComponent(downloadPageUrl)}&text=${encodeURIComponent(shareText)}`, [shareText]);
 
   useEffect(() => {
     let isCurrent = true;
-    const userAgentData = (navigator as NavigatorWithUserAgentData).userAgentData;
-
-    if (userAgentData?.platform?.toLowerCase() !== "android" || !userAgentData.getHighEntropyValues) {
-      setDetectionState("unknown");
-      return () => {
-        isCurrent = false;
-      };
-    }
-
-    void userAgentData
-      .getHighEntropyValues(["architecture", "bitness"])
-      .then(({ architecture = "", bitness = "" }) => {
+    void selectAndroidDownload(navigator, release)
+      .then((selection) => {
         if (!isCurrent) return;
-        const architectureValue = architecture.toLowerCase();
-        const isArm64 = /arm|aarch64/.test(architectureValue) &&
-          (architectureValue.includes("64") || bitness === "64");
-        const abi: AndroidAbi = isArm64 ? "arm64" : "armv7";
-        setDetectedAbi(abi);
-        setDetectionState(abi);
-      })
-      .catch(() => {
-        if (isCurrent) setDetectionState("unknown");
+        setDeviceDownload(selection);
+        setDetectionState(selection.supported === false ? "unsupported" : selection.isAndroid ? selection.abi : "unknown");
+        try {
+          beginAutomaticDownload(selection, release, window.sessionStorage, (url) => {
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "";
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+          });
+        } catch {
+          return;
+        }
       });
 
     return () => {
@@ -350,12 +362,15 @@ export default function Home() {
   const contactWasSubmitted = new URLSearchParams(window.location.search).get("sent") === "1";
   const detectionMessage = detectionState === "checking"
     ? t.autoChoiceChecking
+    : detectionState === "unsupported"
+      ? t.autoChoiceUnsupported
     : detectionState === "arm64"
       ? t.autoChoiceArm64
       : detectionState === "armv7"
         ? t.autoChoiceArmv7
         : t.autoChoiceUnknown;
   const apkChoices = [
+    ...(release.downloadUrls.universal ? [{ key: "universal", label: t.apkChoiceUniversal, url: release.downloadUrls.universal }] : []),
     { key: "armv7", label: t.apkChoiceArmv7, url: currentRelease.downloadUrls.armv7 },
     { key: "arm64", label: t.apkChoiceArm64, url: currentRelease.downloadUrls.arm64 },
   ] as const;
@@ -367,11 +382,11 @@ export default function Home() {
 
   async function copyDownloadLink() {
     if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(preferredDownloadUrl);
+      await navigator.clipboard.writeText(downloadPageUrl);
       return;
     }
     const helper = document.createElement("textarea");
-    helper.value = preferredDownloadUrl;
+    helper.value = downloadPageUrl;
     helper.setAttribute("readonly", "true");
     helper.style.position = "fixed";
     helper.style.opacity = "0";
@@ -386,7 +401,7 @@ export default function Home() {
     const shareData = {
       title: "3ialna / عيالنا",
       text: isArabic ? "شارك رابط تنزيل تطبيق عيالنا مع عائلتك." : "Share the 3ialna Android download with your family.",
-      url: preferredDownloadUrl,
+      url: downloadPageUrl,
     };
     try {
       if (navigator.share) {
@@ -407,7 +422,7 @@ export default function Home() {
     <div dir={isArabic ? "rtl" : "ltr"} className="site-shell">
       <header className="topbar">
         <a className="brand" href="#top"><span className="brand-mark" aria-hidden="true" /><span>3ialna</span><small>عيالنا</small></a>
-        <nav>{t.nav.map((item, index) => <a key={item} href={["#how", "#download", "#setup", "#profiles", "#comparison", "#privacy", "#faq", "#contact"][index]}>{item}</a>)}</nav>
+        <nav>{t.nav.map((item, index) => <a key={item} href={["#how", "#download", "#setup", "#profiles", "#comparison", "#family-safety", "#privacy", "#faq", "#contact"][index]}>{item}</a>)}</nav>
         <div className="top-actions">
           <button className="lang-switch" type="button" onClick={() => setLanguage(isArabic ? "en" : "ar")} aria-label={isArabic ? "Switch site language to English" : "تغيير لغة الموقع إلى العربية"} title={isArabic ? "Switch site language to English" : "تغيير لغة الموقع إلى العربية"}><Globe2 size={16} />{isArabic ? "English" : "العربية"}</button>
           <a className="mini-cta" href="#download">{isArabic ? "النسخة التجريبية" : "Test release"}<ArrowUpRight size={15} /></a>
@@ -428,12 +443,20 @@ export default function Home() {
 
         <section id="how" className="walkthrough-section"><div className="walkthrough-heading"><div><span className="section-kicker">02 / {isArabic ? "الجولة التعريفية" : "Feature tour"}</span><h2>{t.guide}</h2></div><p>{t.guideIntro}</p></div><ol className="walkthrough-list">{t.walkthrough.map(([title, body], index) => <li className="walkthrough-step" key={title}><span className="walkthrough-number">{String(index + 1).padStart(2, "0")}</span><TourPreview step={index} isArabic={isArabic} /><h3>{title}</h3><p>{body}</p></li>)}</ol></section>
 
-        <section id="download" className="release-section section-grid"><div className="release-copy"><span className="section-kicker">{t.releaseKicker}</span><h2>{t.releaseTitle}</h2><p>{t.releaseBody}</p><a className="release-request" href="#contact"><Mail size={16} />{t.requestInvite}<ArrowUpRight size={15} /></a></div><div className="release-panel"><div className="release-status"><span className="release-pulse" aria-hidden="true" />{isArabic ? "إصدار متاح" : "Release available"}</div><div className="release-facts"><div><span>{isArabic ? "المنصة" : "Platform"}</span><b>{currentRelease.platform}</b></div><div><span>{isArabic ? "الإصدار" : "Version"}</span><b>{releaseVersion}</b></div><div><span>{isArabic ? "قناة التثبيت" : "Install channel"}</span><b>{t.releaseChannel}</b></div></div><div className="release-actions"><a className={`button release-button ${downloadState === "opening" ? "is-opening" : ""}`} href={preferredDownloadUrl} target="_blank" rel="noreferrer" onClick={handleDownloadClick} aria-busy={downloadState === "opening"} aria-describedby="release-download-feedback">{downloadState === "opening" ? <LoaderCircle className="download-spinner" size={18} aria-hidden="true" /> : <Download size={18} aria-hidden="true" />}{downloadState === "opening" ? t.releaseOpening : t.releaseButton}<ExternalLink size={16} aria-hidden="true" /></a><span className="share-button-wrap"><button className={`share-button ${shareState !== "idle" ? "is-feedback" : ""}`} type="button" onClick={handleShareClick} title={shareState === "copied" ? t.shareCopiedTooltip : t.share} aria-label={shareState === "copied" ? t.shareCopiedTooltip : t.share} aria-describedby="release-share-feedback"><Share2 size={17} aria-hidden="true" />{shareState === "shared" ? t.shareDone : shareState === "copied" ? t.shareCopied : shareState === "error" ? t.shareError : t.share}</button>{shareState === "copied" && <span className="share-tooltip" role="status">{t.shareCopiedTooltip}</span>}</span><a className="message-share-button whatsapp" href={whatsappShareUrl} target="_blank" rel="noreferrer" aria-label={t.shareWhatsApp} title={t.shareWhatsApp}><MessageCircle size={15} aria-hidden="true" />{t.shareWhatsApp}</a><a className="message-share-button telegram" href={telegramShareUrl} target="_blank" rel="noreferrer" aria-label={t.shareTelegram} title={t.shareTelegram}><Send size={15} aria-hidden="true" />{t.shareTelegram}</a></div><p className="release-download-feedback" id="release-download-feedback" role="status" aria-live="polite">{downloadState === "opening" ? t.releaseOpening : t.releaseReady}</p><p className="release-share-feedback" id="release-share-feedback" role="status" aria-live="polite">{shareState === "shared" ? t.shareDone : shareState === "copied" ? t.shareCopied : shareState === "error" ? t.shareError : ""}</p><p className="release-detection" role="status"><Smartphone size={16} />{detectionMessage}</p><div className="apk-choice-list"><b>{t.apkChoiceTitle}</b>{apkChoices.map((choice) => <a key={choice.key} href={choice.url} target="_blank" rel="noreferrer"><Download size={14} />{choice.label}<ExternalLink size={13} /></a>)}</div><p className="release-notice"><ShieldCheck size={17} />{t.releaseNotice}</p><p className="release-updated">{t.releaseUpdated}: {releaseDate}</p><div className="release-qr-grid"><div className="release-qr-card"><QRCodeSVG value={currentRelease.downloadUrls.arm64} size={128} level="M" includeMargin bgColor="#f7f3eb" fgColor="#174a3b" /><div><b>{t.testerQrTitle}</b><span>{t.testerQrBody}</span></div></div><div className="release-qr-card"><QRCodeSVG value={publicSiteUrl} size={128} level="M" includeMargin bgColor="#f7f3eb" fgColor="#174a3b" /><div><b>{t.siteQrTitle}</b><span>{t.siteQrBody}</span></div></div></div></div></section>
+        <section id="download" className="release-section section-grid"><div className="release-copy"><span className="section-kicker">{t.releaseKicker}</span><h2>{t.releaseTitle}</h2><p>{t.releaseBody}</p><a className="release-request" href="#contact"><Mail size={16} />{t.requestInvite}<ArrowUpRight size={15} /></a></div><div className="release-panel"><div className="release-status"><span className="release-pulse" aria-hidden="true" />{isArabic ? "إصدار متاح" : "Release available"}</div><div className="release-facts"><div><span>{isArabic ? "المنصة" : "Platform"}</span><b>{currentRelease.platform}</b></div><div><span>{isArabic ? "الإصدار" : "Version"}</span><b>{releaseVersion}</b></div><div><span>{isArabic ? "قناة التثبيت" : "Install channel"}</span><b>{t.releaseChannel}</b></div></div><div className="release-actions"><a className={`button release-button ${downloadState === "opening" ? "is-opening" : ""}`} href={preferredDownloadUrl} target="_blank" rel="noreferrer" onClick={handleDownloadClick} aria-busy={downloadState === "opening"} aria-describedby="release-download-feedback">{downloadState === "opening" ? <LoaderCircle className="download-spinner" size={18} aria-hidden="true" /> : <Download size={18} aria-hidden="true" />}{downloadState === "opening" ? t.releaseOpening : t.releaseButton}<ExternalLink size={16} aria-hidden="true" /></a><span className="share-button-wrap"><button className={`share-button ${shareState !== "idle" ? "is-feedback" : ""}`} type="button" onClick={handleShareClick} title={shareState === "copied" ? t.shareCopiedTooltip : t.share} aria-label={shareState === "copied" ? t.shareCopiedTooltip : t.share} aria-describedby="release-share-feedback"><Share2 size={17} aria-hidden="true" />{shareState === "shared" ? t.shareDone : shareState === "copied" ? t.shareCopied : shareState === "error" ? t.shareError : t.share}</button>{shareState === "copied" && <span className="share-tooltip" role="status">{t.shareCopiedTooltip}</span>}</span><a className="message-share-button whatsapp" href={whatsappShareUrl} target="_blank" rel="noreferrer" aria-label={t.shareWhatsApp} title={t.shareWhatsApp}><MessageCircle size={15} aria-hidden="true" />{t.shareWhatsApp}</a><a className="message-share-button telegram" href={telegramShareUrl} target="_blank" rel="noreferrer" aria-label={t.shareTelegram} title={t.shareTelegram}><Send size={15} aria-hidden="true" />{t.shareTelegram}</a></div><p className="release-download-feedback" id="release-download-feedback" role="status" aria-live="polite">{downloadState === "opening" ? t.releaseOpening : t.releaseReady}</p><p className="release-share-feedback" id="release-share-feedback" role="status" aria-live="polite">{shareState === "shared" ? t.shareDone : shareState === "copied" ? t.shareCopied : shareState === "error" ? t.shareError : ""}</p><p className="release-detection" role="status"><Smartphone size={16} />{detectionMessage}</p><div className="apk-choice-list"><b>{t.apkChoiceTitle}</b>{apkChoices.map((choice) => <a key={choice.key} href={choice.url} target="_blank" rel="noreferrer"><Download size={14} />{choice.label}<ExternalLink size={13} /></a>)}</div><p className="release-notice"><ShieldCheck size={17} />{t.releaseNotice}</p><p className="release-updated">{t.releaseUpdated}: {releaseDate}</p><div className="release-qr-grid"><div className="release-qr-card"><QRCodeSVG value={downloadPageUrl} size={128} level="M" includeMargin bgColor="#f7f3eb" fgColor="#174a3b" /><div><b>{t.testerQrTitle}</b><span>{t.testerQrBody}</span></div></div><div className="release-qr-card"><QRCodeSVG value={publicSiteUrl} size={128} level="M" includeMargin bgColor="#f7f3eb" fgColor="#174a3b" /><div><b>{t.siteQrTitle}</b><span>{t.siteQrBody}</span></div></div></div></div></section>
 
         <section id="setup" className="setup-section section-grid"><div className="sticky-heading"><span className="section-kicker">04 / {isArabic ? "الدليل العملي" : "The practical guide"}</span><h2>{t.install}</h2><p>{t.installIntro}</p><a className="button dark-button" href="#profiles"><ArrowDown size={17} />{isArabic ? "تابع إلى الملفات" : "Continue to profiles"}</a></div><div className="steps">{t.steps.map(([title, body], index) => <article className="step" key={title}><div className="step-index">{String(index + 1).padStart(2, "0")}</div><div><h3>{title}</h3><p>{body}</p></div><Check size={18} className="step-check" /></article>)}</div><div className="installation-details"><article><h3>{t.androidInstallTitle}</h3><ol>{t.androidInstallSteps.map((step) => <li key={step}>{step}</li>)}</ol></article><article><h3>{t.iosInstallTitle}</h3><ol>{t.iosInstallSteps.map((step) => <li key={step}>{step}</li>)}</ol></article><aside><h3>{t.packTitle}</h3><p>{t.packBody}</p></aside></div></section>
 
         <section id="profiles" className="profiles-section"><div className="section-heading"><div><span className="section-kicker">05 / {isArabic ? "مرونة الوالدين" : "Parent-controlled flexibility"}</span><h2>{t.profiles}</h2></div><p>{t.profilesIntro}</p></div><div className="profile-feature"><div className="profile-image" style={{ backgroundImage: profileImage }}><span>{isArabic ? "ابدأ من الأساس المناسب" : "Start from the right baseline"}</span></div><div className="profile-list">{t.profileNames.map((name, index) => <div className="profile-row" key={name}><span className="profile-number">0{index + 1}</span><div><h3>{name}</h3><p>{t.profileDetails[index]}</p></div><ChevronDown size={18} /></div>)}</div></div><div className="profile-evidence"><p>{t.profileNote}</p><span>{t.profileSources}: <a href="https://www.who.int/news/item/24-04-2019-to-grow-up-healthy-children-need-to-sit-less-and-play-more" target="_blank" rel="noreferrer">WHO</a> · <a href="https://aasm.org/advocacy/position-statements/child-sleep-duration-health-advisory/" target="_blank" rel="noreferrer">AASM</a> · <a href="https://www.aap.org/en/patient-care/media-and-children/center-of-excellence-on-social-media-and-youth-mental-health/qa-portal/qa-portal-library/qa-portal-library-questions/screen-time-guidelines/" target="_blank" rel="noreferrer">AAP</a> · <a href="https://cps.ca/en/documents/position/digital-media" target="_blank" rel="noreferrer">CPS</a></span></div><div className="profile-category-registry"><h3>{t.categoryRegistryTitle}</h3><p>{t.socialRegistry}</p><p>{t.gamesRegistry}</p><small>{t.categoryRegistryNote}</small></div></section>
         <section id="comparison" className="comparison-section"><div className="section-heading"><div><span className="section-kicker">06 / {isArabic ? "سياق السوق" : "Market context"}</span><h2>{t.comparisonTitle}</h2></div><p>{t.comparisonIntro}</p></div><div className="comparison-scroll"><table><thead><tr>{t.comparisonHeaders.map((heading) => <th key={heading}>{heading}</th>)}</tr></thead><tbody>{t.comparisonRows.map((row) => <tr key={row[0]}>{row.map((cell, index) => <td key={`${row[0]}-${index}`}>{cell}</td>)}</tr>)}</tbody></table></div><p className="comparison-sources">{t.comparisonSources}: <a href="https://families.google/familylink/" target="_blank" rel="noreferrer">Google Family Link</a> · <a href="https://www.qustodio.com/en/features/" target="_blank" rel="noreferrer">Qustodio</a> · <a href="https://www.bark.us/" target="_blank" rel="noreferrer">Bark</a> · <a href="https://us.norton.com/feature/parental-control" target="_blank" rel="noreferrer">Norton Family</a> · <a href="https://developer.apple.com/documentation/screentimeapidocumentation" target="_blank" rel="noreferrer">Apple Screen Time</a></p></section>
+
+        <section id="family-safety" className="policy-section" aria-labelledby="family-safety-title">
+          <div className="section-heading"><div><span className="section-kicker">{t.familySafetyKicker}</span><h2 id="family-safety-title">{t.familySafetyTitle}</h2></div><p>{t.familySafetyIntro}</p></div>
+          <div className="policy-examples">{t.familySafetyExamples.map(([title, body]) => <article className="policy-example" key={title}><h3>{title}</h3><p>{body}</p></article>)}</div>
+          <p className="policy-scope-note">{t.familySafetyDisclaimer}</p>
+          <div className="policy-family"><div className="policy-family-heading"><h3>{t.familySupportTitle}</h3><p>{t.familySupportIntro}</p></div><div className="policy-family-grid">{t.familySupportPoints.map((point) => <div className="policy-family-item" key={point}><ShieldCheck size={20} aria-hidden="true" /><p>{point}</p></div>)}</div><p className="policy-scope-note">{t.familySupportLimit}</p></div>
+          <p className="comparison-sources">{t.familySafetySources}: <a href="https://www.dataprotection.ie/en/news-media/press-releases/data-protection-commission-announces-decision-instagram-inquiry" target="_blank" rel="noreferrer">Irish Data Protection Commission</a> · <a href="https://www.legislation.gov.au/C2024A00127/latest/text" target="_blank" rel="noreferrer">Australian legislation</a> · <a href="https://www.gov.uk/government/publications/online-safety-act-explainer/online-safety-act-explainer" target="_blank" rel="noreferrer">UK Government</a> · <a href="https://digital-strategy.ec.europa.eu/en/policies/dsa-guidelines" target="_blank" rel="noreferrer">European Commission · DSA guidelines</a></p>
+        </section>
 
         <section className="voice-section section-grid"><div className="voice-image" style={{ backgroundImage: voiceImage }}><span className="voice-tag"><Mic2 size={15} />{isArabic ? "محلي على الجهاز" : "Stored on-device"}</span></div><div className="voice-copy"><span className="section-kicker">06 / {isArabic ? "التنبيهات" : "Notifications"}</span><h2>{t.voice}</h2><p>{t.voiceBody}</p><div className="voice-points"><div><Mic2 size={20} /><span>{isArabic ? "تسجيل واستبدال وحذف" : "Record, replace, and delete"}</span></div><div><Smartphone size={20} /><span>{isArabic ? "لا رفع إلى السحابة" : "No cloud upload"}</span></div></div></div></section>
 

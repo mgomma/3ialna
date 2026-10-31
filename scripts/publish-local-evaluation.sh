@@ -91,12 +91,22 @@ fi
 if [[ "$dry_run" != "true" ]]; then
   git pull --ff-only origin "$branch"
   flutter pub get
+  public_apks_dir="$(mktemp -d)"
+  trap 'rm -rf "$public_apks_dir"' EXIT
   if [[ -f android/key.properties ]]; then
     flutter build apk --release --split-per-abi --target-platform android-arm,android-arm64
   else
   ORG_GRADLE_PROJECT_allowDebugReleaseSigning=true \
     flutter build apk --release --split-per-abi --target-platform android-arm,android-arm64
   fi
+  cp build/app/outputs/flutter-apk/app-*-release.apk "$public_apks_dir/"
+  if [[ -f android/key.properties ]]; then
+    flutter build apk --release --target-platform android-arm,android-arm64,android-x64
+  else
+    ORG_GRADLE_PROJECT_allowDebugReleaseSigning=true \
+      flutter build apk --release --target-platform android-arm,android-arm64,android-x64
+  fi
+  cp build/app/outputs/flutter-apk/app-release.apk "$public_apks_dir/"
 fi
 
 version_line="$(awk '/^version:/{print $2; exit}' pubspec.yaml)"
@@ -111,8 +121,10 @@ else
 fi
 arm64_asset="app-arm64-v8a-release.apk"
 armv7_asset="app-armeabi-v7a-release.apk"
+universal_asset="app-release.apk"
 arm64_url="https://github.com/${repository}/releases/download/${release_tag}/${arm64_asset}"
 armv7_url="https://github.com/${repository}/releases/download/${release_tag}/${armv7_asset}"
+universal_url="https://github.com/${repository}/releases/download/${release_tag}/${universal_asset}"
 
 published_at="$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
 render_metadata() {
@@ -123,10 +135,12 @@ export const currentRelease = {
   version: "$version_name",
   build: "$build_number",
   distribution: "$signing_description",
-  downloadUrl: "$arm64_url",
+  minimumAndroidApi: 24,
+  downloadUrl: "$universal_url",
   downloadUrls: {
     arm64: "$arm64_url",
     armv7: "$armv7_url",
+    universal: "$universal_url",
   },
   publishedAt: "$published_at",
 } as const;
@@ -153,11 +167,12 @@ if [[ "$dry_run" == "true" ]]; then
 fi
 
 gh release create "$release_tag" \
-  "build/app/outputs/flutter-apk/${arm64_asset}" \
-  "build/app/outputs/flutter-apk/${armv7_asset}" \
+  "$public_apks_dir/${arm64_asset}" \
+  "$public_apks_dir/${armv7_asset}" \
+  "$public_apks_dir/${universal_asset}" \
   --repo "$repository" \
   --title "3ialna local optimized evaluation ${version_name} (${build_number})" \
-  --notes "${signing_description}. Release-mode optimized APKs for arm64 and armv7. This is not a Play Store release." \
+  --notes "${signing_description}. Full-feature optimized APKs for Android 7+: ARM64, ARMv7 and universal CPU compatibility. This is not a Play Store release." \
   --prerelease
 
 render_metadata > website/src/release.generated.ts

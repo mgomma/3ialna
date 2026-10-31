@@ -146,6 +146,16 @@ button { font: inherit; }
 .comparison-scroll tr:nth-child(even) td { background: rgba(233,223,204,.38); }
 .comparison-sources { margin: 17px 0 0; color: #68746e; font-size: 11px; line-height: 1.8; }
 .comparison-sources a { color: var(--green); font-weight: 800; border-bottom: 1px solid rgba(23,74,59,.35); }
+.policy-section { max-width: none; padding: 106px max(8.5%, calc((100% - 1100px)/2)); background: #f0e9dc; scroll-margin-top: 96px; }
+.policy-examples { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 225px), 1fr)); gap: 1px; border-top: 3px solid var(--green); background: var(--line); }
+.policy-example { padding: 24px; background: var(--paper); }
+.policy-example h3, .policy-family-heading h3 { margin: 0 0 12px; color: var(--green); font-size: 16px; }
+.policy-example p, .policy-family-heading p { margin: 0; color: #596a61; font-size: 13px; line-height: 1.8; }
+.policy-scope-note { margin: 16px 0 0; color: #68746e; font-size: 11px; line-height: 1.8; }
+.policy-family { margin-top: 54px; padding-top: 36px; border-top: 1px solid var(--line); }
+.policy-family-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 1px; margin-top: 22px; border: 1px solid var(--line); background: var(--line); }
+.policy-family-item { min-height: 150px; padding: 22px; display: grid; align-content: space-between; gap: 24px; background: var(--paper); color: var(--saffron); }
+.policy-family-item p { margin: 0; color: var(--green); font-size: 13px; line-height: 1.7; font-weight: 700; }
 .voice-section { background: #f0e9dc; max-width: none; padding-inline: max(8.5%, calc((100% - 1100px)/2)); grid-template-columns: 1fr 1fr; align-items: center; }
 .voice-image { min-height: 440px; }
 .voice-copy { padding-inline: 7%; }

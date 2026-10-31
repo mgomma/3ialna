@@ -82,7 +82,13 @@ jobs:
           chmod 600 android/key.properties "$keystore_path"
           echo "description=GitHub optimized stable-signed evaluation release" >> "$GITHUB_OUTPUT"
       - name: Build optimized public evaluation APKs
-        run: flutter build apk --release --split-per-abi --target-platform android-arm,android-arm64
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/public-apks"
+          flutter build apk --release --split-per-abi --target-platform android-arm,android-arm64
+          cp build/app/outputs/flutter-apk/app-*-release.apk "$RUNNER_TEMP/public-apks/"
+          flutter build apk --release --target-platform android-arm,android-arm64,android-x64
+          cp build/app/outputs/flutter-apk/app-release.apk "$RUNNER_TEMP/public-apks/"
       - name: Publish optimized public evaluation pre-release
         id: public_release
         env:
@@ -100,13 +106,15 @@ jobs:
           # here produced metadata URLs that did not exist and returned 404.
           arm64_asset="app-arm64-v8a-release.apk"
           armv7_asset="app-armeabi-v7a-release.apk"
+          universal_asset="app-release.apk"
           arm64_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${release_tag}/${arm64_asset}"
           armv7_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${release_tag}/${armv7_asset}"
+          universal_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${release_tag}/${universal_asset}"
 
           cat > "$RUNNER_TEMP/public-debug-notes.md" <<EOF
           ## Optimized public Android evaluation build
 
-          These APKs are **release-mode optimized, architecture-specific evaluation builds** for Android. R8 and Android resource shrinking are enabled. The arm64 file is for most current Android phones; they are not Play Store releases and should not be used as a production distribution channel.
+          These APKs keep all features on Android 7.0+ (API 24+). R8 and resource shrinking reduce size. ARM64 and ARMv7 downloads omit other CPU libraries; the universal APK includes ARM64, ARMv7 and x86_64 for uncertain device detection. All variants use the same app ID, version and signing key. They are evaluation builds, not Play Store releases.
 
           Signing: ${SIGNING_DESCRIPTION}
 
@@ -116,8 +124,9 @@ jobs:
           EOF
 
           gh release create "$release_tag" \
-            "build/app/outputs/flutter-apk/app-arm64-v8a-release.apk#${arm64_asset}" \
-            "build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk#${armv7_asset}" \
+            "$RUNNER_TEMP/public-apks/${arm64_asset}#${arm64_asset}" \
+            "$RUNNER_TEMP/public-apks/${armv7_asset}#${armv7_asset}" \
+            "$RUNNER_TEMP/public-apks/${universal_asset}#${universal_asset}" \
             --repo "$GITHUB_REPOSITORY" \
             --title "3ialna optimized evaluation ${version_name} (${build_number})" \
             --notes-file "$RUNNER_TEMP/public-debug-notes.md" \
@@ -128,6 +137,7 @@ jobs:
           echo "download_url=$arm64_url" >> "$GITHUB_OUTPUT"
           echo "arm64_url=$arm64_url" >> "$GITHUB_OUTPUT"
           echo "armv7_url=$armv7_url" >> "$GITHUB_OUTPUT"
+          echo "universal_url=$universal_url" >> "$GITHUB_OUTPUT"
       - name: Synchronize public website download metadata
         env:
           GH_TOKEN: ${{ github.token }}
@@ -136,6 +146,7 @@ jobs:
           DOWNLOAD_URL: ${{ steps.public_release.outputs.download_url }}
           ARM64_URL: ${{ steps.public_release.outputs.arm64_url }}
           ARMV7_URL: ${{ steps.public_release.outputs.armv7_url }}
+          UNIVERSAL_URL: ${{ steps.public_release.outputs.universal_url }}
           SIGNING_DESCRIPTION: ${{ steps.evaluation_signing.outputs.description }}
         run: |
           set -euo pipefail
@@ -152,10 +163,12 @@ jobs:
             version: "$VERSION_NAME",
             build: "$BUILD_NUMBER",
             distribution: "$SIGNING_DESCRIPTION",
-            downloadUrl: "$DOWNLOAD_URL",
+            minimumAndroidApi: 24,
+            downloadUrl: "$UNIVERSAL_URL",
             downloadUrls: {
               arm64: "$ARM64_URL",
               armv7: "$ARMV7_URL",
+              universal: "$UNIVERSAL_URL",
             },
             publishedAt: "$published_at",
           } as const;

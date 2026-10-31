@@ -134,6 +134,67 @@ jobs:
           path: build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
 
+      - name: Build optimized release APK for compatibility checks
+        env:
+          ORG_GRADLE_PROJECT_allowDebugReleaseSigning: 'true'
+        run: flutter build apk --release
+
+      - name: Upload optimized release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+
+  android-compatibility:
+    name: Android API ${{ matrix.api-level }} permissions and release upgrade
+    runs-on: ubuntu-latest
+    needs: android-build
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        api-level: [24, 26, 28, 29, 30, 31, 32, 33, 34, 35, 36]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Download tested APK
+        uses: actions/download-artifact@v4
+        with:
+          name: app-debug-apk
+          path: apk
+
+      - name: Download optimized release APK
+        uses: actions/download-artifact@v4
+        with:
+          name: app-release-apk
+          path: release-apk
+
+      - name: Enable emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Install and cold-start without optional permissions
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          script: ANDROID_SMOKE_RESET_DATA=1 ANDROID_SMOKE_DEEP_TESTS=1 bash copilot/scripts/android-startup-smoke.sh apk/app-debug.apk release-apk/app-release.apk
+
+      - name: Upload startup diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-api-${{ matrix.api-level }}-startup
+          path: diagnostics/
+          if-no-files-found: warn
+          retention-days: 14
+
   manual-android-apk:
     name: Manual installable Android APK
     if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/dev'

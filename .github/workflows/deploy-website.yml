@@ -41,7 +41,7 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Build static website
         working-directory: website
-        run: pnpm build
+        run: pnpm test && pnpm build
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
         with:
