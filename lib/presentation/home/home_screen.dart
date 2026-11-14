@@ -66,6 +66,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   /// Whether monitoring is currently active.
   bool isMonitoring = false;
 
+  /// Usage-based protection is unavailable until Android grants Usage Access.
+  bool _usageAccessEnabled = !Platform.isAndroid;
+
   /// Timer used to periodically check usage.
   Timer? monitoringTimer;
 
@@ -384,6 +387,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _resumeMonitoringAfterParentMode() async {
     if (!mounted || !_settings.isMonitoring) return;
+    if (Platform.isAndroid && !await _refreshUsageAccessStatus()) return;
     final bool started =
         !Platform.isAndroid || await _startBackgroundMonitoring();
     if (!started || !mounted) return;
@@ -393,6 +397,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _captureOutgoingChildUsage() async {
     if (_childProfiles.isParentModeActive()) return;
+    if (Platform.isAndroid && !await _refreshUsageAccessStatus()) return;
     final ChildProfile? active = _childProfiles.activeChild();
     if (active == null) return;
     await _childUsageLedger.captureActiveChildUsage(childId: active.id);
@@ -1054,8 +1059,35 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
+  Future<bool> _refreshUsageAccessStatus() async {
+    final bool enabled =
+        !Platform.isAndroid || await _firstRunPermissions.hasUsageAccess();
+    if (!mounted) return enabled;
+
+    if (_usageAccessEnabled != enabled) {
+      setState(() => _usageAccessEnabled = enabled);
+    }
+    if (!enabled && isMonitoring) {
+      _stopMonitoring();
+      await _stopBackgroundMonitoring();
+      if (!mounted) return false;
+      setState(() => isMonitoring = false);
+      await _saveSettings();
+    }
+    return enabled;
+  }
+
   /// Fetches app usage for today and updates state.
   Future<void> _checkAppUsage() async {
+    if (!await _refreshUsageAccessStatus()) {
+      if (mounted) {
+        setState(() {
+          totalUsageMinutes = 0;
+          usageDataMinutes = <String, int>{};
+        });
+      }
+      return;
+    }
     if (_childProfiles.isParentModeActive()) {
       if (mounted) {
         setState(() {
@@ -1156,6 +1188,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       return;
     }
 
+    if (Platform.isAndroid && !await _refreshUsageAccessStatus()) {
+      await _showUsageAccessLimitedModeDialog();
+      return;
+    }
+
     if (Platform.isAndroid &&
         (!await _refreshAccessibilityStatus() || !mounted)) {
       await _showAccessibilityRequiredForMonitoring();
@@ -1187,6 +1224,30 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     _startMonitoring();
     await _checkAppUsage();
+  }
+
+  Future<void> _showUsageAccessLimitedModeDialog() async {
+    if (!mounted) return;
+    final bool? openSettings = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) => AlertDialog(
+        title: Text(context.l10n.limitedModeTitle),
+        content: Text(context.l10n.limitedModeBody),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(context.l10n.notNow),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(context.l10n.openUsageSettings),
+          ),
+        ],
+      ),
+    );
+    if (openSettings == true) {
+      await _firstRunPermissions.openUsageAccessSettings();
+    }
   }
 
   Future<void> _showAccessibilityRequiredForMonitoring() async {
@@ -1272,6 +1333,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   List<Widget> _buildHomeSections(ColorScheme colorScheme) => <Widget>[
+    if (Platform.isAndroid && !_usageAccessEnabled) ...<Widget>[
+      _buildLimitedModeBanner(colorScheme),
+      const SizedBox(height: 16),
+    ],
     if (_countryWordProfile != null) ...<Widget>[
       _buildCountryWordCard(),
       const SizedBox(height: 16),
@@ -1710,6 +1775,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         ? (_isArabic
                               ? 'لا توجد حدود زمنية أو قيود للأطفال.'
                               : 'No child time limits or restrictions apply.')
+                      : Platform.isAndroid && !_usageAccessEnabled
+                      ? context.l10n.usageTrackingPaused
                         : '${context.l10n.displayChildName(_activeChild?.name ?? (_isArabic ? 'الطفل النشط' : 'Active child'))}: '
                               '${_isArabic ? 'استخدم اليوم' : 'Used today'} $totalUsageMinutes '
                               '${context.l10n.minutesSuffix}',
@@ -1763,7 +1830,57 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
+  Widget _buildLimitedModeBanner(ColorScheme colorScheme) {
+    return Card(
+      color: colorScheme.errorContainer.withValues(alpha: 0.45),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Icon(Icons.info_outline, color: colorScheme.error),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    context.l10n.limitedModeTitle,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(context.l10n.limitedModeBody),
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: TextButton.icon(
+                onPressed: () async {
+                  await _firstRunPermissions.openUsageAccessSettings();
+                },
+                icon: const Icon(Icons.settings_outlined),
+                label: Text(context.l10n.openUsageSettings),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildUsageList(ColorScheme colorScheme, {bool shrinkWrap = false}) {
+    if (Platform.isAndroid && !_usageAccessEnabled) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            context.l10n.usageTrackingPaused,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ),
+      );
+    }
     if (usageDataMinutes.isEmpty) {
       return Center(
         child: Column(
@@ -1790,6 +1907,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       );
     }
 
+
     final List<MapEntry<String, int>> entries =
         usageDataMinutes.entries.toList()..sort(
           (MapEntry<String, int> a, MapEntry<String, int> b) =>
@@ -1804,8 +1922,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       itemBuilder: (BuildContext context, int index) {
         final MapEntry<String, int> entry = entries[index];
         final String packageName = entry.key;
-        final int usedMinutes = entry.value;
         final String appName = socialMediaApps[packageName] ?? packageName;
+        final int usedMinutes = entry.value;
         final int safeTimeLimit = timeLimitMinutes <= 0 ? 1 : timeLimitMinutes;
 
         final double progress = (usedMinutes / safeTimeLimit)

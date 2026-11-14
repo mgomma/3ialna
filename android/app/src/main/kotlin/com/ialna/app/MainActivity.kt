@@ -97,16 +97,20 @@ class MainActivity : FlutterActivity() {
         ).setMethodCallHandler { call, result ->
             when (call.method) {
                 "startMonitoringService" -> {
-                    try {
-                        startMonitoringService()
-                        result.success(true)
-                    } catch (error: Exception) {
-                        CrashReportRecorder.record(this, "monitoring_service_start", error)
-                        result.error(
-                            "MONITORING_SERVICE_START_FAILED",
-                            "Could not start monitoring service.",
-                            null
-                        )
+                    if (!hasUsageAccess()) {
+                        result.success(false)
+                    } else {
+                        try {
+                            startMonitoringService()
+                            result.success(true)
+                        } catch (error: Exception) {
+                            CrashReportRecorder.record(this, "monitoring_service_start", error)
+                            result.error(
+                                "MONITORING_SERVICE_START_FAILED",
+                                "Could not start monitoring service.",
+                                null
+                            )
+                        }
                     }
                 }
                 "stopMonitoringService" -> {

@@ -1,6 +1,7 @@
 package com.ialna.app.kiosk
 
 import android.app.Activity
+import android.app.ActivityManager
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
@@ -110,12 +111,8 @@ object KioskModeHelper {
     fun isKioskModeActive(activity: Activity): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             try {
-                // Use reflection to call isInLockTaskMode() method on Activity
-                val method = Activity::class.java.getMethod("isInLockTaskMode")
-                method.invoke(activity) as? Boolean ?: false
-            } catch (e: NoSuchMethodException) {
-                Log.w(TAG, "isInLockTaskMode method not found", e)
-                false
+                val manager = activity.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+                manager.lockTaskModeState != ActivityManager.LOCK_TASK_MODE_NONE
             } catch (e: Exception) {
                 Log.w(TAG, "Error checking lock task mode", e)
                 false

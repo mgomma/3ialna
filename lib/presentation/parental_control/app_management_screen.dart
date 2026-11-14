@@ -131,6 +131,12 @@ class _AppManagementScreenState extends State<AppManagementScreen> {
           await _storage.setAppTimeLimit(app.packageName, minutes);
           await _loadData();
         },
+        onTimeLimitRemoved: currentLimit == null
+            ? null
+            : () async {
+                await _storage.removeAppTimeLimit(app.packageName);
+                await _loadData();
+              },
       ),
     );
   }

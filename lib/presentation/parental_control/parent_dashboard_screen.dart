@@ -673,12 +673,13 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                     icon: Icons.apps,
                     label: _isArabic ? 'إدارة التطبيقات' : 'Manage Apps',
                     color: colorScheme.primary,
-                    onTap: () {
-                      Navigator.of(context).push(
+                    onTap: () async {
+                      await Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (context) => const AppManagementScreen(),
                         ),
                       );
+                      if (mounted) await _loadSettings();
                     },
                   ),
                   _ActionCard(

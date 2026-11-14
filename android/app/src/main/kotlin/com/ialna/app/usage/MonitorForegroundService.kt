@@ -1,6 +1,7 @@
 package com.ialna.app.usage
 
 import android.app.Notification
+import android.app.AppOpsManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -53,6 +54,11 @@ class MonitorForegroundService : Service() {
 
     private val runnable = object : Runnable {
         override fun run() {
+            if (!hasUsageAccess()) {
+                disableMonitoringPreference()
+                stopSelf()
+                return
+            }
             try {
                 Log.d(TAG, "Runnable: checking usage...")
                 checkUsageAndMaybeBlock()
@@ -90,6 +96,12 @@ class MonitorForegroundService : Service() {
         if (!isMonitoringEnabled()) {
             Log.w(TAG, "Service started but monitoring disabled; stopping self")
             showDebugToast("3ialna: Monitoring disabled")
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        if (!hasUsageAccess()) {
+            Log.w(TAG, "Usage access is unavailable; stopping monitoring")
+            disableMonitoringPreference()
             stopSelf()
             return START_NOT_STICKY
         }
@@ -393,6 +405,23 @@ class MonitorForegroundService : Service() {
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start OverlayService", e)
         }
+    }
+
+    private fun hasUsageAccess(): Boolean {
+        val appOps = getSystemService(Context.APP_OPS_SERVICE) as? AppOpsManager
+            ?: return false
+        return appOps.checkOpNoThrow(
+            AppOpsManager.OPSTR_GET_USAGE_STATS,
+            android.os.Process.myUid(),
+            packageName
+        ) == AppOpsManager.MODE_ALLOWED
+    }
+
+    private fun disableMonitoringPreference() {
+        getSharedPreferences(FLUTTER_PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean("$PFX$_PREF_IS_MONITORING", false)
+            .apply()
     }
 
     private fun isMonitoringEnabled(): Boolean {

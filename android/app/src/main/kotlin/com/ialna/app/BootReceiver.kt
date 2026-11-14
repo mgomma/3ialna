@@ -3,6 +3,8 @@ package com.ialna.app
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.app.AppOpsManager
+import android.os.Process
 import androidx.core.content.ContextCompat
 import com.ialna.app.usage.MonitorForegroundService
 import com.ialna.app.voice.VoicePlaybackScheduler
@@ -21,7 +23,7 @@ class BootReceiver : BroadcastReceiver() {
             action == Intent.ACTION_USER_UNLOCKED ||
             action == "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED"
         ) {
-            if (isMonitoringEnabled(context)) {
+            if (isMonitoringEnabled(context) && hasUsageAccess(context)) {
                 startMonitoringService(context)
             }
             VoicePlaybackScheduler.reschedule(context)
@@ -33,6 +35,16 @@ class BootReceiver : BroadcastReceiver() {
     private fun isMonitoringEnabled(context: Context): Boolean {
         val prefs = context.getSharedPreferences(FLUTTER_PREFS, Context.MODE_PRIVATE)
         return prefs.getBoolean("$PFX$_PREF_IS_MONITORING", false)
+    }
+
+    private fun hasUsageAccess(context: Context): Boolean {
+        val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as? AppOpsManager
+            ?: return false
+        return appOps.checkOpNoThrow(
+            AppOpsManager.OPSTR_GET_USAGE_STATS,
+            Process.myUid(),
+            context.packageName
+        ) == AppOpsManager.MODE_ALLOWED
     }
 
     private fun startMonitoringService(context: Context) {

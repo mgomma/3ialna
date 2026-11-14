@@ -46,6 +46,12 @@ class AppLocalizations {
       'appTitle': '3ialna',
       'dailyTimeLimit': 'Daily Time Limit',
       'minutesSuffix': 'minutes',
+      'setTimeLimitTitle': 'Set Time Limit',
+      'customTimeLimitMinutes': 'Custom (minutes)',
+      'enterTimeLimitMinutes': 'Enter minutes',
+      'removeTimeLimit': 'Remove limit',
+      'shortMinutes': '{value}m',
+      'shortHours': '{value}h',
       'startMonitoring': 'Start Monitoring',
       'stopMonitoring': 'Stop Monitoring',
       'noUsageTitle': 'No usage data yet',
@@ -83,6 +89,16 @@ class AppLocalizations {
               'You can enable this by going to:\n'
               'Settings → Apps → Special access → Usage access, '
               'then choosing this app and turning access on.',
+        'limitedModeTitle': 'Limited mode',
+        'limitedModeBody':
+          '3ialna stays available, but usage reports, time limits, and app '
+            'blocking are paused without Usage Access. If Android says '
+            '"controlled by selected settings," ask the parent or device '
+            'administrator to allow it. Other features that do not require '
+            'Usage Access remain available.',
+        'usageTrackingPaused':
+          'Usage tracking and app limits are paused until Usage Access is allowed.',
+        'openUsageSettings': 'Open Usage access settings',
       'gotIt': 'Got it',
       'countryProfileTitle': 'Country profile',
       'countryProfileHint': 'Select your country to personalize words.',
@@ -232,6 +248,12 @@ class AppLocalizations {
       'appTitle': 'عيالنا',
       'dailyTimeLimit': 'الحد اليومي للوقت',
       'minutesSuffix': 'دقيقة',
+      'setTimeLimitTitle': 'تعيين الحد الزمني',
+      'customTimeLimitMinutes': 'مدة مخصصة (بالدقائق)',
+      'enterTimeLimitMinutes': 'أدخل عدد الدقائق',
+      'removeTimeLimit': 'إزالة الحد',
+      'shortMinutes': '{value}د',
+      'shortHours': '{value}س',
       'startMonitoring': 'بدء المراقبة',
       'stopMonitoring': 'إيقاف المراقبة',
       'noUsageTitle': 'لا توجد بيانات استخدام بعد',
@@ -267,6 +289,16 @@ class AppLocalizations {
               'يمكنك تفعيل ذلك من خلال:\n'
               'الإعدادات → التطبيقات → وصول خاص → الوصول إلى '
               'الاستخدام، ثم اختيار هذا التطبيق وتفعيل الوصول.',
+        'limitedModeTitle': 'الوضع المحدود',
+        'limitedModeBody':
+          'يبقى تطبيق عيالنا متاحًا، لكن تقارير الاستخدام والحدود الزمنية '
+            'وحظر التطبيقات متوقفة لعدم توفر إذن وصول الاستخدام. إذا ظهرت '
+              'رسالة تفيد بأن الإعدادات المحددة تتحكم بهذا الخيار، اطلب من الوالد أو '
+            'مسؤول الجهاز السماح بالإذن. تبقى الميزات الأخرى التي لا تحتاج '
+            'إلى هذا الإذن متاحة.',
+        'usageTrackingPaused':
+          'تتبّع الاستخدام وحدود التطبيقات متوقفة حتى يتم السماح بإذن وصول الاستخدام.',
+        'openUsageSettings': 'فتح إعدادات وصول الاستخدام',
       'gotIt': 'حسنًا',
       'countryProfileTitle': 'الملف اللفظي حسب الدولة',
       'countryProfileHint': 'اختر دولتك لتخصيص الكلمات داخل التطبيق.',
@@ -427,6 +459,14 @@ class AppLocalizations {
   String get appTitle => _text('appTitle');
   String get dailyTimeLimit => _text('dailyTimeLimit');
   String get minutesSuffix => _text('minutesSuffix');
+  String get setTimeLimitTitle => _text('setTimeLimitTitle');
+  String get customTimeLimitMinutes => _text('customTimeLimitMinutes');
+  String get enterTimeLimitMinutes => _text('enterTimeLimitMinutes');
+  String get removeTimeLimit => _text('removeTimeLimit');
+  String shortMinutes(int value) =>
+      _text('shortMinutes').replaceAll('{value}', '$value');
+  String shortHours(int value) =>
+      _text('shortHours').replaceAll('{value}', '$value');
   String get startMonitoring => _text('startMonitoring');
   String get stopMonitoring => _text('stopMonitoring');
   String get noUsageTitle => _text('noUsageTitle');
@@ -452,6 +492,10 @@ class AppLocalizations {
   String get continueLabel => _text('continue');
   String get usageAccessTitle => _text('usageAccessTitle');
   String get usageAccessBody => _text('usageAccessBody');
+  String get limitedModeTitle => _text('limitedModeTitle');
+  String get limitedModeBody => _text('limitedModeBody');
+  String get usageTrackingPaused => _text('usageTrackingPaused');
+  String get openUsageSettings => _text('openUsageSettings');
   String get gotIt => _text('gotIt');
   String get countryProfileTitle => _text('countryProfileTitle');
   String get countryProfileHint => _text('countryProfileHint');

@@ -274,6 +274,8 @@ When time limits are exceeded:
 - [x] "Take a Break" blocks apps correctly
 - [x] Blocked apps cannot reopen
 - [x] Blocks expire automatically
+- [x] Parent dashboard refreshes blocked-app and time-limit counts after returning from app management
+- [x] Existing per-app limits can be removed from the time-limit dialog without changing shared category budgets
 
 ## ⚠️ Important Notes
 
@@ -308,6 +310,8 @@ When time limits are exceeded:
 ### Common Issues
 
 **Kiosk Mode Not Working:**
+- Status detection uses `ActivityManager.lockTaskModeState` on Android 6.0+, treating both locked and screen-pinned states as active. `Activity.isInLockTaskMode` does not exist; reflecting on it incorrectly reported every state as inactive.
+- With explicit device-owner/pinning approval, verify inactive status before locking, active status while locked or pinned, and inactive status after unlocking. Compilation alone does not verify kiosk enforcement.
 - Verify Device Admin is enabled
 - Check device admin permissions
 - Restart device and try again
@@ -316,6 +320,8 @@ When time limits are exceeded:
 - Verify AccessibilityService is enabled
 - Check blocked apps list
 - Ensure monitoring service is running
+- Native readers of `flutter.block_duration_minutes` must use `getLong`, matching the value saved by `MainActivity.blockApp`. Reading it with `getInt` throws a `ClassCastException` and prevents accessibility blocking.
+- Device regression: temporarily block a non-system app, verify that launching and reopening it returns to Home, then unblock it and verify it opens normally. Check that the blocking logs contain no preference type errors.
 
 **Time Limits Not Enforcing:**
 - Verify Usage Access permission

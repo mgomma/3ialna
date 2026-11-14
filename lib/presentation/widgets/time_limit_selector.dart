@@ -6,11 +6,13 @@ import '../../l10n/app_localizations.dart';
 class TimeLimitSelector extends StatefulWidget {
   final int? initialMinutes;
   final ValueChanged<int> onTimeLimitSelected;
+  final Future<void> Function()? onTimeLimitRemoved;
 
   const TimeLimitSelector({
     super.key,
     this.initialMinutes,
     required this.onTimeLimitSelected,
+    this.onTimeLimitRemoved,
   });
 
   @override
@@ -19,16 +21,9 @@ class TimeLimitSelector extends StatefulWidget {
 
 class _TimeLimitSelectorState extends State<TimeLimitSelector> {
   int? _selectedMinutes;
+  bool _isRemoving = false;
 
-  final List<int> _presetMinutes = [
-    15,
-    30,
-    60,
-    90,
-    120,
-    180,
-    240,
-  ];
+  final List<int> _presetMinutes = [15, 30, 60, 90, 120, 180, 240];
 
   @override
   void initState() {
@@ -49,7 +44,7 @@ class _TimeLimitSelectorState extends State<TimeLimitSelector> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Set Time Limit',
+              context.l10n.setTimeLimitTitle,
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -78,8 +73,8 @@ class _TimeLimitSelectorState extends State<TimeLimitSelector> {
             // Custom input
             TextField(
               decoration: InputDecoration(
-                labelText: 'Custom (minutes)',
-                hintText: 'Enter minutes',
+                labelText: context.l10n.customTimeLimitMinutes,
+                hintText: context.l10n.enterTimeLimitMinutes,
                 border: const OutlineInputBorder(),
               ),
               keyboardType: TextInputType.number,
@@ -94,22 +89,30 @@ class _TimeLimitSelectorState extends State<TimeLimitSelector> {
             ),
             const SizedBox(height: 24),
             // Action buttons
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 8,
               children: [
+                if (widget.initialMinutes != null &&
+                    widget.onTimeLimitRemoved != null)
+                  TextButton(
+                    onPressed: _isRemoving ? null : _removeTimeLimit,
+                    child: Text(context.l10n.removeTimeLimit),
+                  ),
                 TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: _isRemoving
+                      ? null
+                      : () => Navigator.of(context).pop(),
                   child: Text(context.l10n.cancel),
                 ),
-                const SizedBox(width: 8),
                 FilledButton(
-                  onPressed: _selectedMinutes != null
+                  onPressed: _selectedMinutes != null && !_isRemoving
                       ? () {
                           widget.onTimeLimitSelected(_selectedMinutes!);
                           Navigator.of(context).pop();
                         }
                       : null,
-                  child: const Text('Set'),
+                  child: Text(context.l10n.save),
                 ),
               ],
             ),
@@ -119,16 +122,25 @@ class _TimeLimitSelectorState extends State<TimeLimitSelector> {
     );
   }
 
+  Future<void> _removeTimeLimit() async {
+    setState(() => _isRemoving = true);
+    try {
+      await widget.onTimeLimitRemoved!();
+      if (mounted) Navigator.of(context).pop();
+    } finally {
+      if (mounted) setState(() => _isRemoving = false);
+    }
+  }
+
   String _formatMinutes(int minutes) {
     if (minutes < 60) {
-      return '${minutes}m';
+      return context.l10n.shortMinutes(minutes);
     }
     final hours = minutes ~/ 60;
     final remainingMinutes = minutes % 60;
     if (remainingMinutes == 0) {
-      return '${hours}h';
+      return context.l10n.shortHours(hours);
     }
-    return '${hours}h ${remainingMinutes}m';
+    return '${context.l10n.shortHours(hours)} ${context.l10n.shortMinutes(remainingMinutes)}';
   }
 }
-

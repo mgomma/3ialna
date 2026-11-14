@@ -79,7 +79,7 @@ class AppBlockingAccessibilityService : AccessibilityService() {
             val blockTimestamp = blockedApps[packageName] ?: return false
 
             val now = System.currentTimeMillis()
-            val blockDuration = prefs.getInt("${PFX}block_duration_minutes", 30).toLong() * 60 * 1000 // Convert to milliseconds
+            val blockDuration = prefs.getLong("${PFX}block_duration_minutes", 30L) * 60 * 1000 // Convert to milliseconds
 
             // Check if block has expired
             if (now - blockTimestamp > blockDuration) {
@@ -153,7 +153,7 @@ class AppBlockingAccessibilityService : AccessibilityService() {
         val blockTimestamp = blockedApps[packageName] ?: return 0
 
         val now = System.currentTimeMillis()
-        val blockDuration = prefs.getInt("${PFX}block_duration_minutes", 30).toLong() * 60 * 1000
+        val blockDuration = prefs.getLong("${PFX}block_duration_minutes", 30L) * 60 * 1000
         val elapsed = now - blockTimestamp
         val remaining = blockDuration - elapsed
 
