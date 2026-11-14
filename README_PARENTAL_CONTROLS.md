@@ -287,6 +287,8 @@ When time limits are exceeded:
 5. **iOS has stricter limitations** - This implementation focuses on Android
 
 ### Requirements
+
+Public Android release and regression CI use Flutter 3.44.0, matching the validated Gradle toolchain. Upgrade Flutter and Gradle together deliberately; do not bypass Flutter's build-dependency checks.
 - **Android 6.0+** (API 23+) for full functionality
 - **Device Admin permission** for kiosk mode
 - **Usage Access permission** for time tracking
