@@ -290,7 +290,7 @@ When time limits are exceeded:
 
 Public Android release and regression CI use Flutter 3.44.0, matching the validated Gradle toolchain. Upgrade Flutter and Gradle together deliberately; do not bypass Flutter's build-dependency checks.
 
-Public APK variants are built one architecture at a time without `--split-per-abi`, so every variant uses the same Android version code from `pubspec.yaml`. Keep that code higher than every previously published variant; Flutter's split-APK offsets otherwise cause downgrade failures when users switch to the Universal download. CI verifies the actual APK version codes before publishing.
+Public APK variants are built one architecture at a time without `--split-per-abi`, so every variant uses the same Android version code from `pubspec.yaml`. The release workflow supplies `public-apk-abis` and disables Flutter's default all-architecture filter so Gradle packages only the requested native libraries; normal builds keep their existing defaults. Keep the version code higher than every previously published variant; Flutter's split-APK offsets otherwise cause downgrade failures when users switch to the Universal download. CI verifies the actual APK version codes and architectures before publishing.
 - **Android 6.0+** (API 23+) for full functionality
 - **Device Admin permission** for kiosk mode
 - **Usage Access permission** for time tracking

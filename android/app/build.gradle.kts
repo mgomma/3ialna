@@ -67,6 +67,17 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        project.findProperty("public-apk-abis")?.toString()?.split(",")?.let { abis ->
+            val supportedAbis = setOf("arm64-v8a", "armeabi-v7a", "x86_64")
+            if (abis.any { it !in supportedAbis }) {
+                throw org.gradle.api.GradleException("Unsupported public APK architectures: $abis")
+            }
+            ndk {
+                abiFilters.clear()
+                abiFilters.addAll(abis)
+            }
+        }
     }
 
     buildTypes {
