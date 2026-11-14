@@ -225,7 +225,7 @@ jobs:
             echo "configured=true" >> "$GITHUB_OUTPUT"
           else
             echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "Firebase distribution is not configured; continuing with the public debug release only."
+            echo "Firebase distribution is not configured; continuing with the public evaluation release only."
           fi
       - name: Install Firebase CLI
         if: steps.firebase_configuration.outputs.configured == 'true'
@@ -241,13 +241,13 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
           FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
           FIREBASE_TESTER_GROUPS: ${{ secrets.FIREBASE_TESTER_GROUPS }}
-          RELEASE_NOTES: ${{ inputs.release_notes || format('Automated debug build from {0}', github.sha) }}
+          RELEASE_NOTES: ${{ inputs.release_notes || format('Automated evaluation release from {0}', github.sha) }}
         run: |
           group_args=""
           if [ -n "$FIREBASE_TESTER_GROUPS" ]; then
             group_args="--groups $FIREBASE_TESTER_GROUPS"
           fi
-          firebase appdistribution:distribute build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
+          firebase appdistribution:distribute "$RUNNER_TEMP/public-apks/app-arm64-v8a-release.apk" \
             --app "$FIREBASE_APP_ID" \
             --release-notes "$RELEASE_NOTES" \
             $group_args \
