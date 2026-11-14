@@ -83,10 +83,35 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/public-apks"
-          flutter build apk --release --split-per-abi --target-platform android-arm,android-arm64
-          cp build/app/outputs/flutter-apk/app-*-release.apk "$RUNNER_TEMP/public-apks/"
+          flutter build apk --release --target-platform android-arm64
+          cp build/app/outputs/flutter-apk/app-release.apk "$RUNNER_TEMP/public-apks/app-arm64-v8a-release.apk"
+          flutter build apk --release --target-platform android-arm
+          cp build/app/outputs/flutter-apk/app-release.apk "$RUNNER_TEMP/public-apks/app-armeabi-v7a-release.apk"
           flutter build apk --release --target-platform android-arm,android-arm64,android-x64
           cp build/app/outputs/flutter-apk/app-release.apk "$RUNNER_TEMP/public-apks/"
+          app_version="$(awk '/^version:/{print $2; exit}' pubspec.yaml)"
+          expected_code="${app_version#*+}"
+          aapt_path="$(find "$ANDROID_HOME/build-tools" -mindepth 2 -maxdepth 2 -name aapt -type f | sort -V | tail -n 1)"
+          test -x "$aapt_path" || { echo "Android APK verification tool is unavailable."; exit 1; }
+          for apk in "$RUNNER_TEMP/public-apks/"*.apk; do
+            badging="$("$aapt_path" dump badging "$apk")"
+            version_code="$(printf '%s\n' "$badging" | sed -n "s/^package:.*versionCode='\([0-9][0-9]*\)'.*/\1/p")"
+            if [ "$version_code" != "$expected_code" ]; then
+              echo "APK version code mismatch: $apk has $version_code, expected $expected_code."
+              exit 1
+            fi
+            case "$(basename "$apk")" in
+              app-arm64-v8a-release.apk) expected_abis="'arm64-v8a'" ;;
+              app-armeabi-v7a-release.apk) expected_abis="'armeabi-v7a'" ;;
+              app-release.apk) expected_abis="'arm64-v8a' 'armeabi-v7a' 'x86_64'" ;;
+            esac
+            actual_abis="$(printf '%s\n' "$badging" | sed -n 's/^native-code: //p')"
+            if [ "$actual_abis" != "$expected_abis" ]; then
+              echo "APK architecture mismatch: $apk has $actual_abis, expected $expected_abis."
+              exit 1
+            fi
+            echo "Verified shared Android version code $version_code: $(basename "$apk")"
+          done
       - name: Publish optimized public evaluation pre-release
         id: public_release
         env:
@@ -99,9 +124,7 @@ jobs:
           build_number="${app_version#*+}"
           if [ "$build_number" = "$app_version" ]; then build_number="0"; fi
           release_tag="optimized-v${version_name}-b${build_number}-run${GITHUB_RUN_ID}-a${GITHUB_RUN_ATTEMPT}"
-          # Keep these names identical to Flutter's split-APK output filenames.
-          # GitHub CLI uploads the file basename, so using custom display aliases
-          # here produced metadata URLs that did not exist and returned 404.
+          # Keep these names identical to the copied public asset filenames.
           arm64_asset="app-arm64-v8a-release.apk"
           armv7_asset="app-armeabi-v7a-release.apk"
           universal_asset="app-release.apk"
